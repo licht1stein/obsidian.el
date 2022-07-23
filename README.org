@@ -2,6 +2,14 @@
 
 The purpose is to make an Obsidian Notes comfortably writable in Emacs. Obviously you already can open your Obsidian folder and start creating markdown files with Emacs. Let's try to improve that a little.
 
-* Project Tasks [0/2]
-- [ ] Autocompletion suggestions for tags
-- [ ] Autocompletion suggestions for note links
+* Project Tasks
+** TODO General utils
+- [ ] Specify Obsidian folder and save it in variables
+- [ ] Enumerate files in the Obsidian folder and save a list
+- [ ] Run the enumeration task in the background
+- [ ] Functions to scan notes for tags
+- [ ] Functions to scan notes for links
+- [ ] Database (?) for the scan results
+
+** TODO Autocompletion for tags
+** TODO Autocompletion for note links
