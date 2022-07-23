@@ -1,6 +1,7 @@
 #+TITLE: Obsidian Notes for Emacs
 
-The purpose is to make an Obsidian Notes comfortably writable in Emacs. Obviously you already can open your Obsidian folder and start creating markdown files with Emacs. The first goals are:
+The purpose is to make an Obsidian Notes comfortably writable in Emacs. Obviously you already can open your Obsidian folder and start creating markdown files with Emacs. Let's try to improve that a little.
 
-[ ] Autocompletion suggestions for tags
-[ ] Autocompletion suggestions for note links
+* Project Tasks [0/2]
+- [ ] Autocompletion suggestions for tags
+- [ ] Autocompletion suggestions for note links
