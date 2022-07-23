@@ -9,6 +9,7 @@ The purpose is to make an Obsidian Notes comfortably writable in Emacs. Obviousl
 - [ ] Run the enumeration task in the background
 - [ ] Functions to scan notes for tags
 - [ ] Functions to scan notes for links
+- [ ] Capture command to create a new note in Obsidian folder
 - [ ] Database (?) for the scan results
 
 ** TODO Autocompletion for tags
