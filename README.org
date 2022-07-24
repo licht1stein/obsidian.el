@@ -58,10 +58,10 @@ You can update the lists of tags, links etc. manually if it's lagging for some r
 
 * Why not?
 ** Obsidian App, Athens Research or any other great app?
-Easy. They are not Emacs. You could probably use some of them as the back-end for a similar set up, but I happen to prefer Obsidian.
+Easy. When on desktop they are simply not Emacs. You could probably use some of them as the back-end for a similar set up, but I happen to prefer Obsidian. But Emacs beats anything else on the desktop once you know how to use it.
 
 ** Org-roam or any other great Emacs libraries?
-The answer is mostly the same for all of them. Mobile. And when choosing what to build — a mobile app for org-roam or an Emacs client for Obsidian, I prefer the latter. A much, much simpler task.
+The answer is mostly the same for all of them. Mobile. I don't by into the story that "you don't really need your PKM system on mobile", and "serious work is done only on desktop" etc. These are just excuses for the impossibility of building a full-fledged mobile version of Emacs. So there were two ways to go about it: build a mobile app for something like org-roam (which would be cool, but is above my front-end skills) or build a light-weight Emacs client for something like Obsidian. I chose the simpler task.
 
 * Gratitude
 - The work on Obsidian.el was made considerably easier and definitely more fun thanks to the great work of [[https://github.com/magnars][Magnar Sveen]] and his packages [[https://github.com/magnars/dash.el][dash.el]] and [[https://github.com/magnars/s.el][s.el]]. Thank you for making Elisp almost as convenient as Clojure!
