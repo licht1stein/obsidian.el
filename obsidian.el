@@ -80,9 +80,9 @@ When run interactively asks user to specify the path."
     (string-prefix-p (replace-regexp-in-string "^\\([A-Za-z]\\):" 'downcase (expand-file-name b) t t)
 		     (replace-regexp-in-string "^\\([A-Za-z]\\):" 'downcase (expand-file-name a) t t))))
 
-(defun obsidian-not-trash-p (file)
+(defun obsidian-not-trash? (file)
   "Return t if FILE is not in .trash of Obsidian."
-  (not (obsidian-descendant-of-p file (concat obsidian-directory ".trash"))))
+  (not (s-contains? "/.trash" file)))
 
 (defun obsidian-file? (&optional file)
   "Return t if FILE is an obsidian.el file, nil otherwise.
@@ -98,8 +98,7 @@ FILE is an Org-roam file if:
 	       (ext (file-name-extension relative-path))
 	       (md? (string= ext "md"))
 	       (obsidian-dir? (obsidian-descendant-of-p path obsidian-directory))
-	       (trash-dir (concat obsidian-directory ".trash"))
-	       (not-trash? (obsidian-not-trash-p path))
+	       (not-trash? (obsidian-not-trash? path))
 	       (not-temp? (not (s-contains? "~" relative-path))))
     t))
 
@@ -200,7 +199,7 @@ lower and upper case versions of the tags."
 			  (-map (lambda (s) (s-replace "#" "" s)))
 			  (-map 's-downcase)))
 	 (capitalized (-map 's-capitalize lower-case))
-	 (merged (-concat lower-case capitalized)))
+	 (merged (-concat tags lower-case capitalized)))
     (->> merged
 	 (-map (lambda (s) (s-concat "#" s)))
 	 -distinct)))
