@@ -29,5 +29,5 @@ Using use-package and straight.el:
 #+begin_src elisp
   (use-package obsidian
     :straight (:type git :host github :repo "licht1stein/obsidian.el")
-    :confg (obsidian-specify-path "~/MY_OBSIDIAN_FOLDER"))
+    :config (obsidian-specify-path "~/MY_OBSIDIAN_FOLDER"))
 #+end_src
