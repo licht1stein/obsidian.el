@@ -95,9 +95,16 @@ If FILE is not specified, use the current buffer"
    (-> (obsidian-read-file-or-buffer file)
        obsidian-find-tags))
 
+ (defun obsidian-all-tags ()
+   "Finds all tags in all obsidian files."
+   (->> (obsidian-list-all-files)
+	(mapcar 'obsidian-find-tags-in-file)
+	-flatten))
+
  (-comment
   (obsidian-read-file-or-buffer)
   (obsidian-read-file-or-buffer sample-file)
   (obsidian-find-tags "foo #foo # #тэг-такой spam") ;; => ("#foo" "#тэг-такой")
   (obsidian-find-tags-in-file)
-  (obsidian-find-tags-in-file sample-file))
+  (obsidian-find-tags-in-file sample-file)
+  (obsidian-all-tags))

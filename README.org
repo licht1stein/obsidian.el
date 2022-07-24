@@ -11,9 +11,10 @@ The purpose is to make an Obsidian Notes comfortably writable in Emacs. Obviousl
 * Development tasks
 ** TODO General utils
 - [X] Specify Obsidian folder and save it in variables
-- [ ] Enumerate files in the Obsidian folder and save a list
+- [X] Enumerate files in the Obsidian folder and save a list
 - [ ] Run the enumeration task in the background
-- [ ] Functions to scan notes for tags
+- [X] Functions to scan notes for tags
+- [X] Get full list of all tags
 - [ ] Functions to scan notes for links
 - [ ] Capture command to create a new note in Obsidian folder
 - [ ] Database (?) for the scan results
