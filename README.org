@@ -1,5 +1,7 @@
 #+TITLE: Obsidian Notes for Emacs
 
+During the development of Obsidian.el I have learned and copied from the code of the amazing [[https://github.com/org-roam/org-roam][org-roam]] package. Thank you!
+
 The purpose is to make an Obsidian Notes comfortably writable in Emacs. Obviously you already can open your Obsidian folder and start creating markdown files with Emacs. Let's try to improve that a little.
 
 * Project Tasks
