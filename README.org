@@ -2,7 +2,7 @@
 Emacs front-end for [[https://obsidian.md/][Obsidian Notes]].
 
 * Install
-Using use-package and straight.el:
+Using [[https://github.com/jwiegley/use-package][use-package]] and [[https://github.com/radian-software/straight.el][straight.el]]:
 
 #+begin_src elisp
   (use-package obsidian
