@@ -176,9 +176,7 @@ versions of the tags."
 	      (match-string 0)))
     (candidates (->> obsidian--tags-list
 		     obsidian-prepare-tags-list
-		     (-filter (lambda (s) (s-starts-with? arg s nil)))))))
-
-(add-to-list 'company-backends 'obsidian-tags-backend)
+		     (-filter (lambda (s) (s-starts-with? arg s)))))))
 
 (defun obsidian-enable-minor-mode ()
   "Check if current buffer is an obsidian-file? and if it is enable minor obsidian-mode."
@@ -186,5 +184,6 @@ versions of the tags."
     (obsidian-mode t)))
 
 (add-hook 'markdown-mode-hook #'obsidian-enable-minor-mode)
+(add-to-list 'company-backends 'obsidian-tags-backend)
 
 (provide 'obsidian)
