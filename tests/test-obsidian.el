@@ -71,4 +71,4 @@
   (it "check tags are filled out after update"
     (expect (progn
 	      (obsidian-update)
-	      (length obsidian--tags-list)) :to-equal 5)))
+	      (length obsidian--tags-list)) :to-equal 6)))

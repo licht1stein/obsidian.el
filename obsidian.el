@@ -236,6 +236,11 @@ Optional argument IGNORED this is ignored."
   (obsidian-update-tags-list)
   (message "obsidian.el updated"))
 
+(-comment
+ "[Link](1.md)")
+
+(defvar obsidian--link-regex "\\[[[:alnum:]]+\\]\([[:alnum:].]+\)" "Regex to find links in md files")
+
 (add-hook 'markdown-mode-hook #'obsidian-enable-minor-mode)
 (add-to-list 'company-backends 'obsidian-tags-backend)
 
