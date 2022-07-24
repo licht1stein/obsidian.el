@@ -125,7 +125,6 @@ If FILE is not specified, use the current buffer"
 
 (defun obsidian-update-tags-list ()
   "Scans entire Obsidian vault and updates all tags for completion."
-  (interactive)
   (->> (obsidian-list-all-tags)
        (setq obsidian--tags-list))
   (message "Obsidian tags updated"))
