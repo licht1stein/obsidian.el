@@ -1,3 +1,38 @@
+;; obsidian.el --- An Emacs interface for Obsidian Notes -*- coding: utf-8; lexical-binding: t; -*-
+
+;; Copyright (c) 2022 Mykhaylo Bilyanskyy <mb@blaster.ai>
+
+;; Author: Mykhaylo Bilyanskyy
+;; URL: https://github.com./licht1stein/obsidian.el
+;; Keywords: obsidian, pkm, convenience
+;; Version: 1.0.0
+;; Package-Requires: ((emacs "26.1") (dash "2.19") (s "20210616.619"))
+
+;; This file is NOT part of GNU Emacs.
+
+;; This program is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation; either version 3, or (at your option)
+;; any later version.
+;;
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with GNU Emacs; see the file COPYING.  If not, write to the
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
+
+
+;;; Commentary:
+;;
+;; obsidian.el lets you interact with more convenience with markdown files
+;; that are contained in Obsidian Notes vault.  It adds autocompletion for
+;; tags and links, jumping between notes, capturing new notes into inbox etc.
+
+;;; Code:
 (require 'dash)
 (require 's)
 
@@ -6,8 +41,11 @@
 
 ;; Clojure style comment
 (defmacro -comment (&rest body)
-  "Ignores body, yields nil."
+  "Ignore BODY, yields nil."
   nil)
+
+(-comment
+ (package-buffer-info))
 
 (defcustom obsidian-directory nil
   "Path to Obsidian Notes vault."
@@ -18,7 +56,7 @@
 (defvar obsidian--tag-regex "#[[:alnum:]-_=+]+" "Regex pattern used to find tags in Obsidian files.")
 
 (defun obsidian-specify-path (&optional path)
-  "Specifies obsidian folder path to obsidian-folder variable. When run interactively asks user to specify the path."
+  "Specifies obsidian folder PATH to obsidian-folder variable.  When run interactively asks user to specify the path."
   (interactive)
   (->> (or path (read-directory-name "Specify path to Obsidian folder"))
        (expand-file-name)
@@ -38,7 +76,7 @@
                      (replace-regexp-in-string "^\\([A-Za-z]\\):" 'downcase (expand-file-name a) t t))))
 
 (defun obsidian-not-trash-p (file)
-  "Returns t if file is not in .trash of Obsidian."
+  "Return t if FILE is not in .trash of Obsidian."
   (not (obsidian-descendant-of-p file (concat obsidian-directory ".trash"))))
 
 (defun obsidian-file? (&optional file)
@@ -79,7 +117,7 @@ Obsidian notes files:
  )
 
 (defun obsidian-read-file-or-buffer (&optional file)
-  "Returns string contents of a file or current buffer.
+  "Return string contents of a file or current buffer.
 
 If FILE is not specified, use the current buffer."
   (if file
@@ -89,12 +127,13 @@ If FILE is not specified, use the current buffer."
     (buffer-substring-no-properties (point-min) (point-max))))
 
 (defun obsidian-find-tags (s)
-  "Finda all #tags in string."
+  "Finda all #tags in string.
+Argument S string to find tags in."
   (->> (s-match-strings-all obsidian--tag-regex s)
        -flatten))
 
 (defun obsidian-tag? (s)
-  "Returns t if s matches obsidian--tag-regex, else nil."
+  "Return t if S matches `obsidian--tag-regex', else nil."
   (when (s-match obsidian--tag-regex s)
     t))
 
@@ -102,7 +141,7 @@ If FILE is not specified, use the current buffer."
  (obsidian-tag? "#foo"))
 
 (defun obsidian-find-tags-in-file (&optional file)
-  "Returns all tags in file or current buffer.
+  "Return all tags in file or current buffer.
 
 If FILE is not specified, use the current buffer"
   (-> (obsidian-read-file-or-buffer file)
@@ -110,7 +149,7 @@ If FILE is not specified, use the current buffer"
       -distinct))
 
 (defun obsidian-list-all-tags ()
-  "Finds all tags in all obsidian files."
+  "Find all tags in all obsidian files."
   (->> (obsidian-list-all-files)
        (mapcar 'obsidian-find-tags-in-file)
        -flatten
@@ -125,7 +164,7 @@ If FILE is not specified, use the current buffer"
  (obsidian-list-all-tags))
 
 (defun obsidian-update-tags-list ()
-  "Scans entire Obsidian vault and updates all tags for completion."
+  "Scans entire Obsidian vault and update all tags for completion."
   (->> (obsidian-list-all-tags)
        (setq obsidian--tags-list))
   (message "Obsidian tags updated"))
@@ -134,7 +173,7 @@ If FILE is not specified, use the current buffer"
  (obsidian-update-tags-list))
 
 (define-minor-mode obsidian-mode
-  "Toggle minor obsidian-mode on and off.
+  "Toggle minor `obsidian-mode' on and off.
 
 Interactively with no argument, this command toggles the mode.
 A positive prefix argument enables the mode, any other prefix
@@ -146,11 +185,12 @@ the mode, `toggle' toggles the state."
   :after-hook (obsidian-update-tags-list))
 
 (defun obsidian-prepare-tags-list (tags)
-  "Prepares a list of tags with both lower-case and capitalized versions.
+  "Prepare a list of TAGS with both lower-case and capitalized versions.
 
-Obsidian Notes doesn't considers tags to be the same no matter their case. Somtimes it's convenient to capitalize a tag,
-for example when using it at the start of the sentence. This function allows completion with both lower and upper case
-versions of the tags."
+Obsidian Notes doesn't considers tags to be the same no matter their case.
+Sometimes it's convenient to capitalize a tag, for example when using it
+at the start of the sentence.  This function allows completion with both
+lower and upper case versions of the tags."
   (let* ((lower-case (->> tags
 			  (-map (lambda (s) (s-replace "#" "" s)))
 			  (-map 's-downcase)))
@@ -165,7 +205,10 @@ versions of the tags."
       (obsidian-prepare-tags-list)))
 
 (defun obsidian-tags-backend (command &optional arg &rest ignored)
-  "company-mode backend for obsidian.el."
+  "`company-mode' backend for obsidian.el.
+Argument COMMAND `company-mode' command.
+Optional argument ARG word to complete.
+Optional argument IGNORED this is ignored."
   (interactive (list 'interactive))
 
   (cl-case command
@@ -179,12 +222,12 @@ versions of the tags."
 		     (-filter (lambda (s) (s-starts-with? arg s)))))))
 
 (defun obsidian-enable-minor-mode ()
-  "Check if current buffer is an obsidian-file? and if it is enable minor obsidian-mode."
+  "Check if current buffer is an `obsidian-file?' and if it is enable minor `obsidian-mode'."
   (when (obsidian-file?)
     (obsidian-mode t)))
 
 (defun obsidian-update ()
-  "Command updates everything there is to update in obsidian.el (tags, links etc.)"
+  "Command update everything there is to update in obsidian.el (tags, links etc.)."
   (interactive)
   (obsidian-update-tags-list)
   (message "obsidian.el updated"))
@@ -193,3 +236,7 @@ versions of the tags."
 (add-to-list 'company-backends 'obsidian-tags-backend)
 
 (provide 'obsidian)
+
+(provide 'obsidian)
+
+;;; obsidian.el ends here
