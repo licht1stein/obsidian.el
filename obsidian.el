@@ -62,13 +62,42 @@ Obsidian notes files:
        (-filter 'obsidian-file-p)))
 
 (-comment
+ "#tag1 #tag2"
+
  (setq sample-file "~/Sync/Zettelkasten/Literature/Самадхи у Кинга.md")
  (obsidian-descendant-of-p sample-file obsidian-directory) ;; => t
  (obsidian-file-p)					   ;; => nil
  (obsidian-file-p "~/Sync/Zettelkasten/Literature/Самадхи у Кинга.md")
  (->> (obsidian-file-p "~/Sync/Zettelkasten/Inbox/.Мои мысли об убийстве.md.~undo-tree~")
       (s-contains? "~"))
- (obsidian-file-p "~/Sync/Zettelkasten/.trash/2021-10-26.md") ;; => nil
- (directory-files obsidian-path)
- (obsidian-list-all-files)
- )
+ (obsidian-file-p "~/Sync/Zettelkasten/.trash/2021-10-26.md") ;; => nil)
+
+ (defun obsidian-read-file-or-buffer (&optional file)
+   "Returns string contents of a file or current buffer.
+
+If FILE is not specified, use the current buffer."
+   (let* ((text (if file
+		    (with-temp-buffer
+		      (insert-file-contents file)
+		      (buffer-string))
+		  (buffer-substring-no-properties (point-min) (point-max)))))
+     text))
+
+ (defun obsidian-find-tags (s)
+   "Finda all #tags in string."
+   (->> (s-match-strings-all "#[[:alnum:]-_=+]+" s)
+	(mapcar 'car)))
+
+ (defun obsidian-find-tags-in-file (&optional file)
+   "Returns all tags in file or current buffer.
+
+If FILE is not specified, use the current buffer"
+   (-> (obsidian-read-file-or-buffer file)
+       obsidian-find-tags))
+
+ (-comment
+  (obsidian-read-file-or-buffer)
+  (obsidian-read-file-or-buffer sample-file)
+  (obsidian-find-tags "foo #foo # #тэг-такой spam") ;; => ("#foo" "#тэг-такой")
+  (obsidian-find-tags-in-file)
+  (obsidian-find-tags-in-file sample-file))
