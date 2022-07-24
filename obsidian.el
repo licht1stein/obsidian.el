@@ -1,4 +1,4 @@
-;; obsidian.el --- An Emacs interface for Obsidian Notes -*- coding: utf-8; lexical-binding: t; -*-
+;;; obsidian.el --- An Emacs interface for Obsidian Notes -*- coding: utf-8; lexical-binding: t; -*-
 
 ;; Copyright (c) 2022 Mykhaylo Bilyanskyy <mb@blaster.ai>
 
@@ -6,10 +6,11 @@
 ;; URL: https://github.com./licht1stein/obsidian.el
 ;; Keywords: obsidian, pkm, convenience
 ;; Version: 1.0.0
-;; Package-Requires: ((emacs "26.1") (dash "2.19") (s "20210616.619"))
+;; Package-Requires: ((emacs "27.1") (company "0.9.13") (s "20210616.619") (dash "2.13"))
 
 ;; This file is NOT part of GNU Emacs.
 
+;;; License:
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
 ;; the Free Software Foundation; either version 3, or (at your option)
@@ -40,8 +41,8 @@
 (require 'company)
 
 ;; Clojure style comment
-(defmacro -comment (&rest body)
-  "Ignore BODY, yields nil."
+(defmacro -comment (&rest _)
+  "Ignore body, yield nil."
   nil)
 
 (-comment
@@ -56,7 +57,9 @@
 (defvar obsidian--tag-regex "#[[:alnum:]-_=+]+" "Regex pattern used to find tags in Obsidian files.")
 
 (defun obsidian-specify-path (&optional path)
-  "Specifies obsidian folder PATH to obsidian-folder variable.  When run interactively asks user to specify the path."
+  "Specifies obsidian folder PATH to obsidian-folder variable.
+
+When run interactively asks user to specify the path."
   (interactive)
   (->> (or path (read-directory-name "Specify path to Obsidian folder"))
        (expand-file-name)
@@ -73,7 +76,7 @@
   "Return t if A is descendant of B."
   (unless (equal (file-truename a) (file-truename b))
     (string-prefix-p (replace-regexp-in-string "^\\([A-Za-z]\\):" 'downcase (expand-file-name b) t t)
-                     (replace-regexp-in-string "^\\([A-Za-z]\\):" 'downcase (expand-file-name a) t t))))
+		     (replace-regexp-in-string "^\\([A-Za-z]\\):" 'downcase (expand-file-name a) t t))))
 
 (defun obsidian-not-trash-p (file)
   "Return t if FILE is not in .trash of Obsidian."
@@ -102,7 +105,7 @@ FILE is an Org-roam file if:
   "Lists all Obsidian Notes files that are not in trash.
 
 Obsidian notes files:
-- Pass the 'obsidian-file? check"
+- Pass the `obsidian-file?' check"
   (->> (directory-files-recursively obsidian-directory "\.*$")
        (-filter 'obsidian-file?)))
 
@@ -215,14 +218,14 @@ Optional argument IGNORED this is ignored."
     (interactive (company-begin-backend 'obsidian-tags-backend))
     (prefix (when (and
 		   (-contains? local-minor-modes 'obsidian-mode)
-		   (looking-back obsidian--tag-regex))
+		   (looking-back obsidian--tag-regex nil))
 	      (match-string 0)))
     (candidates (->> obsidian--tags-list
 		     obsidian-prepare-tags-list
 		     (-filter (lambda (s) (s-starts-with? arg s)))))))
 
 (defun obsidian-enable-minor-mode ()
-  "Check if current buffer is an `obsidian-file?' and if it is enable minor `obsidian-mode'."
+  "Check if current buffer is an `obsidian-file?' and enable minor `obsidian-mode'."
   (when (obsidian-file?)
     (obsidian-mode t)))
 
