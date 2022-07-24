@@ -31,9 +31,18 @@ Obsidian.el must empower us to stay in Emacs for things that make sense in Emacs
 When all of the above is ready we will almost never need the Obsidian app on desktop, but will still be able to use it on mobile or when specifically needed.
 
 * How does obsidian.el work?
-When you require obsidian.el via `use-package` or in other ways (see snippet above), you have to specify the root folder of your Obsidian Notes vault. Once obsidian.el knows the root folder, each time you open a markdown file it checks, weather this file is part of your Obsidian Notes vault. If it is `obsidian-mode` minor mode is activated for this buffer.
+** obsidian-mode
+When you require obsidian.el via `use-package` or in other ways (see snippet above), you have to specify the root folder of your Obsidian Notes vault. Once obsidian.el knows the root folder, each time you open a markdown buffer it checks, if that file is part of your Obsidian Notes vault. If it is `obsidian-mode` minor mode is activated for this buffer.
 
+** company-mode completion
 Once the `obsidian-mode` is activated obsidian.el scans all markdown files in the vault for tags and links (links still WIP), and stores these lists in it's global variables. It also adds [[http://company-mode.github.io/][company-mode]] backends to suggest links and tags for completion.
+
+** Manual re-scan
+You can update the lists of tags, links etc. manually if it's lagging for some reason by running an interactive command:
+
+#+begin_src
+  M-x obsidian-update
+#+end_src
 
 *** Development tasks
 - [X] Specify Obsidian folder and save it in variables

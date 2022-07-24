@@ -183,6 +183,12 @@ versions of the tags."
   (when (obsidian-file?)
     (obsidian-mode t)))
 
+(defun obsidian-update ()
+  "Command updates everything there is to update in obsidian.el (tags, links etc.)"
+  (interactive)
+  (obsidian-update-tags-list)
+  (message "obsidian.el updated"))
+
 (add-hook 'markdown-mode-hook #'obsidian-enable-minor-mode)
 (add-to-list 'company-backends 'obsidian-tags-backend)
 
