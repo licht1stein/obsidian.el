@@ -1,1 +1,4 @@
 *~
+.eldev/
+*autoloads.el
+*.elc

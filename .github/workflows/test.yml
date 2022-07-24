@@ -1,0 +1,35 @@
+name: "Emacs CI"
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        emacs_version:
+          - 27.2
+          - 28.1
+          - snapshot
+
+    steps:
+      - uses: purcell/setup-emacs@master
+        with:
+          version: ${{ matrix.emacs_version }}
+
+      - uses: actions/checkout@v2
+
+      - name: Install Eldev
+        run: curl -fsSL https://raw.github.com/org-roam/org-roam/master/github-eldev | sh
+
+      - name: Install dependencies
+        run: make prepare
+
+      - name: Lint
+        run: make lint
+
+      - name: Test
+        run: make test
