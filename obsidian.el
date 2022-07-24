@@ -16,7 +16,7 @@
   (interactive)
   (->> (or path (read-directory-name "Specify path to Obsidian folder"))
        (expand-file-name)
-       (setq obsidian-directory)))
+       (customize-set-value 'obsidian-directory)))
 
 (-comment
  (obsidian-specify-path)
@@ -94,7 +94,7 @@ If FILE is not specified, use the current buffer"
    (-> (obsidian-read-file-or-buffer file)
        obsidian-find-tags))
 
- (defun obsidian-all-tags ()
+ (defun obsidian-list-all-tags ()
    "Finds all tags in all obsidian files."
    (->> (obsidian-list-all-files)
 	(mapcar 'obsidian-find-tags-in-file)
@@ -106,4 +106,4 @@ If FILE is not specified, use the current buffer"
   (obsidian-find-tags "foo #foo # #тэг-такой spam") ;; => ("#foo" "#тэг-такой")
   (obsidian-find-tags-in-file)
   (obsidian-find-tags-in-file sample-file)
-  (obsidian-all-tags))
+  (obsidian-list-all-tags))
