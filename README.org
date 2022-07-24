@@ -45,7 +45,7 @@ When all of the above is ready we will almost never need the Obsidian app on des
 ** Obsidian App, Athens Research or any other great app?
 Easy. They are not Emacs. You could probably use some of them as the back-end for a similar set up, but I happen to prefer Obsidian.
 
-** Org-roam or and other great Emacs libraries?
+** Org-roam or any other great Emacs libraries?
 The answer is mostly the same for all of them. Mobile. And when choosing what to build — a mobile app for org-roam or an Emacs client for Obsidian, I prefer the latter. A much, much simpler task.
 
 * Gratitude
