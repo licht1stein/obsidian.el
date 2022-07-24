@@ -138,7 +138,7 @@ Argument S string to find tags in."
        -flatten))
 
 (defun obsidian-tag? (s)
-  "Return t if S matches `obsidian--tag-regex', else nil."
+  "Return t if S will match `obsidian--tag-regex', else nil."
   (when (s-match obsidian--tag-regex s)
     t))
 
