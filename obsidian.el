@@ -14,6 +14,8 @@
   :group 'obsidian
   :type 'directory)
 
+(setq obsidian-tags-list '())
+
 (defun obsidian-specify-path (&optional path)
   "Specifies obsidian folder path to obsidian-folder variable. When run interactively asks user to specify the path."
   (interactive)
@@ -121,6 +123,15 @@ If FILE is not specified, use the current buffer"
  (obsidian-find-tags-in-file sample-file)
  (obsidian-list-all-tags))
 
+(defun obsidian-update-tags-list ()
+  "Scans entire Obsidian vault and updates all tags for completion."
+  (interactive)
+  (->> (obsidian-list-all-tags)
+       (setq obsidian-tags-list)))
+
+(-comment
+ (obsidian-update-tags-list))
+
 (define-minor-mode obsidian-mode
   "Toggle minor obsidian-mode on and off.
 
@@ -130,9 +141,11 @@ argument disables it.  From Lisp, argument omitted or nil enables
 the mode, `toggle' toggles the state."
   ;; The initial value.
   :init-value nil
-  :lighter "obs")
+  :lighter "obs"
+  :after-hook (obsidian-update-tags-list))
 
 (defun obsidian-tags-backend (command &optional arg &rest ignored)
+  "company-mode backend for obsidian.el."
   (interactive (list 'interactive))
 
   (cl-case command
@@ -141,7 +154,7 @@ the mode, `toggle' toggles the state."
 		   (-contains? local-minor-modes 'obsidian-mode)
 		   (looking-back obsidian--tag-regex))
 	      (match-string 0)))
-    (candidates (->> (obsidian-list-all-tags)
+    (candidates (->> obsidian-tags-list
 		     (-filter (lambda (s) (s-starts-with? arg s t)))))))
 
 (add-to-list 'company-backends 'obsidian-tags-backend)
