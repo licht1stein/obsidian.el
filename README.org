@@ -41,7 +41,7 @@ Once the `obsidian-mode` is activated obsidian.el scans all markdown files in th
 You can update the lists of tags, links etc. manually if it's lagging for some reason by running an interactive command:
 
 #+begin_src
-  M-x obsidian-update
+  M-x obsidian-update RET
 #+end_src
 
 *** Development tasks
