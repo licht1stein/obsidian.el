@@ -18,6 +18,7 @@ The purpose is to make an Obsidian Notes comfortably writable in Emacs. Obviousl
 - [ ] Functions to scan notes for links
 - [ ] Capture command to create a new note in Obsidian folder
 - [ ] Database (?) for the scan results
+- [ ] Obsidian minor (major?) mode for matching .md files
 
 ** TODO Autocompletion for tags
 ** TODO Autocompletion for note links
