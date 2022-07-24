@@ -1,4 +1,5 @@
 #+TITLE: Obsidian Notes for Emacs
+Emacs front-end for [[https://obsidian.md/][Obsidian Notes]].
 
 During the development of Obsidian.el I have learned and copied from the code of the amazing [[https://github.com/org-roam/org-roam][org-roam]] package. Thank you!
 
