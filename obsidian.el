@@ -26,7 +26,8 @@
 
 (-comment
  (obsidian-specify-path)
- (obsidian-specify-path "~/Sync/Zettelkasten/"))
+ "Use the below vault for testing and development"
+ (obsidian-specify-path "./tests/test_vault"))
 
 ;;; File utilities
 ;; Copied from org-roam's org-roam-descendant-of-p
