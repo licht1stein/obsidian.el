@@ -1,6 +1,9 @@
 (require 'dash)
 (require 's)
 
+(require 'cl-lib)
+(require 'company)
+
 ;; Clojure style comment
 (defmacro -comment (&rest body)
   "Ignores body, yields nil."
@@ -70,40 +73,65 @@ Obsidian notes files:
  (obsidian-file-p "~/Sync/Zettelkasten/Literature/Самадхи у Кинга.md")
  (->> (obsidian-file-p "~/Sync/Zettelkasten/Inbox/.Мои мысли об убийстве.md.~undo-tree~")
       (s-contains? "~"))
- (obsidian-file-p "~/Sync/Zettelkasten/.trash/2021-10-26.md") ;; => nil)
+ (obsidian-file-p "~/Sync/Zettelkasten/.trash/2021-10-26.md") ;; => nil
+ )
 
- (defun obsidian-read-file-or-buffer (&optional file)
-   "Returns string contents of a file or current buffer.
+(defun obsidian-read-file-or-buffer (&optional file)
+  "Returns string contents of a file or current buffer.
 
 If FILE is not specified, use the current buffer."
-   (if file
-       (with-temp-buffer
-	 (insert-file-contents file)
-	 (buffer-substring-no-properties (point-min) (point-max)))
-     (buffer-substring-no-properties (point-min) (point-max))))
+  (if file
+      (with-temp-buffer
+	(insert-file-contents file)
+	(buffer-substring-no-properties (point-min) (point-max)))
+    (buffer-substring-no-properties (point-min) (point-max))))
 
- (defun obsidian-find-tags (s)
-   "Finda all #tags in string."
-   (->> (s-match-strings-all "#[[:alnum:]-_=+]+" s)
-	-flatten))
+(setq obsidian--tag-regex "#[[:alnum:]-_=+]+")
+(defun obsidian-find-tags (s)
+  "Finda all #tags in string."
+  (->> (s-match-strings-all obsidian--tag-regex s)
+       -flatten))
 
- (defun obsidian-find-tags-in-file (&optional file)
-   "Returns all tags in file or current buffer.
+(defun obsidian-tag? (s)
+  "Returns t if s matches obsidian--tag-regex, else nil."
+  (when (s-match obsidian--tag-regex s)
+    t))
+
+(-comment
+ (obsidian-tag? "#foo"))
+
+(defun obsidian-find-tags-in-file (&optional file)
+  "Returns all tags in file or current buffer.
 
 If FILE is not specified, use the current buffer"
-   (-> (obsidian-read-file-or-buffer file)
-       obsidian-find-tags))
+  (-> (obsidian-read-file-or-buffer file)
+      obsidian-find-tags
+      -distinct))
 
- (defun obsidian-list-all-tags ()
-   "Finds all tags in all obsidian files."
-   (->> (obsidian-list-all-files)
-	(mapcar 'obsidian-find-tags-in-file)
-	-flatten))
+(defun obsidian-list-all-tags ()
+  "Finds all tags in all obsidian files."
+  (->> (obsidian-list-all-files)
+       (mapcar 'obsidian-find-tags-in-file)
+       -flatten
+       -distinct))
 
- (-comment
-  (obsidian-read-file-or-buffer)
-  (obsidian-read-file-or-buffer sample-file)
-  (obsidian-find-tags "foo #foo # #тэг-такой spam") ;; => ("#foo" "#тэг-такой")
-  (obsidian-find-tags-in-file)
-  (obsidian-find-tags-in-file sample-file)
-  (obsidian-list-all-tags))
+(-comment
+ (obsidian-read-file-or-buffer)
+ (obsidian-read-file-or-buffer sample-file)
+ (obsidian-find-tags "foo #foo # #тэг-такой spam") ;; => ("#foo" "#тэг-такой")
+ (obsidian-find-tags-in-file)
+ (obsidian-find-tags-in-file sample-file)
+ (obsidian-list-all-tags))
+
+(defun obsidian-tags-backend (command &optional arg &rest ignored)
+  (interactive (list 'interactive))
+
+  (cl-case command
+    (interactive (company-begin-backend 'obsidian-tags-backend))
+    (prefix (when (and
+		   (eq major-mode 'markdown-mode)
+		   (looking-back obsidian--tag-regex))
+	      (match-string 0)))
+    (candidates (-filter (lambda (s) (s-starts-with? arg s t)) (obsidian-list-all-tags)))))
+
+(add-to-list 'company-backends 'obsidian-tags-backend)

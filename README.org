@@ -36,6 +36,7 @@ When all of the above is ready we will almost never need the Obsidian app on des
 - [ ] Run the enumeration task in the background (or trigger it when viewing an Obsidian file)
 - [X] Functions to scan notes for tags
 - [X] Get full list of all tags
+- [X] company-backend with tags
 - [ ] Functions to scan notes for links
 - [ ] Capture command to create a new note in Obsidian folder
 - [ ] Database (?) for the scan results
