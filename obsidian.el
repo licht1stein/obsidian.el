@@ -241,7 +241,4 @@ Optional argument IGNORED this is ignored."
 (add-to-list 'company-backends 'obsidian-tags-backend)
 
 (provide 'obsidian)
-
-(provide 'obsidian)
-
 ;;; obsidian.el ends here
