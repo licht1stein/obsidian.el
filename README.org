@@ -12,7 +12,7 @@ Using [[https://github.com/jwiegley/use-package][use-package]] and [[https://git
 
 * About Obsidian.el
 
-I wanted to work with Obsidian Notes using Emacs. Obviously you already can open your Obsidian folder and start creating markdown files with Emacs. Let's try to improve that a little, and split the responsibilities between Emacs and Obsidian the way it makes sense.
+I wanted to work with Obsidian Notes using Emacs. Obviously you already can open your Obsidian folder and start editing markdown files with Emacs. But I want to improve that and split the responsibilities between Emacs and Obsidian the way it makes sense for an Emacs user.
 
 ** What should we keep doing in Obsidian?
 - Sync
