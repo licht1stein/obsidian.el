@@ -123,15 +123,28 @@ If FILE is not specified, use the current buffer"
  (obsidian-find-tags-in-file sample-file)
  (obsidian-list-all-tags))
 
+(define-minor-mode obsidian-mode
+  "Toggle minor obsidian-mode on and off.
+
+Interactively with no argument, this command toggles the mode.
+A positive prefix argument enables the mode, any other prefix
+argument disables it.  From Lisp, argument omitted or nil enables
+the mode, `toggle' toggles the state."
+  ;; The initial value.
+  nil
+  ;; The indicator for the mode line.
+  " obs")
+
 (defun obsidian-tags-backend (command &optional arg &rest ignored)
   (interactive (list 'interactive))
 
   (cl-case command
     (interactive (company-begin-backend 'obsidian-tags-backend))
     (prefix (when (and
-		   (eq major-mode 'markdown-mode)
+		   (-contains? local-minor-modes 'obsidian-mode)
 		   (looking-back obsidian--tag-regex))
 	      (match-string 0)))
-    (candidates (-filter (lambda (s) (s-starts-with? arg s t)) (obsidian-list-all-tags)))))
+    (candidates (->> (obsidian-list-all-tags)
+		     (-filter (lambda (s) (s-starts-with? arg s t)))))))
 
 (add-to-list 'company-backends 'obsidian-tags-backend)
