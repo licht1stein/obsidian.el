@@ -129,9 +129,8 @@ A positive prefix argument enables the mode, any other prefix
 argument disables it.  From Lisp, argument omitted or nil enables
 the mode, `toggle' toggles the state."
   ;; The initial value.
-  nil
-  ;; The indicator for the mode line.
-  " obs")
+  :init-value nil
+  :lighter "obs")
 
 (defun obsidian-tags-backend (command &optional arg &rest ignored)
   (interactive (list 'interactive))
