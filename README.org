@@ -1,7 +1,6 @@
 #+TITLE: Obsidian Notes for Emacs
 Emacs front-end for [[https://obsidian.md/][Obsidian Notes]].
 
-During the development of Obsidian.el I have learned and copied from the code of the amazing [[https://github.com/org-roam/org-roam][org-roam]] package. Thank you!
 
 The purpose is to make an Obsidian Notes comfortably writable in Emacs. Obviously you already can open your Obsidian folder and start creating markdown files with Emacs. Let's try to improve that a little, and split the responsibilities between Emacs and Obsidian the way it makes sense.
 
@@ -40,3 +39,8 @@ Using use-package and straight.el:
     :straight (:type git :host github :repo "licht1stein/obsidian.el")
     :config (obsidian-specify-path "~/MY_OBSIDIAN_FOLDER"))
 #+end_src
+
+* Gratitude
+- The work on Obsidian.el was made much, much easier and definitely more fun thanks to the great work of [[https://github.com/magnars][Magnar Sveen]] and his packages [[https://github.com/magnars/dash.el][dash.el]] and [[https://github.com/magnars/s.el][s.el]]. Thank you for making Elisp almost as convenient as Clojure!
+
+- During the development of Obsidian.el I have learned and copied from the code of the amazing [[https://github.com/org-roam/org-roam][org-roam]] package. Thank you!
