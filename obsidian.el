@@ -1,4 +1,5 @@
 (require 'dash)
+(require 's)
 
 ;; Clojure style comment
 (defmacro -comment (&rest body)
@@ -29,23 +30,45 @@
     (string-prefix-p (replace-regexp-in-string "^\\([A-Za-z]\\):" 'downcase (expand-file-name b) t t)
                      (replace-regexp-in-string "^\\([A-Za-z]\\):" 'downcase (expand-file-name a) t t))))
 
+(defun obsidian-not-trash-p (file)
+  "Returns t if file is not in .trash of Obsidian."
+  (not (obsidian-descendant-of-p file (concat obsidian-directory ".trash"))))
+
 (defun obsidian-file-p (&optional file)
   "Return t if FILE is an obsidian.el file, nil otherwise.
 
 If FILE is not specified, use the current buffer's file-path.
 FILE is an Org-roam file if:
 - It's located somewhere under `obsidian-directory
-- It is a markdown .md file"
+- It is a markdown .md file
+- It is not in .trash
+- It is not an Emacs temp file"
   (-when-let* ((path (or file (-> (buffer-base-buffer) buffer-file-name)))
 	       (relative-path (file-relative-name path obsidian-directory))
 	       (ext (file-name-extension relative-path))
 	       (md? (string= ext "md"))
-	       (obsidian-dir? (obsidian-descendant-of-p path obsidian-directory)))
+	       (obsidian-dir? (obsidian-descendant-of-p path obsidian-directory))
+	       (trash-dir (concat obsidian-directory ".trash"))
+	       (not-trash? (obsidian-not-trash-p path))
+	       (not-temp? (not (s-contains? "~" relative-path))))
     t))
+
+(defun obsidian-list-all-files ()
+  "Lists all Obsidian Notes files that are not in trash.
+
+Obsidian notes files:
+- Pass the 'obsidian-file-p check"
+  (->> (directory-files-recursively obsidian-directory "\.*$")
+       (-filter 'obsidian-file-p)))
 
 (-comment
  (setq sample-file "~/Sync/Zettelkasten/Literature/Самадхи у Кинга.md")
  (obsidian-descendant-of-p sample-file obsidian-directory) ;; => t
- (obsidian-file-p) ;; => nil
- (obsidian-file-p "~/Sync/Zettelkasten/Literature/Самадхи у Кинга.md") ;; => t
+ (obsidian-file-p)					   ;; => nil
+ (obsidian-file-p "~/Sync/Zettelkasten/Literature/Самадхи у Кинга.md")
+ (->> (obsidian-file-p "~/Sync/Zettelkasten/Inbox/.Мои мысли об убийстве.md.~undo-tree~")
+      (s-contains? "~"))
+ (obsidian-file-p "~/Sync/Zettelkasten/.trash/2021-10-26.md") ;; => nil
+ (directory-files obsidian-path)
+ (obsidian-list-all-files)
  )
