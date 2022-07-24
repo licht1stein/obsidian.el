@@ -28,3 +28,15 @@
     (expect (obsidian-file? "./test_vault/subdir/1-sub.md") :to-be t))
   (it "exclude files in trash"
     (expect (obsidian-file? "./test_vault/.trash/trash.md") :to-be nil)))
+
+(describe "obsidian-list-all-files"
+  (it "check file count"
+    (expect (length (obsidian-list-all-files)) :to-equal 5)))
+
+(describe "obsidian-find-tags"
+  (it "find tags in string"
+    (expect (length (obsidian-find-tags "#foo bar #spam #bar-spam #spam_bar #foo+spam #foo=bar not tags")) :to-equal 6)))
+
+(describe "obsidian-list-all-tags"
+  (it "find all tags in the vault"
+    (expect (length (obsidian-list-all-tags)) :to-equal 5)))
