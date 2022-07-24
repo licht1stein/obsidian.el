@@ -37,7 +37,7 @@
   "Returns t if file is not in .trash of Obsidian."
   (not (obsidian-descendant-of-p file (concat obsidian-directory ".trash"))))
 
-(defun obsidian-file-p (&optional file)
+(defun obsidian-file? (&optional file)
   "Return t if FILE is an obsidian.el file, nil otherwise.
 
 If FILE is not specified, use the current buffer's file-path.
@@ -60,20 +60,18 @@ FILE is an Org-roam file if:
   "Lists all Obsidian Notes files that are not in trash.
 
 Obsidian notes files:
-- Pass the 'obsidian-file-p check"
+- Pass the 'obsidian-file? check"
   (->> (directory-files-recursively obsidian-directory "\.*$")
-       (-filter 'obsidian-file-p)))
+       (-filter 'obsidian-file?)))
 
 (-comment
  "#tag1 #tag2"
 
  (setq sample-file "~/Sync/Zettelkasten/Literature/Самадхи у Кинга.md")
  (obsidian-descendant-of-p sample-file obsidian-directory) ;; => t
- (obsidian-file-p)					   ;; => nil
- (obsidian-file-p "~/Sync/Zettelkasten/Literature/Самадхи у Кинга.md")
- (->> (obsidian-file-p "~/Sync/Zettelkasten/Inbox/.Мои мысли об убийстве.md.~undo-tree~")
-      (s-contains? "~"))
- (obsidian-file-p "~/Sync/Zettelkasten/.trash/2021-10-26.md") ;; => nil
+ (obsidian-file?)					   ;; => nil
+ (obsidian-file? "~/Sync/Zettelkasten/Literature/Самадхи у Кинга.md") ;; => t
+ (obsidian-file? "~/Sync/Zettelkasten/.trash/2021-10-26.md") ;; => nil
  )
 
 (defun obsidian-read-file-or-buffer (&optional file)
@@ -148,3 +146,10 @@ the mode, `toggle' toggles the state."
 		     (-filter (lambda (s) (s-starts-with? arg s t)))))))
 
 (add-to-list 'company-backends 'obsidian-tags-backend)
+
+(defun obsidian-enable-minor-mode ()
+  "Check if current buffer is an obsidian-file? and if it is enable minor obsidian-mode."
+  (when (obsidian-file?)
+    (obsidian-mode t)))
+
+(add-hook 'markdown-mode-hook #'obsidian-enable-minor-mode)

@@ -40,7 +40,7 @@ When all of the above is ready we will almost never need the Obsidian app on des
 - [ ] Functions to scan notes for links
 - [ ] Capture command to create a new note in Obsidian folder
 - [ ] Database (?) for the scan results
-- [ ] Obsidian minor (major?) mode for matching .md files
+- [X] Obsidian minor for matching .md files
 
 * Why not?
 ** Obsidian App, Athens Research or any other great app?
