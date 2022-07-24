@@ -2,26 +2,34 @@
 
 During the development of Obsidian.el I have learned and copied from the code of the amazing [[https://github.com/org-roam/org-roam][org-roam]] package. Thank you!
 
-The purpose is to make an Obsidian Notes comfortably writable in Emacs. Obviously you already can open your Obsidian folder and start creating markdown files with Emacs. Let's try to improve that a little.
+The purpose is to make an Obsidian Notes comfortably writable in Emacs. Obviously you already can open your Obsidian folder and start creating markdown files with Emacs. Let's try to improve that a little, and split the responsibilities between Emacs and Obsidian the way it makes sense.
 
-* What does Obsidian.el do?
-- [ ] Autocomplete Obsidian tags
-- [ ] Autocomplete Obsidian file links
+* What should we keep doing in Obsidian?
+- Sync
+- Mobile client (of course, and that's where Obsidian beats anything else in Emacs)
+- Complex exploring (graph views etc)
+- All the things done with complex plugins
 
-* Development tasks
-** TODO General utils
+* What should be possible to do in Emacs?
+Obsidian.el must empower us to stay in Emacs for things that make sense in Emacs:
+
+- [ ] Creating and editing notes with convenient autocomplete for tags and links (nothing will ever compare to Emacs in terms of editing power)
+- [ ] Jumping between notes
+- [ ] Searching all notes
+- [ ] Viewing and following backlinks
+
+When all of the above is ready we will almost never need the Obsidian app on desktop, but still being able to use it on mobile or when specifically needed.
+
+** Development tasks
 - [X] Specify Obsidian folder and save it in variables
 - [X] Enumerate files in the Obsidian folder and save a list
-- [ ] Run the enumeration task in the background
+- [ ] Run the enumeration task in the background (or trigger it when viewing an Obsidian file)
 - [X] Functions to scan notes for tags
 - [X] Get full list of all tags
 - [ ] Functions to scan notes for links
 - [ ] Capture command to create a new note in Obsidian folder
 - [ ] Database (?) for the scan results
 - [ ] Obsidian minor (major?) mode for matching .md files
-
-** TODO Autocompletion for tags
-** TODO Autocompletion for note links
 
 * Install
 Using use-package and straight.el:
