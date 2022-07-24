@@ -1,4 +1,4 @@
-name: "CI"
+name: "Emacs CI"
 on:
   pull_request:
   push:
@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
