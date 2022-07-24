@@ -85,7 +85,7 @@ If FILE is not specified, use the current buffer."
  (defun obsidian-find-tags (s)
    "Finda all #tags in string."
    (->> (s-match-strings-all "#[[:alnum:]-_=+]+" s)
-	(mapcar 'car)))
+	-flatten))
 
  (defun obsidian-find-tags-in-file (&optional file)
    "Returns all tags in file or current buffer.
