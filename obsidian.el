@@ -153,3 +153,5 @@ the mode, `toggle' toggles the state."
     (obsidian-mode t)))
 
 (add-hook 'markdown-mode-hook #'obsidian-enable-minor-mode)
+
+(provide 'obsidian)
