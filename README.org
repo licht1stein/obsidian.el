@@ -49,6 +49,6 @@ Easy. They are not Emacs. You could probably use some of them as the back-end fo
 The answer is mostly the same for all of them. Mobile. And when choosing what to build — a mobile app for org-roam or an Emacs client for Obsidian, I prefer the latter. A much, much simpler task.
 
 * Gratitude
-- The work on Obsidian.el was made much, much easier and definitely more fun thanks to the great work of [[https://github.com/magnars][Magnar Sveen]] and his packages [[https://github.com/magnars/dash.el][dash.el]] and [[https://github.com/magnars/s.el][s.el]]. Thank you for making Elisp almost as convenient as Clojure!
+- The work on Obsidian.el was made considerably easier and definitely more fun thanks to the great work of [[https://github.com/magnars][Magnar Sveen]] and his packages [[https://github.com/magnars/dash.el][dash.el]] and [[https://github.com/magnars/s.el][s.el]]. Thank you for making Elisp almost as convenient as Clojure!
 
 - During the development of Obsidian.el I have learned and copied from the code of the amazing [[https://github.com/org-roam/org-roam][org-roam]] package. Thank you!
