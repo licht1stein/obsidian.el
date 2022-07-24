@@ -210,8 +210,8 @@ lower and upper case versions of the tags."
       (obsidian-prepare-tags-list)))
 
 (defun obsidian-tags-backend (command &optional arg &rest ignored)
-  "`company-mode' backend for obsidian.el.
-Argument COMMAND company-mode command.
+  "Completion backend for company used by obsidian.el.
+Argument COMMAND company command.
 Optional argument ARG word to complete.
 Optional argument IGNORED this is ignored."
   (interactive (list 'interactive))
