@@ -127,7 +127,8 @@ If FILE is not specified, use the current buffer"
   "Scans entire Obsidian vault and updates all tags for completion."
   (interactive)
   (->> (obsidian-list-all-tags)
-       (setq obsidian-tags-list)))
+       (setq obsidian-tags-list))
+  (message "Obsidian tags updated"))
 
 (-comment
  (obsidian-update-tags-list))
