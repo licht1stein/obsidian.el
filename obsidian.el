@@ -82,7 +82,7 @@ When run interactively asks user to specify the path."
 
 (defun obsidian-not-trash? (file)
   "Return t if FILE is not in .trash of Obsidian."
-  (not (s-contains? "/.trash/" file)))
+  (not (s-contains? "/.trash" file)))
 
 (defun obsidian-file? (&optional file)
   "Return t if FILE is an obsidian.el file, nil otherwise.
@@ -199,7 +199,7 @@ lower and upper case versions of the tags."
 			  (-map (lambda (s) (s-replace "#" "" s)))
 			  (-map 's-downcase)))
 	 (capitalized (-map 's-capitalize lower-case))
-	 (merged (-concat lower-case capitalized)))
+	 (merged (-concat tags lower-case capitalized)))
     (->> merged
 	 (-map (lambda (s) (s-concat "#" s)))
 	 -distinct)))
