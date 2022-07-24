@@ -76,12 +76,11 @@ Obsidian notes files:
    "Returns string contents of a file or current buffer.
 
 If FILE is not specified, use the current buffer."
-   (let* ((text (if file
-		    (with-temp-buffer
-		      (insert-file-contents file)
-		      (buffer-string))
-		  (buffer-substring-no-properties (point-min) (point-max)))))
-     text))
+   (if file
+       (with-temp-buffer
+	 (insert-file-contents file)
+	 (buffer-substring-no-properties (point-min) (point-max)))
+     (buffer-substring-no-properties (point-min) (point-max))))
 
  (defun obsidian-find-tags (s)
    "Finda all #tags in string."
