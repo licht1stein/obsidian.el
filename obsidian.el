@@ -6,7 +6,7 @@
 ;; URL: https://github.com./licht1stein/obsidian.el
 ;; Keywords: obsidian, pkm, convenience
 ;; Version: 1.0.0
-;; Package-Requires: ((emacs "27.1") (company "0.9.13") (s "20210616.619") (dash "2.13"))
+;; Package-Requires: ((emacs "26.1") (company "0.9.13") (s "20210616.619") (dash "2.13"))
 
 ;; This file is NOT part of GNU Emacs.
 
