@@ -4,7 +4,11 @@ During the development of Obsidian.el I have learned and copied from the code of
 
 The purpose is to make an Obsidian Notes comfortably writable in Emacs. Obviously you already can open your Obsidian folder and start creating markdown files with Emacs. Let's try to improve that a little.
 
-* Project Tasks
+* What does Obsidian.el do?
+- [ ] Autocomplete Obsidian tags
+- [ ] Autocomplete Obsidian file links
+
+* Development tasks
 ** TODO General utils
 - [X] Specify Obsidian folder and save it in variables
 - [ ] Enumerate files in the Obsidian folder and save a list
