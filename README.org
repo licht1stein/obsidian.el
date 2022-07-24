@@ -32,10 +32,10 @@ When all of the above is ready we will almost never need the Obsidian app on des
 
 * How does obsidian.el work?
 ** obsidian-mode
-When you require obsidian.el via `use-package` or in other ways (see snippet above), you have to specify the root folder of your Obsidian Notes vault. Once obsidian.el knows the root folder, each time you open a markdown buffer it checks, if that file is part of your Obsidian Notes vault. If it is `obsidian-mode` minor mode is activated for this buffer.
+When you require obsidian.el via ~use-package~ or in other ways (see snippet above), you have to specify the root folder of your Obsidian Notes vault. Once obsidian.el knows the root folder, each time you open a markdown buffer it checks, if that file is part of your Obsidian Notes vault. If it is ~obsidian-mode~ minor mode is activated for this buffer.
 
 ** company-mode completion
-Once the `obsidian-mode` is activated obsidian.el scans all markdown files in the vault for tags and links (links still WIP), and stores these lists in it's global variables. It also adds [[http://company-mode.github.io/][company-mode]] backends to suggest links and tags for completion.
+Once the ~obsidian-mode~ is activated obsidian.el scans all markdown files in the vault for tags and links (links still WIP), and stores these lists in it's global variables. It also adds [[http://company-mode.github.io/][company-mode]] backends to suggest links and tags for completion.
 
 ** Manual re-scan
 You can update the lists of tags, links etc. manually if it's lagging for some reason by running an interactive command:
