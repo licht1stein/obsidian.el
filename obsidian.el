@@ -239,6 +239,7 @@ Optional argument IGNORED this is ignored."
   (message "obsidian.el updated"))
 
 (defun obsidian--request-link ()
+  "Service function to request user for link iput."
   (let* ((all-files (obsidian-list-all-files))
 	 (region (when (org-region-active-p)
 		   (buffer-substring-no-properties (region-beginning) (region-end))))
