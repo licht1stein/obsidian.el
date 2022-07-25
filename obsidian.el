@@ -246,7 +246,7 @@ Optional argument IGNORED this is ignored."
 	 (chosen-file (completing-read "Link: " all-files))
 	 (default-description (-> chosen-file file-name-nondirectory file-name-sans-extension))
 	 (description (read-from-minibuffer "Description: " (or region default-description))))
-    (list :file (file-relative-name chosen-file obsidian-directory) :description description)))
+    (list :file (->> (file-relative-name chosen-file obsidian-directory) (s-replace " " "%20")) :description description)))
 
 (defun obsidian-insert-wikilink ()
   "Insert a link to file in wikiling format."
