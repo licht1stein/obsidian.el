@@ -56,7 +56,7 @@
   :type 'directory)
 
 (defcustom obsidian-inbox-directory nil
-  "Subdir to create notes using obsidian-capture"
+  "Subdir to create notes using `obsidian-capture'."
   :group 'obsidian
   :type 'directory)
 
@@ -268,7 +268,9 @@ Optional argument IGNORED this is ignored."
 	insert)))
 
 (defun obsidian-capture ()
-  "Create new note in the `obsidian-inbox-directory' if set otherwise in `obsidian-directory' root."
+  "Create new obsidian note.
+
+In the `obsidian-inbox-directory' if set otherwise in `obsidian-directory' root."
   (interactive)
   (let* ((title (read-from-minibuffer "Title: "))
 	 (filename (s-concat obsidian-directory "/" obsidian-inbox-directory "/" title ".md"))
