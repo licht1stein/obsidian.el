@@ -3,3 +3,4 @@
 *autoloads.el
 *.elc
 .obsidian
+.DS_Store
