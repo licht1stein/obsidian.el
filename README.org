@@ -73,6 +73,13 @@ Quickly jump between notes using ~obsidian-jump~
   M-x obsidian-jump RET
 #+end_src
 
+** Capturing new note
+Use ~obsidian-capture~. If you specified ~obsidian-inbox-directory~, it will create new notes in this directory. Otherwise in your Obsidian vault root directory:
+
+#+begin_src
+  M-x obsidian-capture RET
+#+end_src
+
 *** Development tasks
 - [X] Specify Obsidian folder and save it in variables
 - [X] Enumerate files in the Obsidian folder and save a list
