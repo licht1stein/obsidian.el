@@ -44,6 +44,22 @@ You can update the lists of tags, links etc. manually if it's lagging for some r
   M-x obsidian-update RET
 #+end_src
 
+** Inserting links
+There are two commands to insert links ~obsidian-insert-link~ and ~obsidian-insert-wikilink~, you can choose one depending on your preferred link format:
+
+*** Inserts a link in Markdown format
+Example: ~[Link description](path/to/file.md)~
+#+begin_src
+  M-x obsidian-insert-link RET
+#+end_src
+
+*** Insert a link in wikilink format
+Example: ~[[path/fo/file.md|Link description]]~
+
+#+begin_src
+  M-x obsidian-insert-wikilink RET
+#+end_src
+
 *** Development tasks
 - [X] Specify Obsidian folder and save it in variables
 - [X] Enumerate files in the Obsidian folder and save a list
@@ -51,6 +67,7 @@ You can update the lists of tags, links etc. manually if it's lagging for some r
 - [X] Functions to scan notes for tags
 - [X] Get full list of all tags
 - [X] company-backend with tags
+- [X] commands to insert links in markdown and wikilink format
 - [ ] Functions to scan notes for links
 - [ ] Capture command to create a new note in Obsidian folder
 - [ ] Database (?) for the scan results

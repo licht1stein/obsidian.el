@@ -236,10 +236,27 @@ Optional argument IGNORED this is ignored."
   (obsidian-update-tags-list)
   (message "obsidian.el updated"))
 
-(-comment
- "[Link](1.md)")
+(defun obsidian--request-link ()
+  (let* ((all-files (obsidian-list-all-files))
+	 (region (when (org-region-active-p)
+		   (buffer-substring-no-properties (region-beginning) (region-end))))
+	 (chosen-file (completing-read "Link: " all-files))
+	 (description (read-from-minibuffer "Description: " region)))
+    (list :file (file-relative-name chosen-file obsidian-directory) :description description)))
 
-(defvar obsidian--link-regex "\\[[[:alnum:]]+\\]\([[:alnum:].]+\)" "Regex to find links in md files")
+(defun obsidian-insert-wikilink ()
+  "Insert a link to file in wikiling format."
+  (interactive)
+  (let* ((file (obsidian--request-link)))
+    (-> (s-concat "[[" (plist-get file :file) "|" (plist-get file :description) "]]")
+	insert)))
+
+(defun obsidian-insert-link ()
+  "Insert a link to file in markdown format."
+  (interactive)
+  (let* ((file (obsidian--request-link)))
+    (-> (s-concat "[" (plist-get file :description) "](" (plist-get file :file) ")")
+	insert)))
 
 (add-hook 'markdown-mode-hook #'obsidian-enable-minor-mode)
 (add-to-list 'company-backends 'obsidian-tags-backend)
