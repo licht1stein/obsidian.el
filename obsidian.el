@@ -277,9 +277,14 @@ In the `obsidian-inbox-directory' if set otherwise in `obsidian-directory' root.
 	 (clean-filename (s-replace "//" "/" filename)))
     (find-file (expand-file-name clean-filename) t)))
 
-(-comment
- (setq obsidian-inbox-directory "Inbox")
- (obsidian-capture))
+(defun obsidian-jump ()
+  "Jump to Obsidian note."
+  (interactive)
+  (let* ((files (obsidian-list-all-files))
+	 (dict (-map (lambda (f) (cons (file-relative-name f obsidian-directory) f)) files))
+	 (choice (completing-read "Jump to: " (-map 'car dict)))
+	 (target (->> dict (-filter (lambda (s) (string= choice (car s)))) car cdr)))
+    (find-file target)))
 
 (add-hook 'markdown-mode-hook #'obsidian-enable-minor-mode)
 (add-to-list 'company-backends 'obsidian-tags-backend)

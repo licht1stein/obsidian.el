@@ -1,6 +1,8 @@
 #+TITLE: Obsidian Notes for Emacs
 Emacs front-end for [[https://obsidian.md/][Obsidian Notes]].
 
+This package is still work in progress, but I think it's ready enough to be used by those who want to use it.
+
 * Install
 Using [[https://github.com/jwiegley/use-package][use-package]] and [[https://github.com/radian-software/straight.el][straight.el]]:
 
@@ -28,7 +30,7 @@ I wanted to work with Obsidian Notes using Emacs. Obviously you already can open
 Obsidian.el must empower us to stay in Emacs for things that make sense in Emacs:
 
 - [X] Creating and editing notes with convenient autocomplete for tags and links (nothing will ever compare to Emacs in terms of editing power)
-- [ ] Jumping between notes
+- [X] Jumping between notes
 - [ ] Searching all notes
 - [ ] Viewing and following backlinks
 
@@ -64,18 +66,25 @@ Example: ~[[path/fo/file.md|Link description]]~
   M-x obsidian-insert-wikilink RET
 #+end_src
 
+** Jumping between notes
+Quickly jump between notes using ~obsidian-jump~
+
+#+begin_src
+  M-x obsidian-jump RET
+#+end_src
+
 *** Development tasks
 - [X] Specify Obsidian folder and save it in variables
 - [X] Enumerate files in the Obsidian folder and save a list
-- [ ] Run the enumeration task in the background (or trigger it when viewing an Obsidian file)
+- [X] Run the scan when entering obsidian-mode
 - [X] Functions to scan notes for tags
 - [X] Get full list of all tags
 - [X] company-backend with tags
-- [X] commands to insert links in markdown and wikilink format
-- [ ] Functions to scan notes for links
-- [ ] Capture command to create a new note in Obsidian folder
-- [ ] Database (?) for the scan results
+- [X] commands to insert links in markdown and wikilink
+- [X] Capture command to create a new note in Obsidian folder
 - [X] Obsidian minor for matching .md files
+- [X] Jumping between notes
+- [ ] Functions to scan notes for links
 
 * Why not?
 ** Obsidian App, Athens Research or any other great app?
