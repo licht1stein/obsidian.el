@@ -6,7 +6,7 @@
 ;; URL: https://github.com./licht1stein/obsidian.el
 ;; Keywords: obsidian, pkm, convenience
 ;; Version: 1.0.0
-;; Package-Requires: ((emacs "27.2") (company "0.9.13") (s "20210616.619") (dash "2.13"))
+;; Package-Requires: ((emacs "27.2") (company "0.9.13") (s "20210616.619") (dash "2.13") (org "9.5.3"))
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -39,6 +39,8 @@
 
 (require 'cl-lib)
 (require 'company)
+
+(require 'org)
 
 ;; Clojure style comment
 (defmacro -comment (&rest _)
@@ -235,6 +237,29 @@ Optional argument IGNORED this is ignored."
   (interactive)
   (obsidian-update-tags-list)
   (message "obsidian.el updated"))
+
+(defun obsidian--request-link ()
+  "Service function to request user for link iput."
+  (let* ((all-files (obsidian-list-all-files))
+	 (region (when (org-region-active-p)
+		   (buffer-substring-no-properties (region-beginning) (region-end))))
+	 (chosen-file (completing-read "Link: " all-files))
+	 (description (read-from-minibuffer "Description: " region)))
+    (list :file (file-relative-name chosen-file obsidian-directory) :description description)))
+
+(defun obsidian-insert-wikilink ()
+  "Insert a link to file in wikiling format."
+  (interactive)
+  (let* ((file (obsidian--request-link)))
+    (-> (s-concat "[[" (plist-get file :file) "|" (plist-get file :description) "]]")
+	insert)))
+
+(defun obsidian-insert-link ()
+  "Insert a link to file in markdown format."
+  (interactive)
+  (let* ((file (obsidian--request-link)))
+    (-> (s-concat "[" (plist-get file :description) "](" (plist-get file :file) ")")
+	insert)))
 
 (add-hook 'markdown-mode-hook #'obsidian-enable-minor-mode)
 (add-to-list 'company-backends 'obsidian-tags-backend)

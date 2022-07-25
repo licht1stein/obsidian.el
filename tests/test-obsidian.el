@@ -42,7 +42,7 @@
   (after-all (obsidian-specify-path obsidian--test--original-dir))
 
   (it "check file count"
-    (expect (length (obsidian-list-all-files)) :to-equal 5)))
+    (expect (length (obsidian-list-all-files)) :to-equal 6)))
 
 (describe "obsidian-find-tags"
   (before-all (obsidian-specify-path obsidian--test-dir))

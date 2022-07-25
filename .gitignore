@@ -2,3 +2,4 @@
 .eldev/
 *autoloads.el
 *.elc
+.obsidian
