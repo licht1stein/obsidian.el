@@ -244,7 +244,8 @@ Optional argument IGNORED this is ignored."
 	 (region (when (org-region-active-p)
 		   (buffer-substring-no-properties (region-beginning) (region-end))))
 	 (chosen-file (completing-read "Link: " all-files))
-	 (description (read-from-minibuffer "Description: " region)))
+	 (default-description (-> chosen-file file-name-nondirectory file-name-sans-extension))
+	 (description (read-from-minibuffer "Description: " (or region default-description))))
     (list :file (file-relative-name chosen-file obsidian-directory) :description description)))
 
 (defun obsidian-insert-wikilink ()
@@ -260,6 +261,9 @@ Optional argument IGNORED this is ignored."
   (let* ((file (obsidian--request-link)))
     (-> (s-concat "[" (plist-get file :description) "](" (plist-get file :file) ")")
 	insert)))
+
+(-comment
+ (obsidian--request-link))
 
 (add-hook 'markdown-mode-hook #'obsidian-enable-minor-mode)
 (add-to-list 'company-backends 'obsidian-tags-backend)
