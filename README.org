@@ -27,7 +27,7 @@ I wanted to work with Obsidian Notes using Emacs. Obviously you already can open
 ** What should be possible to do in Emacs?
 Obsidian.el must empower us to stay in Emacs for things that make sense in Emacs:
 
-- [ ] Creating and editing notes with convenient autocomplete for tags and links (nothing will ever compare to Emacs in terms of editing power)
+- [X] Creating and editing notes with convenient autocomplete for tags and links (nothing will ever compare to Emacs in terms of editing power)
 - [ ] Jumping between notes
 - [ ] Searching all notes
 - [ ] Viewing and following backlinks
