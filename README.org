@@ -28,7 +28,7 @@ I wanted to work with Obsidian Notes using Emacs. Obviously you already can open
 Obsidian.el must empower us to stay in Emacs for things that make sense in Emacs:
 
 - [X] Creating and editing notes with convenient autocomplete for tags and links (nothing will ever compare to Emacs in terms of editing power)
-- [ ] Jumping between notes
+- [X] Jumping between notes
 - [ ] Searching all notes
 - [ ] Viewing and following backlinks
 
@@ -62,6 +62,13 @@ Example: ~[[path/fo/file.md|Link description]]~
 
 #+begin_src
   M-x obsidian-insert-wikilink RET
+#+end_src
+
+** Jumping between notes
+Quickly jump between notes using ~obsidian-jump~
+
+#+begin_src
+  M-x obsidian-jump RET
 #+end_src
 
 *** Development tasks
