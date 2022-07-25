@@ -7,8 +7,12 @@ Using [[https://github.com/jwiegley/use-package][use-package]] and [[https://git
 #+begin_src elisp
   (use-package obsidian
     :straight (:type git :host github :repo "licht1stein/obsidian.el")
-    :config (obsidian-specify-path "~/MY_OBSIDIAN_FOLDER"))
+    :config (obsidian-specify-path "~/MY_OBSIDIAN_FOLDER")
+    :custom
+    (obsidian-inbox-directory "Inbox"))
 #+end_src
+
+Optionally you can specify ~obsidian-inbox-directory~, it will be used by ~obsidian-capture~ to store new notes into. If you don't set it the root folder of your Obsidian vault will be used.
 
 * About Obsidian.el
 
