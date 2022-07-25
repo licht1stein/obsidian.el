@@ -240,13 +240,13 @@ Optional argument IGNORED this is ignored."
 
 (defun obsidian--request-link ()
   "Service function to request user for link iput."
-  (let* ((all-files (obsidian-list-all-files))
+  (let* ((all-files (->> (obsidian-list-all-files) (-map (lambda (f) (file-relative-name f obsidian-directory)))))
 	 (region (when (org-region-active-p)
 		   (buffer-substring-no-properties (region-beginning) (region-end))))
 	 (chosen-file (completing-read "Link: " all-files))
 	 (default-description (-> chosen-file file-name-nondirectory file-name-sans-extension))
 	 (description (read-from-minibuffer "Description: " (or region default-description))))
-    (list :file (->> (file-relative-name chosen-file obsidian-directory) (s-replace " " "%20")) :description description)))
+    (list :file (->> chosen-file (s-replace " " "%20")) :description description)))
 
 (defun obsidian-insert-wikilink ()
   "Insert a link to file in wikiling format."
