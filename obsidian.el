@@ -5,7 +5,7 @@
 ;; Author: Mykhaylo Bilyanskyy
 ;; URL: https://github.com./licht1stein/obsidian.el
 ;; Keywords: obsidian, pkm, convenience
-;; Version: 1.0.0
+;; Version: 1.0.1
 ;; Package-Requires: ((emacs "27.2") (company "0.9.13") (s "1.12.0") (dash "2.13") (org "9.5.3") (markdown-mode "2.6"))
 
 ;; This file is NOT part of GNU Emacs.
@@ -109,6 +109,14 @@ FILE is an Org-roam file if:
 	       (not-trash? (obsidian-not-trash? path))
 	       (not-temp? (not (s-contains? "~" relative-path))))
     t))
+
+(defun obsidian--file-relative-name (f)
+  "Take file name F and return relative path for `obsidian-directory'."
+  (file-relative-name f obsidian-directory))
+
+(defun obsidian--expand-file-name (f)
+  "Take relative file name F and return expanded name."
+  (expand-file-name f obsidian-directory))
 
 (defun obsidian-list-all-files ()
   "Lists all Obsidian Notes files that are not in trash.
@@ -291,10 +299,27 @@ In the `obsidian-inbox-directory' if set otherwise in `obsidian-directory' root.
 (defun obsidian-prepare-file-path (s)
   "Replace %20 with spaces in file path.
 Argument S relative file name to clean and convert to absolute."
-  (expand-file-name (s-replace "%20" " " s) obsidian-directory))
+  (let* ((cleaned-name (s-replace "%20" " " s)))
+    cleaned-name))
+
+(defun obsidian--match-files (f all-files)
+  "Filter ALL-FILES to return matches with the same name as F."
+  (-filter (lambda (el) (s-ends-with? f el)) all-files))
+
+(defun obsidian-find-file (f)
+  "Takes a file name F and either opens directly or offers choice if there are multiple matches."
+  (let* ((all-files (->> (obsidian-list-all-files) (-map #'obsidian--file-relative-name)))
+	 (matches (obsidian--match-files f all-files))
+	 (file (if (> (length matches) 1)
+		   (let* ((choice (completing-read "Jump to: " matches)))
+		     choice)
+		 (car matches))))
+    (-> file obsidian--expand-file-name find-file)))
 
 (obsidian-comment
- (obsidian-prepare-file-path "subdir/1-sub.md"))
+ (obsidian-prepare-file-path "subdir/1-sub.md")
+ (obsidian-find-file "subdir/2-sub.md")
+ (obsidian-find-file "1.md"))
 
 (defun obsidian-wiki-link? ()
   "Return non-nil if `point' is at a true wiki link.
@@ -318,7 +343,7 @@ link name must be available via `match-string'."
 		   s-trim)))
     (if (s-contains? ":" url)
 	(browse-url url)
-      (-> url obsidian-prepare-file-path find-file))))
+      (-> url obsidian-prepare-file-path obsidian-find-file))))
 
 (defun obsidian-follow-markdown-link-at-point ()
   "Find and follow markdown link at point."
@@ -328,7 +353,7 @@ link name must be available via `match-string'."
 	(browse-url normalized)
       (-> normalized
 	  obsidian-prepare-file-path
-	  find-file))))
+	  obsidian-find-file))))
 
 (defun obsidian-follow-link-at-point ()
   "Follow thing at point if possible, such as a reference link or wiki link.
@@ -346,17 +371,17 @@ See `markdown-follow-link-at-point' and
 (add-hook 'markdown-mode-hook #'obsidian-enable-minor-mode)
 (add-to-list 'company-backends #'obsidian-tags-backend)
 
-;; (obsidian-comment
-;;  (use-package obsidian
-;;    :ensure nil
-;;    :config (obsidian-specify-path "./tests/test_vault")
-;;    :custom
-;;    (obsidian-inbox-directory "Inbox")
-;;    :bind (:map obsidian-mode-map
-;; 	       ;; Replace C-c C-o with Obsidian.el's implementation. It's ok to use another key binding.
-;; 	       ("C-c C-o" . obsidian-follow-link-at-point)
-;; 	       ;; If you prefer you can use `obsidian-insert-wikilink'
-;; 	       ("C-c C-l" . obsidian-insert-link))))
+(obsidian-comment
+ (use-package obsidian
+   :ensure nil
+   :config (obsidian-specify-path "./tests/test_vault")
+   :custom
+   (obsidian-inbox-directory "Inbox")
+   :bind (:map obsidian-mode-map
+	       ;; Replace C-c C-o with Obsidian.el's implementation. It's ok to use another key binding.
+	       ("C-c C-o" . obsidian-follow-link-at-point)
+	       ;; If you prefer you can use `obsidian-insert-wikilink'
+	       ("C-c C-l" . obsidian-insert-link))))
 
 (provide 'obsidian)
 ;;; obsidian.el ends here
