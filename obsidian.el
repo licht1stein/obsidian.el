@@ -318,14 +318,14 @@ See `markdown-wiki-link-p' and `markdown-follow-wiki-link'."
   (thing-at-point-looking-at markdown-regex-wiki-link)
   (let* ((url (->> (match-string-no-properties 3)
 		   s-trim)))
-    (if (s-contains? "http" url)
-	(browse-url (pp-to-string url))
+    (if (s-contains? ":" url)
+	(browse-url url)
       (-> url obsidian-prepare-file-path find-file))))
 
 (defun obsidian-follow-markdown-link-at-point (&optional arg)
   (interactive "P")
   (let ((normalized (s-replace "%20" " " (markdown-link-url))))
-    (if (s-contains? "http" normalized)
+    (if (s-contains? ":" normalized)
 	(browse-url normalized)
       (-> normalized
 	  obsidian-prepare-file-path
