@@ -260,15 +260,20 @@ Optional argument IGNORED this is ignored."
 		   (buffer-substring-no-properties (region-beginning) (region-end))))
 	 (chosen-file (completing-read "Link: " all-files))
 	 (default-description (-> chosen-file file-name-nondirectory file-name-sans-extension))
-	 (description (read-from-minibuffer "Description: " (or region default-description))))
+	 (description (read-from-minibuffer "Description (optional): " (or region default-description))))
     (list :file chosen-file :description description)))
 
 (defun obsidian-insert-wikilink ()
   "Insert a link to file in wikiling format."
   (interactive)
-  (let* ((file (obsidian--request-link)))
-    (-> (s-concat "[[" (plist-get file :file) "|" (plist-get file :description) "]]")
-	insert)))
+  (let* ((file (obsidian--request-link))
+	 (filename (plist-get file :file))
+	 (description (plist-get file :description))
+	 (no-ext (file-name-sans-extension filename))
+	 (link (if (and description (not (s-ends-with? description no-ext)))
+		   (s-concat "[[" no-ext "|" description"]]")
+		 (s-concat "[[" no-ext "]]"))))
+    (insert link)))
 
 (defun obsidian-insert-link ()
   "Insert a link to file in markdown format."
@@ -334,6 +339,12 @@ link name must be available via `match-string'."
 	     (not (string-equal (buffer-file-name)
 				(markdown-wiki-link-link)))))))
 
+(defun obsidian-wiki->normal (f)
+  "Add extension to wiki link F if none."
+  (if (file-name-extension f)
+      f
+    (s-concat f ".md")))
+
 (defun obsidian-follow-wiki-link-at-point ()
   "Find Wiki Link at point."
   (interactive)
@@ -343,7 +354,11 @@ link name must be available via `match-string'."
 		   s-trim)))
     (if (s-contains? ":" url)
 	(browse-url url)
-      (-> url obsidian-prepare-file-path obsidian-find-file))))
+      (-> url
+	  obsidian-prepare-file-path
+	  obsidian-wiki->normal
+	  message
+	  obsidian-find-file))))
 
 (defun obsidian-follow-markdown-link-at-point ()
   "Find and follow markdown link at point."
