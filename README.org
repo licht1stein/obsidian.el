@@ -85,7 +85,11 @@ Example: ~[Link description](path/to/file.md)~
   M-x obsidian-insert-link RET
 #+end_src
 
-Note, that when you insert a link to file that has spaces in it's name, like "facts about inserting links.md", Obsidian app would html-format the spaces, meaning the link will become ~[facts](facts%20about%20inserting%20links.md)~. Obsidian.el follows this convention and does the same when inserting markdown links. ~obsidian-follow-link-at-point~ handles this correctly.
+Note, that when you insert a link to file that has spaces in it's name, like "facts about inserting links.md", Obsidian app would html-format the spaces, meaning the link will look like
+
+~[facts](facts%20about%20inserting%20links.md)~
+
+Obsidian.el follows this convention and does the same when inserting markdown links. ~obsidian-follow-link-at-point~ handles this correctly.
 
 *** Insert a link in wikilink format
 Example: ~[[path/fo/file.md|Link description]]~
