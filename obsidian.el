@@ -303,17 +303,17 @@ Argument S relative file name to clean and convert to absolute."
     cleaned-name))
 
 (defun obsidian--match-files (f all-files)
-  "Filter ALL-FILES to return matches with the same name as F."
+  "Filter ALL-FILES to return list with same name as F."
   (-filter (lambda (el) (s-ends-with? f el)) all-files))
 
 (defun obsidian-find-file (f)
-  "Take file F and either opens directly or offer choice if multiple matches."
+  "Take file F and either opens directly or offer choice if multiple match."
   (let* ((all-files (->> (obsidian-list-all-files) (-map #'obsidian--file-relative-name)))
 	 (matches (obsidian--match-files f all-files))
 	 (file (if (> (length matches) 1)
 		   (let* ((choice (completing-read "Jump to: " matches)))
 		     choice)
-		 (car matches))))
+		 f)))
     (-> file obsidian--expand-file-name find-file)))
 
 (obsidian-comment
