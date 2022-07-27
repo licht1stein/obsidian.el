@@ -1,8 +1,6 @@
 #+TITLE: Obsidian Notes for Emacs
 Emacs front-end for [[https://obsidian.md/][Obsidian Notes]].
 
-This package is still work in progress, but I think it's ready enough to be used by those who want to use it.
-
 * Install
 Using [[https://github.com/jwiegley/use-package][use-package]] and [[https://github.com/radian-software/straight.el][straight.el]]:
 
