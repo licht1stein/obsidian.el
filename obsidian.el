@@ -194,7 +194,8 @@ the mode, `toggle' toggles the state."
   ;; The initial value.
   :init-value nil
   :lighter "obs"
-  :after-hook (obsidian-update-tags-list))
+  :after-hook (obsidian-update-tags-list)
+  :keymap (make-sparse-keymap))
 
 (defun obsidian-prepare-tags-list (tags)
   "Prepare a list of TAGS with both lower-case and capitalized versions.
