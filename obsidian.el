@@ -289,7 +289,8 @@ In the `obsidian-inbox-directory' if set otherwise in `obsidian-directory' root.
     (find-file target)))
 
 (defun obsidian-prepare-file-path (s)
-  "Replace %20 with spaces in file path."
+  "Replace %20 with spaces in file path.
+Argument S relative file name to clean and convert to absolute."
   (expand-file-name (s-replace "%20" " " s) obsidian-directory))
 
 (-comment
