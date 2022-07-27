@@ -6,7 +6,7 @@
 ;; URL: https://github.com./licht1stein/obsidian.el
 ;; Keywords: obsidian, pkm, convenience
 ;; Version: 1.0.0
-;; Package-Requires: ((emacs "27.2") (company "0.9.13") (s "20210616.619") (dash "2.13") (org "9.5.3"))
+;; Package-Requires: ((emacs "27.2") (company "0.9.13") (s "20210616.619") (dash "2.13") (org "9.5.3") (markdown-mode "2.6"))
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -41,6 +41,7 @@
 (require 'company)
 
 (require 'org)
+(require 'markdown-mode)
 
 ;; Clojure style comment
 (defmacro -comment (&rest _)
@@ -67,7 +68,7 @@
 
 (defun obsidian-specify-path (&optional path)
   "Specifies obsidian folder PATH to obsidian-folder variable.
-
+n
 When run interactively asks user to specify the path."
   (interactive)
   (->> (or path (read-directory-name "Specify path to Obsidian folder"))
@@ -193,7 +194,8 @@ the mode, `toggle' toggles the state."
   ;; The initial value.
   :init-value nil
   :lighter "obs"
-  :after-hook (obsidian-update-tags-list))
+  :after-hook (obsidian-update-tags-list)
+  :keymap (make-sparse-keymap))
 
 (defun obsidian-prepare-tags-list (tags)
   "Prepare a list of TAGS with both lower-case and capitalized versions.
@@ -251,7 +253,7 @@ Optional argument IGNORED this is ignored."
 	 (chosen-file (completing-read "Link: " all-files))
 	 (default-description (-> chosen-file file-name-nondirectory file-name-sans-extension))
 	 (description (read-from-minibuffer "Description: " (or region default-description))))
-    (list :file (->> chosen-file (s-replace " " "%20")) :description description)))
+    (list :file chosen-file :description description)))
 
 (defun obsidian-insert-wikilink ()
   "Insert a link to file in wikiling format."
@@ -264,7 +266,7 @@ Optional argument IGNORED this is ignored."
   "Insert a link to file in markdown format."
   (interactive)
   (let* ((file (obsidian--request-link)))
-    (-> (s-concat "[" (plist-get file :description) "](" (plist-get file :file) ")")
+    (-> (s-concat "[" (plist-get file :description) "](" (->> (plist-get file :file) (s-replace " " "%20")) ")")
 	insert)))
 
 (defun obsidian-capture ()
@@ -286,8 +288,75 @@ In the `obsidian-inbox-directory' if set otherwise in `obsidian-directory' root.
 	 (target (->> dict (-filter (lambda (s) (string= choice (car s)))) car cdr)))
     (find-file target)))
 
+(defun obsidian-prepare-file-path (s)
+  "Replace %20 with spaces in file path.
+Argument S relative file name to clean and convert to absolute."
+  (expand-file-name (s-replace "%20" " " s) obsidian-directory))
+
+(-comment
+ (obsidian-prepare-file-path "subdir/1-sub.md"))
+
+(defun obsidian-wiki-link? ()
+  "Return non-nil if `point' is at a true wiki link.
+A true wiki link name matches `markdown-regex-wiki-link' but does
+not match the current file name after conversion.  This modifies
+the data returned by `match-data'.  Note that the potential wiki
+link name must be available via `match-string'."
+  (let ((case-fold-search nil))
+    (and (thing-at-point-looking-at markdown-regex-wiki-link)
+	 (not (markdown-code-block-at-point-p))
+	 (or (not buffer-file-name)
+	     (not (string-equal (buffer-file-name)
+				(markdown-wiki-link-link)))))))
+
+(defun obsidian-follow-wiki-link-at-point ()
+  "Find Wiki Link at point."
+  (interactive)
+  ;; (obsidian-wiki-link?)
+  (thing-at-point-looking-at markdown-regex-wiki-link)
+  (let* ((url (->> (match-string-no-properties 3)
+		   s-trim)))
+    (if (s-contains? ":" url)
+	(browse-url url)
+      (-> url obsidian-prepare-file-path find-file))))
+
+(defun obsidian-follow-markdown-link-at-point ()
+  "Find and follow markdown link at point."
+  (interactive)
+  (let ((normalized (s-replace "%20" " " (markdown-link-url))))
+    (if (s-contains? ":" normalized)
+	(browse-url normalized)
+      (-> normalized
+	  obsidian-prepare-file-path
+	  find-file))))
+
+(defun obsidian-follow-link-at-point ()
+  "Follow thing at point if possible, such as a reference link or wiki link.
+Opens inline and reference links in a browser.  Opens wiki links
+to other files in the current window, or the another window if
+ARG is non-nil.
+See `markdown-follow-link-at-point' and
+`markdown-follow-wiki-link-at-point'."
+  (interactive)
+  (cond ((markdown-link-p)
+	 (obsidian-follow-markdown-link-at-point))
+	((obsidian-wiki-link?)
+	 (obsidian-follow-wiki-link-at-point))))
+
 (add-hook 'markdown-mode-hook #'obsidian-enable-minor-mode)
 (add-to-list 'company-backends 'obsidian-tags-backend)
+
+;; (-comment
+;;  (use-package obsidian
+;;    :ensure nil
+;;    :config (obsidian-specify-path "./tests/test_vault")
+;;    :custom
+;;    (obsidian-inbox-directory "Inbox")
+;;    :bind (:map obsidian-mode-map
+;; 	       ;; Replace C-c C-o with Obsidian.el's implementation. It's ok to use another key binding.
+;; 	       ("C-c C-o" . obsidian-follow-link-at-point)
+;; 	       ;; If you prefer you can use `obsidian-insert-wikilink'
+;; 	       ("C-c C-l" . obsidian-insert-link))))
 
 (provide 'obsidian)
 ;;; obsidian.el ends here
