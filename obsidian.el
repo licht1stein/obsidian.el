@@ -6,7 +6,7 @@
 ;; URL: https://github.com./licht1stein/obsidian.el
 ;; Keywords: obsidian, pkm, convenience
 ;; Version: 1.0.0
-;; Package-Requires: ((emacs "27.2") (company "0.9.13") (s "20210616.619") (dash "2.13") (org "9.5.3"))
+;; Package-Requires: ((emacs "27.2") (company "0.9.13") (s "20210616.619") (dash "2.13") (org "9.5.3") (markdown-mode "2.6"))
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -41,6 +41,7 @@
 (require 'company)
 
 (require 'org)
+(require 'markdown-mode)
 
 ;; Clojure style comment
 (defmacro -comment (&rest _)
@@ -251,7 +252,7 @@ Optional argument IGNORED this is ignored."
 	 (chosen-file (completing-read "Link: " all-files))
 	 (default-description (-> chosen-file file-name-nondirectory file-name-sans-extension))
 	 (description (read-from-minibuffer "Description: " (or region default-description))))
-    (list :file (->> chosen-file (s-replace " " "%20")) :description description)))
+    (list :file chosen-file :description description)))
 
 (defun obsidian-insert-wikilink ()
   "Insert a link to file in wikiling format."
@@ -264,7 +265,7 @@ Optional argument IGNORED this is ignored."
   "Insert a link to file in markdown format."
   (interactive)
   (let* ((file (obsidian--request-link)))
-    (-> (s-concat "[" (plist-get file :description) "](" (plist-get file :file) ")")
+    (-> (s-concat "[" (->> (plist-get file :description) (s-replace " " "%20")) "](" (plist-get file :file) ")")
 	insert)))
 
 (defun obsidian-capture ()
@@ -285,6 +286,58 @@ In the `obsidian-inbox-directory' if set otherwise in `obsidian-directory' root.
 	 (choice (completing-read "Jump to: " (-map 'car dict)))
 	 (target (->> dict (-filter (lambda (s) (string= choice (car s)))) car cdr)))
     (find-file target)))
+
+(defun obsidian-prepare-file-path (s)
+  "Replace %20 with spaces in file path."
+  (expand-file-name (s-replace "%20" " " s) obsidian-directory))
+
+(-comment
+ (obsidian-prepare-file-path "subdir/1-sub.md"))
+
+(defun obsidian-wiki-link? ()
+  "Return non-nil if `point' is at a true wiki link.
+A true wiki link name matches `markdown-regex-wiki-link' but does
+not match the current file name after conversion.  This modifies
+the data returned by `match-data'.  Note that the potential wiki
+link name must be available via `match-string'."
+  (let ((case-fold-search nil))
+    (and (thing-at-point-looking-at markdown-regex-wiki-link)
+         (not (markdown-code-block-at-point-p))
+         (or (not buffer-file-name)
+             (not (string-equal (buffer-file-name)
+                                (obsidian-wiki-link-link)))))))
+
+(defun obsidian-follow-wiki-link-at-point (&optional arg)
+  "Find Wiki Link at point.
+With prefix argument ARG, open the file in other window.
+See `markdown-wiki-link-p' and `markdown-follow-wiki-link'."
+  (interactive "P")
+  ;; (obsidian-wiki-link?)
+  (thing-at-point-looking-at obsidian-regex-wiki-link)
+  (let* ((url (->> (match-string-no-properties 0)
+		   (s-replace "[[" "")
+		   (s-replace "]]" "")
+		   (s-split "|")
+		   car
+		   s-trim)))
+    (if (s-contains? "http" url)
+	(browse-url (pp-to-string url))
+      (-> url obsidian-prepare-file-path find-file))))
+
+(defun obsidian-follow-link-at-point (arg)
+  "Follow thing at point if possible, such as a reference link or wiki link.
+Opens inline and reference links in a browser.  Opens wiki links
+to other files in the current window, or the another window if
+ARG is non-nil.
+See `markdown-follow-link-at-point' and
+`markdown-follow-wiki-link-at-point'."
+  (interactive "P")
+  (cond ((markdown-link-p)
+	 (if (s-contains? "http" (markdown-link-url))
+	     (browse-url (markdown-link-url))
+	   (find-file (-> (markdown-link-url) obsidian-prepare-file-path ))))
+        ((obsidian-wiki-link?)
+         (obsidian-follow-wiki-link-at-point arg))))
 
 (add-hook 'markdown-mode-hook #'obsidian-enable-minor-mode)
 (add-to-list 'company-backends 'obsidian-tags-backend)
