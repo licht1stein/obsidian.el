@@ -117,7 +117,7 @@ Use ~obsidian-capture~. If you specified ~obsidian-inbox-directory~, it will cre
 - [X] Capture command to create a new note in Obsidian folder
 - [X] Obsidian minor for matching .md files
 - [X] Jumping between notes
-- [ ] Functions to scan notes for links
+- [X] Following links
 
 * Why obsidian.el and not...
 ** Obsidian App itself, Athens Research or any other great app?
