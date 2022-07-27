@@ -1,4 +1,4 @@
-;;; obsidian.el --- An Emacs interface for Obsidian Notes -*- coding: utf-8; lexical-binding: t; -*-
+;;; obsidian.el --- Obsidian Notes interface -*- coding: utf-8; lexical-binding: t; -*-
 
 ;; Copyright (c) 2022 Mykhaylo Bilyanskyy <mb@blaster.ai>
 
@@ -6,7 +6,7 @@
 ;; URL: https://github.com./licht1stein/obsidian.el
 ;; Keywords: obsidian, pkm, convenience
 ;; Version: 1.0.0
-;; Package-Requires: ((emacs "27.2") (company "0.9.13") (s "20210616.619") (dash "2.13") (org "9.5.3") (markdown-mode "2.6"))
+;; Package-Requires: ((emacs "27.2") (company "0.9.13") (s "1.12.0") (dash "2.13") (org "9.5.3") (markdown-mode "2.6"))
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -44,11 +44,11 @@
 (require 'markdown-mode)
 
 ;; Clojure style comment
-(defmacro -comment (&rest _)
+(defmacro obsidian-comment (&rest _)
   "Ignore body, yield nil."
   nil)
 
-(-comment
+(obsidian-comment
  (package-buffer-info))
 
 (defcustom obsidian-directory nil
@@ -75,7 +75,7 @@ When run interactively asks user to specify the path."
        (expand-file-name)
        (customize-set-value 'obsidian-directory)))
 
-(-comment
+(obsidian-comment
  (obsidian-specify-path)
  "Use the below vault for testing and development"
  (obsidian-specify-path "./tests/test_vault"))
@@ -85,8 +85,8 @@ When run interactively asks user to specify the path."
 (defun obsidian-descendant-of-p (a b)
   "Return t if A is descendant of B."
   (unless (equal (file-truename a) (file-truename b))
-    (string-prefix-p (replace-regexp-in-string "^\\([A-Za-z]\\):" 'downcase (expand-file-name b) t t)
-		     (replace-regexp-in-string "^\\([A-Za-z]\\):" 'downcase (expand-file-name a) t t))))
+    (string-prefix-p (replace-regexp-in-string "^\\([A-Za-z]\\):" #'downcase (expand-file-name b) t t)
+		     (replace-regexp-in-string "^\\([A-Za-z]\\):" #'downcase (expand-file-name a) t t))))
 
 (defun obsidian-not-trash? (file)
   "Return t if FILE is not in .trash of Obsidian."
@@ -116,9 +116,9 @@ FILE is an Org-roam file if:
 Obsidian notes files:
 - Pass the `obsidian-file?' check"
   (->> (directory-files-recursively obsidian-directory "\.*$")
-       (-filter 'obsidian-file?)))
+       (-filter #'obsidian-file?)))
 
-(-comment
+(obsidian-comment
  "#tag1 #tag2"
 
  (setq sample-file "~/Sync/Zettelkasten/Literature/Самадхи у Кинга.md")
@@ -149,7 +149,7 @@ Argument S string to find tags in."
   (when (s-match obsidian--tag-regex s)
     t))
 
-(-comment
+(obsidian-comment
  (obsidian-tag? "#foo"))
 
 (defun obsidian-find-tags-in-file (&optional file)
@@ -163,11 +163,11 @@ If FILE is not specified, use the current buffer"
 (defun obsidian-list-all-tags ()
   "Find all tags in all obsidian files."
   (->> (obsidian-list-all-files)
-       (mapcar 'obsidian-find-tags-in-file)
+       (mapcar #'obsidian-find-tags-in-file)
        -flatten
        -distinct))
 
-(-comment
+(obsidian-comment
  (obsidian-read-file-or-buffer)
  (obsidian-read-file-or-buffer sample-file)
  (obsidian-find-tags "foo #foo # #тэг-такой spam") ;; => ("#foo" "#тэг-такой")
@@ -181,7 +181,7 @@ If FILE is not specified, use the current buffer"
        (setq obsidian--tags-list))
   (message "Obsidian tags updated"))
 
-(-comment
+(obsidian-comment
  (obsidian-update-tags-list))
 
 (define-minor-mode obsidian-mode
@@ -206,14 +206,14 @@ at the start of the sentence.  This function allows completion with both
 lower and upper case versions of the tags."
   (let* ((lower-case (->> tags
 			  (-map (lambda (s) (s-replace "#" "" s)))
-			  (-map 's-downcase)))
-	 (capitalized (-map 's-capitalize lower-case))
+			  (-map #'s-downcase)))
+	 (capitalized (-map #'s-capitalize lower-case))
 	 (merged (-concat tags lower-case capitalized)))
     (->> merged
 	 (-map (lambda (s) (s-concat "#" s)))
 	 -distinct)))
 
-(-comment
+(obsidian-comment
  (->> (obsidian-list-all-tags)
       (obsidian-prepare-tags-list)))
 
@@ -284,7 +284,7 @@ In the `obsidian-inbox-directory' if set otherwise in `obsidian-directory' root.
   (interactive)
   (let* ((files (obsidian-list-all-files))
 	 (dict (-map (lambda (f) (cons (file-relative-name f obsidian-directory) f)) files))
-	 (choice (completing-read "Jump to: " (-map 'car dict)))
+	 (choice (completing-read "Jump to: " (-map #'car dict)))
 	 (target (->> dict (-filter (lambda (s) (string= choice (car s)))) car cdr)))
     (find-file target)))
 
@@ -293,7 +293,7 @@ In the `obsidian-inbox-directory' if set otherwise in `obsidian-directory' root.
 Argument S relative file name to clean and convert to absolute."
   (expand-file-name (s-replace "%20" " " s) obsidian-directory))
 
-(-comment
+(obsidian-comment
  (obsidian-prepare-file-path "subdir/1-sub.md"))
 
 (defun obsidian-wiki-link? ()
@@ -344,9 +344,9 @@ See `markdown-follow-link-at-point' and
 	 (obsidian-follow-wiki-link-at-point))))
 
 (add-hook 'markdown-mode-hook #'obsidian-enable-minor-mode)
-(add-to-list 'company-backends 'obsidian-tags-backend)
+(add-to-list 'company-backends #'obsidian-tags-backend)
 
-;; (-comment
+;; (obsidian-comment
 ;;  (use-package obsidian
 ;;    :ensure nil
 ;;    :config (obsidian-specify-path "./tests/test_vault")
