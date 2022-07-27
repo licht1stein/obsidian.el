@@ -4,3 +4,4 @@
 *.elc
 .obsidian
 .DS_Store
+tmp/

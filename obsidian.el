@@ -85,8 +85,8 @@ When run interactively asks user to specify the path."
 (defun obsidian-descendant-of-p (a b)
   "Return t if A is descendant of B."
   (unless (equal (file-truename a) (file-truename b))
-    (string-prefix-p (replace-regexp-in-string "^\\([A-Za-z]\\):" 'downcase (expand-file-name b) t t)
-		     (replace-regexp-in-string "^\\([A-Za-z]\\):" 'downcase (expand-file-name a) t t))))
+    (string-prefix-p (replace-regexp-in-string "^\\([A-Za-z]\\):" #'downcase (expand-file-name b) t t)
+		     (replace-regexp-in-string "^\\([A-Za-z]\\):" #'downcase (expand-file-name a) t t))))
 
 (defun obsidian-not-trash? (file)
   "Return t if FILE is not in .trash of Obsidian."
@@ -116,7 +116,7 @@ FILE is an Org-roam file if:
 Obsidian notes files:
 - Pass the `obsidian-file?' check"
   (->> (directory-files-recursively obsidian-directory "\.*$")
-       (-filter 'obsidian-file?)))
+       (-filter #'obsidian-file?)))
 
 (-comment
  "#tag1 #tag2"
@@ -163,7 +163,7 @@ If FILE is not specified, use the current buffer"
 (defun obsidian-list-all-tags ()
   "Find all tags in all obsidian files."
   (->> (obsidian-list-all-files)
-       (mapcar 'obsidian-find-tags-in-file)
+       (mapcar #'obsidian-find-tags-in-file)
        -flatten
        -distinct))
 
@@ -206,8 +206,8 @@ at the start of the sentence.  This function allows completion with both
 lower and upper case versions of the tags."
   (let* ((lower-case (->> tags
 			  (-map (lambda (s) (s-replace "#" "" s)))
-			  (-map 's-downcase)))
-	 (capitalized (-map 's-capitalize lower-case))
+			  (-map #'s-downcase)))
+	 (capitalized (-map #'s-capitalize lower-case))
 	 (merged (-concat tags lower-case capitalized)))
     (->> merged
 	 (-map (lambda (s) (s-concat "#" s)))
@@ -284,7 +284,7 @@ In the `obsidian-inbox-directory' if set otherwise in `obsidian-directory' root.
   (interactive)
   (let* ((files (obsidian-list-all-files))
 	 (dict (-map (lambda (f) (cons (file-relative-name f obsidian-directory) f)) files))
-	 (choice (completing-read "Jump to: " (-map 'car dict)))
+	 (choice (completing-read "Jump to: " (-map #'car dict)))
 	 (target (->> dict (-filter (lambda (s) (string= choice (car s)))) car cdr)))
     (find-file target)))
 
@@ -344,7 +344,7 @@ See `markdown-follow-link-at-point' and
 	 (obsidian-follow-wiki-link-at-point))))
 
 (add-hook 'markdown-mode-hook #'obsidian-enable-minor-mode)
-(add-to-list 'company-backends 'obsidian-tags-backend)
+(add-to-list 'company-backends #'obsidian-tags-backend)
 
 ;; (-comment
 ;;  (use-package obsidian
