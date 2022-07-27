@@ -313,7 +313,7 @@ Argument S relative file name to clean and convert to absolute."
 	 (file (if (> (length matches) 1)
 		   (let* ((choice (completing-read "Jump to: " matches)))
 		     choice)
-		 (car matches))))
+		 f)))
     (-> file obsidian--expand-file-name find-file)))
 
 (obsidian-comment
