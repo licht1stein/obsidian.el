@@ -7,7 +7,7 @@
 
 (describe "-comment macro"
   (it "-comment macro expands to nil"
-    (expect (-comment (+ 1 1)) :to-equal nil)))
+    (expect (obsidian-comment (+ 1 1)) :to-equal nil)))
 
 (describe "check path setting"
   (before-all (obsidian-specify-path obsidian--test-dir))
