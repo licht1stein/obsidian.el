@@ -87,7 +87,9 @@ Example: ~[Link description](path/to/file.md)~
 
 Note, that when you insert a link to file that has spaces in it's name, like "facts about inserting links.md", Obsidian app would html-format the spaces, meaning the link will look like
 
-~[facts](facts%20about%20inserting%20links.md)~
+#+begin_src markdown
+  [facts](facts%20about%20inserting%20links.md)
+#+end_src
 
 Obsidian.el follows this convention and does the same when inserting markdown links. ~obsidian-follow-link-at-point~ handles this correctly.
 
