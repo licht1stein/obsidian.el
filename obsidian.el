@@ -307,7 +307,7 @@ Argument S relative file name to clean and convert to absolute."
   (-filter (lambda (el) (s-ends-with? f el)) all-files))
 
 (defun obsidian-find-file (f)
-  "Takes a file name F and either opens directly or offers choice if there are multiple matches."
+  "Take file F and either opens directly or offer choice if multiple matches."
   (let* ((all-files (->> (obsidian-list-all-files) (-map #'obsidian--file-relative-name)))
 	 (matches (obsidian--match-files f all-files))
 	 (file (if (> (length matches) 1)
@@ -371,17 +371,17 @@ See `markdown-follow-link-at-point' and
 (add-hook 'markdown-mode-hook #'obsidian-enable-minor-mode)
 (add-to-list 'company-backends #'obsidian-tags-backend)
 
-(obsidian-comment
- (use-package obsidian
-   :ensure nil
-   :config (obsidian-specify-path "./tests/test_vault")
-   :custom
-   (obsidian-inbox-directory "Inbox")
-   :bind (:map obsidian-mode-map
-	       ;; Replace C-c C-o with Obsidian.el's implementation. It's ok to use another key binding.
-	       ("C-c C-o" . obsidian-follow-link-at-point)
-	       ;; If you prefer you can use `obsidian-insert-wikilink'
-	       ("C-c C-l" . obsidian-insert-link))))
+;; (obsidian-comment
+;;  (use-package obsidian
+;;    :ensure nil
+;;    :config (obsidian-specify-path "./tests/test_vault")
+;;    :custom
+;;    (obsidian-inbox-directory "Inbox")
+;;    :bind (:map obsidian-mode-map
+;; 	       ;; Replace C-c C-o with Obsidian.el's implementation. It's ok to use another key binding.
+;; 	       ("C-c C-o" . obsidian-follow-link-at-point)
+;; 	       ;; If you prefer you can use `obsidian-insert-wikilink'
+;; 	       ("C-c C-l" . obsidian-insert-link))))
 
 (provide 'obsidian)
 ;;; obsidian.el ends here
