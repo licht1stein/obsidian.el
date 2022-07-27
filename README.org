@@ -67,7 +67,7 @@ Note that the Obsidian app replaces spaces with ~%20~ when inserting markdown li
 #+begin_src markdown
   Markdown link with spaces: [2-sub with spaces and буквы](subdir/2-sub%20with%20spaces%20and%20буквы.md)
 
-  Wikilink with spaces: [[Subdir/2-sub with spaces and буквы.md|2-sub with spaces and буквы]]
+  Wikilink with spaces: [[Subdir/2-sub with spaces and буквы]]
 #+end_src
 
 Both these types of links are correctly handled by ~obsidian-follow-link-at-point~.
