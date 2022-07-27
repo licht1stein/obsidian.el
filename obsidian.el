@@ -304,16 +304,14 @@ the data returned by `match-data'.  Note that the potential wiki
 link name must be available via `match-string'."
   (let ((case-fold-search nil))
     (and (thing-at-point-looking-at markdown-regex-wiki-link)
-         (not (markdown-code-block-at-point-p))
-         (or (not buffer-file-name)
-             (not (string-equal (buffer-file-name)
-                                (markdown-wiki-link-link)))))))
+	 (not (markdown-code-block-at-point-p))
+	 (or (not buffer-file-name)
+	     (not (string-equal (buffer-file-name)
+				(markdown-wiki-link-link)))))))
 
-(defun obsidian-follow-wiki-link-at-point (&optional arg)
-  "Find Wiki Link at point.
-With prefix argument ARG, open the file in other window.
-See `markdown-wiki-link-p' and `markdown-follow-wiki-link'."
-  (interactive "P")
+(defun obsidian-follow-wiki-link-at-point ()
+  "Find Wiki Link at point."
+  (interactive)
   ;; (obsidian-wiki-link?)
   (thing-at-point-looking-at markdown-regex-wiki-link)
   (let* ((url (->> (match-string-no-properties 3)
@@ -322,8 +320,9 @@ See `markdown-wiki-link-p' and `markdown-follow-wiki-link'."
 	(browse-url url)
       (-> url obsidian-prepare-file-path find-file))))
 
-(defun obsidian-follow-markdown-link-at-point (&optional arg)
-  (interactive "P")
+(defun obsidian-follow-markdown-link-at-point ()
+  "Find and follow markdown link at point."
+  (interactive)
   (let ((normalized (s-replace "%20" " " (markdown-link-url))))
     (if (s-contains? ":" normalized)
 	(browse-url normalized)
@@ -331,33 +330,33 @@ See `markdown-wiki-link-p' and `markdown-follow-wiki-link'."
 	  obsidian-prepare-file-path
 	  find-file))))
 
-(defun obsidian-follow-link-at-point (arg)
+(defun obsidian-follow-link-at-point ()
   "Follow thing at point if possible, such as a reference link or wiki link.
 Opens inline and reference links in a browser.  Opens wiki links
 to other files in the current window, or the another window if
 ARG is non-nil.
 See `markdown-follow-link-at-point' and
 `markdown-follow-wiki-link-at-point'."
-  (interactive "P")
+  (interactive)
   (cond ((markdown-link-p)
 	 (obsidian-follow-markdown-link-at-point))
-        ((obsidian-wiki-link?)
-         (obsidian-follow-wiki-link-at-point arg))))
+	((obsidian-wiki-link?)
+	 (obsidian-follow-wiki-link-at-point))))
 
 (add-hook 'markdown-mode-hook #'obsidian-enable-minor-mode)
 (add-to-list 'company-backends 'obsidian-tags-backend)
 
-(-comment
- (use-package obsidian
-   :ensure nil
-   :config (obsidian-specify-path "./tests/test_vault")
-   :custom
-   (obsidian-inbox-directory "Inbox")
-   :bind (:map obsidian-mode-map
-	       ;; Replace C-c C-o with Obsidian.el's implementation. It's ok to use another key binding.
-	       ("C-c C-o" . obsidian-follow-link-at-point)
-	       ;; If you prefer you can use `obsidian-insert-wikilink'
-	       ("C-c C-l" . obsidian-insert-link))))
+;; (-comment
+;;  (use-package obsidian
+;;    :ensure nil
+;;    :config (obsidian-specify-path "./tests/test_vault")
+;;    :custom
+;;    (obsidian-inbox-directory "Inbox")
+;;    :bind (:map obsidian-mode-map
+;; 	       ;; Replace C-c C-o with Obsidian.el's implementation. It's ok to use another key binding.
+;; 	       ("C-c C-o" . obsidian-follow-link-at-point)
+;; 	       ;; If you prefer you can use `obsidian-insert-wikilink'
+;; 	       ("C-c C-l" . obsidian-insert-link))))
 
 (provide 'obsidian)
 ;;; obsidian.el ends here
