@@ -68,7 +68,7 @@
 
 (defun obsidian-specify-path (&optional path)
   "Specifies obsidian folder PATH to obsidian-folder variable.
-
+n
 When run interactively asks user to specify the path."
   (interactive)
   (->> (or path (read-directory-name "Specify path to Obsidian folder"))
@@ -266,7 +266,7 @@ Optional argument IGNORED this is ignored."
   "Insert a link to file in markdown format."
   (interactive)
   (let* ((file (obsidian--request-link)))
-    (-> (s-concat "[" (->> (plist-get file :description) (s-replace " " "%20")) "](" (plist-get file :file) ")")
+    (-> (s-concat "[" (plist-get file :description) "](" (->> (plist-get file :file) (s-replace " " "%20")) ")")
 	insert)))
 
 (defun obsidian-capture ()
@@ -307,7 +307,7 @@ link name must be available via `match-string'."
          (not (markdown-code-block-at-point-p))
          (or (not buffer-file-name)
              (not (string-equal (buffer-file-name)
-                                (obsidian-wiki-link-link)))))))
+                                (markdown-wiki-link-link)))))))
 
 (defun obsidian-follow-wiki-link-at-point (&optional arg)
   "Find Wiki Link at point.
@@ -315,16 +315,21 @@ With prefix argument ARG, open the file in other window.
 See `markdown-wiki-link-p' and `markdown-follow-wiki-link'."
   (interactive "P")
   ;; (obsidian-wiki-link?)
-  (thing-at-point-looking-at obsidian-regex-wiki-link)
-  (let* ((url (->> (match-string-no-properties 0)
-		   (s-replace "[[" "")
-		   (s-replace "]]" "")
-		   (s-split "|")
-		   car
+  (thing-at-point-looking-at markdown-regex-wiki-link)
+  (let* ((url (->> (match-string-no-properties 3)
 		   s-trim)))
     (if (s-contains? "http" url)
 	(browse-url (pp-to-string url))
       (-> url obsidian-prepare-file-path find-file))))
+
+(defun obsidian-follow-markdown-link-at-point (&optional arg)
+  (interactive "P")
+  (let ((normalized (s-replace "%20" " " (markdown-link-url))))
+    (if (s-contains? "http" normalized)
+	(browse-url normalized)
+      (-> normalized
+	  obsidian-prepare-file-path
+	  find-file))))
 
 (defun obsidian-follow-link-at-point (arg)
   "Follow thing at point if possible, such as a reference link or wiki link.
@@ -335,14 +340,24 @@ See `markdown-follow-link-at-point' and
 `markdown-follow-wiki-link-at-point'."
   (interactive "P")
   (cond ((markdown-link-p)
-	 (if (s-contains? "http" (markdown-link-url))
-	     (browse-url (markdown-link-url))
-	   (find-file (-> (markdown-link-url) obsidian-prepare-file-path ))))
+	 (obsidian-follow-markdown-link-at-point))
         ((obsidian-wiki-link?)
          (obsidian-follow-wiki-link-at-point arg))))
 
 (add-hook 'markdown-mode-hook #'obsidian-enable-minor-mode)
 (add-to-list 'company-backends 'obsidian-tags-backend)
+
+(-comment
+ (use-package obsidian
+   :ensure nil
+   :config (obsidian-specify-path "./tests/test_vault")
+   :custom
+   (obsidian-inbox-directory "Inbox")
+   :bind (:map obsidian-mode-map
+	       ;; Replace C-c C-o with Obsidian.el's implementation. It's ok to use another key binding.
+	       ("C-c C-o" . obsidian-follow-link-at-point)
+	       ;; If you prefer you can use `obsidian-insert-wikilink'
+	       ("C-c C-l" . obsidian-insert-link))))
 
 (provide 'obsidian)
 ;;; obsidian.el ends here
