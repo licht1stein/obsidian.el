@@ -36,6 +36,7 @@ Obsidian.el must empower us to stay in Emacs for things that make sense in Emacs
 - [X] Creating and editing notes with convenient autocomplete for tags and links (nothing will ever compare to Emacs in terms of editing power)
 - [X] Jumping between notes
 - [X] Searching all notes
+- [X] Finding all notes with a tag
 - [ ] Viewing and following backlinks
 
 When all of the above is ready we will almost never need the Obsidian app on desktop, but will still be able to use it on mobile or when specifically needed.
@@ -121,6 +122,13 @@ User ~obsidian-search~~ to look for a string or a regular expression:
 
 #+begin_src
   M-x obsidian-search RET query RET
+#+end_src
+
+** Finding all notes with a tag
+Use ~obsidian-tag-find~ to list all notes that contain a tag. Let's you choose a tag from list of all tags:
+
+#+begin_src
+  M-x obsidian-tag-find RET
 #+end_src
 
 *** Development tasks
