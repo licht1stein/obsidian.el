@@ -53,10 +53,6 @@
 (obsidian-comment
  (package-buffer-info))
 
-(defgroup obsidian nil
-  "Work with Obsidian Notes in Emacs."
-  :prefix "obsidian-")
-
 (defcustom obsidian-directory nil
   "Path to Obsidian Notes vault."
   :group 'obsidian
