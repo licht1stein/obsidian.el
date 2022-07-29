@@ -401,6 +401,7 @@ See `markdown-follow-link-at-point' and
 (defun obsidian-tag-find ()
   "Find all notes with a tag."
   (interactive)
+  (obsidian-update-tags-list)
   (let* ((tag (completing-read "Select tag: " (->> obsidian--tags-list (-map 's-downcase) -distinct (-sort 'string-lessp))))
 	 (results (obsidian--grep tag))
 	 (choice (completing-read "Select file: " results)))
