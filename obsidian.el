@@ -5,8 +5,8 @@
 ;; Author: Mykhaylo Bilyanskyy
 ;; URL: https://github.com./licht1stein/obsidian.el
 ;; Keywords: obsidian, pkm, convenience
-;; Version: 1.0.2
-;; Package-Requires: ((emacs "27.2") (company "0.9.13") (s "1.12.0") (dash "2.13") (org "9.5.3") (markdown-mode "2.6"))
+;; Version: 1.0.3
+;; Package-Requires: ((emacs "27.2") (company "0.9.13") (s "1.12.0") (dash "2.13") (org "9.5.3") (markdown-mode "2.6") (elgrep "20211221.852"))
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -42,6 +42,8 @@
 
 (require 'org)
 (require 'markdown-mode)
+
+(require 'elgrep)
 
 ;; Clojure style comment
 (defmacro obsidian-comment (&rest _)
@@ -386,6 +388,19 @@ See `markdown-follow-link-at-point' and
 	 (obsidian-follow-markdown-link-at-point))
 	((obsidian-wiki-link?)
 	 (obsidian-follow-wiki-link-at-point))))
+
+(defun obsidian--grep (re)
+  "Find RE in the Obsidian vault."
+  (elgrep obsidian-directory "\.md" re :recursive t :case-fold-search t :exclude-file-re "~"))
+
+(defun obsidian-search ()
+  "Search Obsidian vault for input."
+  (interactive)
+  (let* ((query (-> (read-from-minibuffer "Search query or regex: ")))
+	 (results (obsidian--grep query)))
+    (message (s-concat "Found " (pp-to-string (length results)) " matches"))
+    (let* ((choice (completing-read "Select file: " results)))
+      (obsidian-find-file choice))))
 
 (add-hook 'markdown-mode-hook #'obsidian-enable-minor-mode)
 (add-to-list 'company-backends #'obsidian-tags-backend)
