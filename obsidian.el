@@ -237,16 +237,16 @@ Optional argument IGNORED this is ignored."
   (cl-case command
     (interactive (company-begin-backend 'obsidian-tags-backend))
     (prefix (when (and
-		   (-contains? local-minor-modes 'obsidian-mode)
+		   (-contains-p local-minor-modes 'obsidian-mode)
 		   (looking-back obsidian--tag-regex nil))
 	      (match-string 0)))
     (candidates (->> obsidian--tags-list
 		     obsidian-prepare-tags-list
-		     (-filter (lambda (s) (s-starts-with? arg s)))))))
+		     (-filter (lambda (s) (s-starts-with-p arg s)))))))
 
 (defun obsidian-enable-minor-mode ()
-  "Check if current buffer is an `obsidian-file?' and enable minor `obsidian-mode'."
-  (when (obsidian-file?)
+  "Check if current buffer is an `obsidian-file-p' and enable minor `obsidian-mode'."
+  (when (obsidian-file-p)
     (obsidian-mode t)))
 
 (defun obsidian-update ()
@@ -272,7 +272,7 @@ Optional argument IGNORED this is ignored."
 	 (filename (plist-get file :file))
 	 (description (plist-get file :description))
 	 (no-ext (file-name-sans-extension filename))
-	 (link (if (and description (not (s-ends-with? description no-ext)))
+	 (link (if (and description (not (s-ends-with-p description no-ext)))
 		   (s-concat "[[" no-ext "|" description"]]")
 		 (s-concat "[[" no-ext "]]"))))
     (insert link)))
@@ -311,7 +311,7 @@ Argument S relative file name to clean and convert to absolute."
 
 (defun obsidian--match-files (f all-files)
   "Filter ALL-FILES to return list with same name as F."
-  (-filter (lambda (el) (s-ends-with? f el)) all-files))
+  (-filter (lambda (el) (s-ends-with-p f el)) all-files))
 
 (defun obsidian-find-file (f)
   "Take file F and either opens directly or offer choice if multiple match."
@@ -328,7 +328,7 @@ Argument S relative file name to clean and convert to absolute."
  (obsidian-find-file "subdir/2-sub.md")
  (obsidian-find-file "1.md"))
 
-(defun obsidian-wiki-link? ()
+(defun obsidian-wiki-link-p ()
   "Return non-nil if `point' is at a true wiki link.
 A true wiki link name matches `markdown-regex-wiki-link' but does
 not match the current file name after conversion.  This modifies
@@ -350,11 +350,11 @@ link name must be available via `match-string'."
 (defun obsidian-follow-wiki-link-at-point ()
   "Find Wiki Link at point."
   (interactive)
-  ;; (obsidian-wiki-link?)
+  ;; (obsidian-wiki-link-p)
   (thing-at-point-looking-at markdown-regex-wiki-link)
   (let* ((url (->> (match-string-no-properties 3)
 		   s-trim)))
-    (if (s-contains? ":" url)
+    (if (s-contains-p ":" url)
 	(browse-url url)
       (-> url
 	  obsidian-prepare-file-path
@@ -366,7 +366,7 @@ link name must be available via `match-string'."
   "Find and follow markdown link at point."
   (interactive)
   (let ((normalized (s-replace "%20" " " (markdown-link-url))))
-    (if (s-contains? ":" normalized)
+    (if (s-contains-p ":" normalized)
 	(browse-url normalized)
       (-> normalized
 	  obsidian-prepare-file-path
@@ -382,7 +382,7 @@ See `markdown-follow-link-at-point' and
   (interactive)
   (cond ((markdown-link-p)
 	 (obsidian-follow-markdown-link-at-point))
-	((obsidian-wiki-link?)
+	((obsidian-wiki-link-p)
 	 (obsidian-follow-wiki-link-at-point))))
 
 (defun obsidian--grep (re)
