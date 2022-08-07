@@ -408,7 +408,7 @@ See `markdown-follow-link-at-point' and
     (obsidian-find-file choice)))
 
 (add-hook 'markdown-mode-hook #'obsidian-enable-minor-mode)
-(add-to-list 'company-backends #'obsidian-tags-backend)
+(add-to-list 'company-backends 'obsidian-tags-backend)
 
 ;; (obsidian-comment
 ;;  (use-package obsidian
