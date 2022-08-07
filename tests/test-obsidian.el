@@ -26,16 +26,16 @@
   (it "also include files in trash"
     (expect (obsidian-descendant-of-p "./tests/test_vault/.trash/trash.md" obsidian-directory) :to-be t)))
 
-(describe "obsidian-file?"
+(describe "obsidian-file-p"
   (before-all (obsidian-specify-path obsidian--test-dir))
   (after-all (obsidian-specify-path obsidian--test--original-dir))
 
   (it "include files right in vault"
-    (expect (obsidian-file? "./tests/test_vault/1.md") :to-be t))
+    (expect (obsidian-file-p "./tests/test_vault/1.md") :to-be t))
   (it "include files in subdirs"
-    (expect (obsidian-file? "./tests/test_vault/subdir/1-sub.md") :to-be t))
+    (expect (obsidian-file-p "./tests/test_vault/subdir/1-sub.md") :to-be t))
   (it "exclude files in trash"
-    (expect (obsidian-file? "./tests/test_vault/.trash/trash.md") :to-be nil)))
+    (expect (obsidian-file-p "./tests/test_vault/.trash/trash.md") :to-be nil)))
 
 (describe "obsidian-list-all-files"
   (before-all (obsidian-specify-path obsidian--test-dir))

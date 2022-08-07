@@ -6,7 +6,7 @@
 ;; URL: https://github.com./licht1stein/obsidian.el
 ;; Keywords: obsidian, pkm, convenience
 ;; Version: 1.0.4
-;; Package-Requires: ((emacs "27.2") (company "0.9.13") (s "1.12.0") (dash "2.13") (org "9.5.3") (markdown-mode "2.6") (elgrep "20211221.852"))
+;; Package-Requires: ((emacs "27.2") (company "0.9.13") (s "1.12.0") (dash "2.13") (org "9.5.3") (markdown-mode "2.6") (elgrep "1.0.0"))
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -90,11 +90,11 @@ When run interactively asks user to specify the path."
     (string-prefix-p (replace-regexp-in-string "^\\([A-Za-z]\\):" #'downcase (expand-file-name b) t t)
 		     (replace-regexp-in-string "^\\([A-Za-z]\\):" #'downcase (expand-file-name a) t t))))
 
-(defun obsidian-not-trash? (file)
+(defun obsidian-not-trash-p (file)
   "Return t if FILE is not in .trash of Obsidian."
-  (not (s-contains? "/.trash" file)))
+  (not (s-contains-p "/.trash" file)))
 
-(defun obsidian-file? (&optional file)
+(defun obsidian-file-p (&optional file)
   "Return t if FILE is an obsidian.el file, nil otherwise.
 
 If FILE is not specified, use the current buffer's file-path.
@@ -106,10 +106,10 @@ FILE is an Org-roam file if:
   (-when-let* ((path (or file (-> (buffer-base-buffer) buffer-file-name)))
 	       (relative-path (file-relative-name path obsidian-directory))
 	       (ext (file-name-extension relative-path))
-	       (md? (string= ext "md"))
-	       (obsidian-dir? (obsidian-descendant-of-p path obsidian-directory))
-	       (not-trash? (obsidian-not-trash? path))
-	       (not-temp? (not (s-contains? "~" relative-path))))
+	       (md-p (string= ext "md"))
+	       (obsidian-dir-p (obsidian-descendant-of-p path obsidian-directory))
+	       (not-trash-p (obsidian-not-trash-p path))
+	       (not-temp-p (not (s-contains-p "~" relative-path))))
     t))
 
 (defun obsidian--file-relative-name (f)
@@ -124,18 +124,18 @@ FILE is an Org-roam file if:
   "Lists all Obsidian Notes files that are not in trash.
 
 Obsidian notes files:
-- Pass the `obsidian-file?' check"
+- Pass the `obsidian-file-p' check"
   (->> (directory-files-recursively obsidian-directory "\.*$")
-       (-filter #'obsidian-file?)))
+       (-filter #'obsidian-file-p)))
 
 (obsidian-comment
  "#tag1 #tag2"
 
  (setq sample-file "~/Sync/Zettelkasten/Literature/Самадхи у Кинга.md")
  (obsidian-descendant-of-p sample-file obsidian-directory) ;; => t
- (obsidian-file?)					   ;; => nil
- (obsidian-file? "~/Sync/Zettelkasten/Literature/Самадхи у Кинга.md") ;; => t
- (obsidian-file? "~/Sync/Zettelkasten/.trash/2021-10-26.md") ;; => nil
+ (obsidian-file-p)					   ;; => nil
+ (obsidian-file-p "~/Sync/Zettelkasten/Literature/Самадхи у Кинга.md") ;; => t
+ (obsidian-file-p "~/Sync/Zettelkasten/.trash/2021-10-26.md") ;; => nil
  )
 
 (defun obsidian-read-file-or-buffer (&optional file)
@@ -154,13 +154,13 @@ Argument S string to find tags in."
   (->> (s-match-strings-all obsidian--tag-regex s)
        -flatten))
 
-(defun obsidian-tag? (s)
+(defun obsidian-tag-p (s)
   "Return t if S will match `obsidian--tag-regex', else nil."
   (when (s-match obsidian--tag-regex s)
     t))
 
 (obsidian-comment
- (obsidian-tag? "#foo"))
+ (obsidian-tag-p "#foo"))
 
 (defun obsidian-find-tags-in-file (&optional file)
   "Return all tags in file or current buffer.
@@ -203,7 +203,7 @@ argument disables it.  From Lisp, argument omitted or nil enables
 the mode, `toggle' toggles the state."
   ;; The initial value.
   :init-value nil
-  :lighter "obs"
+  :lighter " obs"
   :after-hook (obsidian-update-tags-list)
   :keymap (make-sparse-keymap))
 
@@ -237,16 +237,16 @@ Optional argument IGNORED this is ignored."
   (cl-case command
     (interactive (company-begin-backend 'obsidian-tags-backend))
     (prefix (when (and
-		   (-contains? local-minor-modes 'obsidian-mode)
+		   (-contains-p local-minor-modes 'obsidian-mode)
 		   (looking-back obsidian--tag-regex nil))
 	      (match-string 0)))
     (candidates (->> obsidian--tags-list
 		     obsidian-prepare-tags-list
-		     (-filter (lambda (s) (s-starts-with? arg s)))))))
+		     (-filter (lambda (s) (s-starts-with-p arg s)))))))
 
 (defun obsidian-enable-minor-mode ()
-  "Check if current buffer is an `obsidian-file?' and enable minor `obsidian-mode'."
-  (when (obsidian-file?)
+  "Check if current buffer is an `obsidian-file-p' and toggle `obsidian-mode'."
+  (when (obsidian-file-p)
     (obsidian-mode t)))
 
 (defun obsidian-update ()
@@ -272,7 +272,7 @@ Optional argument IGNORED this is ignored."
 	 (filename (plist-get file :file))
 	 (description (plist-get file :description))
 	 (no-ext (file-name-sans-extension filename))
-	 (link (if (and description (not (s-ends-with? description no-ext)))
+	 (link (if (and description (not (s-ends-with-p description no-ext)))
 		   (s-concat "[[" no-ext "|" description"]]")
 		 (s-concat "[[" no-ext "]]"))))
     (insert link)))
@@ -311,7 +311,7 @@ Argument S relative file name to clean and convert to absolute."
 
 (defun obsidian--match-files (f all-files)
   "Filter ALL-FILES to return list with same name as F."
-  (-filter (lambda (el) (s-ends-with? f el)) all-files))
+  (-filter (lambda (el) (s-ends-with-p f el)) all-files))
 
 (defun obsidian-find-file (f)
   "Take file F and either opens directly or offer choice if multiple match."
@@ -328,7 +328,7 @@ Argument S relative file name to clean and convert to absolute."
  (obsidian-find-file "subdir/2-sub.md")
  (obsidian-find-file "1.md"))
 
-(defun obsidian-wiki-link? ()
+(defun obsidian-wiki-link-p ()
   "Return non-nil if `point' is at a true wiki link.
 A true wiki link name matches `markdown-regex-wiki-link' but does
 not match the current file name after conversion.  This modifies
@@ -350,11 +350,11 @@ link name must be available via `match-string'."
 (defun obsidian-follow-wiki-link-at-point ()
   "Find Wiki Link at point."
   (interactive)
-  ;; (obsidian-wiki-link?)
+  ;; (obsidian-wiki-link-p)
   (thing-at-point-looking-at markdown-regex-wiki-link)
   (let* ((url (->> (match-string-no-properties 3)
 		   s-trim)))
-    (if (s-contains? ":" url)
+    (if (s-contains-p ":" url)
 	(browse-url url)
       (-> url
 	  obsidian-prepare-file-path
@@ -366,7 +366,7 @@ link name must be available via `match-string'."
   "Find and follow markdown link at point."
   (interactive)
   (let ((normalized (s-replace "%20" " " (markdown-link-url))))
-    (if (s-contains? ":" normalized)
+    (if (s-contains-p ":" normalized)
 	(browse-url normalized)
       (-> normalized
 	  obsidian-prepare-file-path
@@ -382,7 +382,7 @@ See `markdown-follow-link-at-point' and
   (interactive)
   (cond ((markdown-link-p)
 	 (obsidian-follow-markdown-link-at-point))
-	((obsidian-wiki-link?)
+	((obsidian-wiki-link-p)
 	 (obsidian-follow-wiki-link-at-point))))
 
 (defun obsidian--grep (re)
@@ -407,13 +407,19 @@ See `markdown-follow-link-at-point' and
 	 (choice (completing-read "Select file: " results)))
     (obsidian-find-file choice)))
 
-(add-hook 'markdown-mode-hook #'obsidian-enable-minor-mode)
-(add-to-list 'company-backends #'obsidian-tags-backend)
+;;;###autoload
+(define-globalized-minor-mode global-obsidian-mode obsidian-mode obsidian-enable-minor-mode
+  :predicate '(markdown-mode)
+  :group 'obsidian)
+
+(add-to-list 'company-backends 'obsidian-tags-backend)
 
 ;; (obsidian-comment
 ;;  (use-package obsidian
 ;;    :ensure nil
-;;    :config (obsidian-specify-path "./tests/test_vault")
+;;    :config
+;;    (obsidian-specify-path "./tests/test_vault")
+;;    (global-obsidian-mode t)
 ;;    :custom
 ;;    (obsidian-inbox-directory "Inbox")
 ;;    :bind (:map obsidian-mode-map
@@ -421,6 +427,7 @@ See `markdown-follow-link-at-point' and
 ;; 	       ("C-c C-o" . obsidian-follow-link-at-point)
 ;; 	       ;; If you prefer you can use `obsidian-insert-wikilink'
 ;; 	       ("C-c C-l" . obsidian-insert-link))))
+
 
 (provide 'obsidian)
 ;;; obsidian.el ends here
