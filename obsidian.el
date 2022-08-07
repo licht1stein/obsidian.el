@@ -203,7 +203,7 @@ argument disables it.  From Lisp, argument omitted or nil enables
 the mode, `toggle' toggles the state."
   ;; The initial value.
   :init-value nil
-  :lighter "obs"
+  :lighter " obs"
   :after-hook (obsidian-update-tags-list)
   :keymap (make-sparse-keymap))
 
