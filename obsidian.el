@@ -50,17 +50,14 @@
   "Ignore body, yield nil."
   nil)
 
-(obsidian-comment
- (package-buffer-info))
+(defgroup obsidian nil "Obsidian Notes group." :group 'text)
 
 (defcustom obsidian-directory nil
   "Path to Obsidian Notes vault."
-  :group 'obsidian
   :type 'directory)
 
 (defcustom obsidian-inbox-directory nil
   "Subdir to create notes using `obsidian-capture'."
-  :group 'obsidian
   :type 'directory)
 
 (eval-when-compile (defvar local-minor-modes))
@@ -409,8 +406,7 @@ See `markdown-follow-link-at-point' and
 
 ;;;###autoload
 (define-globalized-minor-mode global-obsidian-mode obsidian-mode obsidian-enable-minor-mode
-  :predicate '(markdown-mode)
-  :group 'obsidian)
+  :predicate '(markdown-mode))
 
 (add-to-list 'company-backends 'obsidian-tags-backend)
 
