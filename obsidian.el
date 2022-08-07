@@ -243,8 +243,12 @@ Optional argument IGNORED this is ignored."
 
 (defun obsidian-enable-minor-mode ()
   "Check if current buffer is an `obsidian-file-p' and toggle `obsidian-mode'."
-  (when (obsidian-file-p)
-    (obsidian-mode t)))
+  (when (equal major-mode 'markdown-mode)
+    (when (obsidian-file-p)
+      (obsidian-mode t))))
+
+(obsidian-comment
+ (derived-mode-p 'heroku-app-list-mode 'tabulated-list-mode))
 
 (defun obsidian-update ()
   "Command update everything there is to update in obsidian.el (tags, links etc.)."
@@ -405,8 +409,7 @@ See `markdown-follow-link-at-point' and
     (obsidian-find-file choice)))
 
 ;;;###autoload
-(define-globalized-minor-mode global-obsidian-mode obsidian-mode obsidian-enable-minor-mode
-  :predicate '(markdown-mode))
+(define-globalized-minor-mode global-obsidian-mode obsidian-mode obsidian-enable-minor-mode)
 
 (add-to-list 'company-backends 'obsidian-tags-backend)
 
@@ -423,7 +426,6 @@ See `markdown-follow-link-at-point' and
 ;; 	       ("C-c C-o" . obsidian-follow-link-at-point)
 ;; 	       ;; If you prefer you can use `obsidian-insert-wikilink'
 ;; 	       ("C-c C-l" . obsidian-insert-link))))
-
 
 (provide 'obsidian)
 ;;; obsidian.el ends here
