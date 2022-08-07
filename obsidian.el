@@ -245,7 +245,7 @@ Optional argument IGNORED this is ignored."
 		     (-filter (lambda (s) (s-starts-with-p arg s)))))))
 
 (defun obsidian-enable-minor-mode ()
-  "Check if current buffer is an `obsidian-file-p' and enable minor `obsidian-mode'."
+  "Check if current buffer is an `obsidian-file-p' and toggle `obsidian-mode'."
   (when (obsidian-file-p)
     (obsidian-mode t)))
 
