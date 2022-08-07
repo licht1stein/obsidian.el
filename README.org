@@ -7,15 +7,16 @@ Using [[https://github.com/jwiegley/use-package][use-package]] and [[https://git
 #+begin_src elisp
   (use-package obsidian
     :straight (:type git :host github :repo "licht1stein/obsidian.el")
-    :demand t
-    :config (obsidian-specify-path "~/MY_OBSIDIAN_FOLDER")
+    :config
+    (obsidian-specify-path "~/MY_OBSIDIAN_FOLDER")
+    (global-obsidian-mode t)
     :custom
     (obsidian-inbox-directory "Inbox")
     :bind (:map obsidian-mode-map
 		;; Replace C-c C-o with Obsidian.el's implementation. It's ok to use another key binding.
 		("C-c C-o" . obsidian-follow-link-at-point)
-		;; If you prefer you can use `obsidian-insert-link'
-		("C-c C-l" . obsidian-insert-wikilink)))
+		;; If you prefer you can use `obsidian-insert-wikilink'
+		("C-c C-l" . obsidian-insert-link)))
 #+end_src
 
 Optionally you can specify ~obsidian-inbox-directory~, it will be used by ~obsidian-capture~ to store new notes into. If you don't set it the root folder of your Obsidian vault will be used.
@@ -43,7 +44,7 @@ When all of the above is ready we will almost never need the Obsidian app on des
 
 * How does obsidian.el work?
 ** obsidian-mode
-When you require obsidian.el via ~use-package~ or in other ways (see snippet above), you have to specify the root folder of your Obsidian Notes vault. Once obsidian.el knows the root folder, each time you open a markdown buffer it checks, if that file is part of your Obsidian Notes vault. If it is ~obsidian-mode~ minor mode is activated for this buffer.
+When you require obsidian.el via ~use-package~ or in other ways (see snippet above), you have to specify the root folder of your Obsidian Notes vault. If ~global-obsidian-mode~ is enabled and if you specified the root folder, each time you open a markdown buffer it checks, if that file is part of your Obsidian Notes vault. If it is ~obsidian-mode~ minor mode is activated for this buffer.
 
 ** company-mode completion
 [[./resources/tag-completion.png]]

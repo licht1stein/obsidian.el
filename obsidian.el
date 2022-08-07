@@ -90,11 +90,11 @@ When run interactively asks user to specify the path."
     (string-prefix-p (replace-regexp-in-string "^\\([A-Za-z]\\):" #'downcase (expand-file-name b) t t)
 		     (replace-regexp-in-string "^\\([A-Za-z]\\):" #'downcase (expand-file-name a) t t))))
 
-(defun obsidian-not-trash? (file)
+(defun obsidian-not-trash-p (file)
   "Return t if FILE is not in .trash of Obsidian."
-  (not (s-contains? "/.trash" file)))
+  (not (s-contains-p "/.trash" file)))
 
-(defun obsidian-file? (&optional file)
+(defun obsidian-file-p (&optional file)
   "Return t if FILE is an obsidian.el file, nil otherwise.
 
 If FILE is not specified, use the current buffer's file-path.
@@ -106,10 +106,10 @@ FILE is an Org-roam file if:
   (-when-let* ((path (or file (-> (buffer-base-buffer) buffer-file-name)))
 	       (relative-path (file-relative-name path obsidian-directory))
 	       (ext (file-name-extension relative-path))
-	       (md? (string= ext "md"))
-	       (obsidian-dir? (obsidian-descendant-of-p path obsidian-directory))
-	       (not-trash? (obsidian-not-trash? path))
-	       (not-temp? (not (s-contains? "~" relative-path))))
+	       (md-p (string= ext "md"))
+	       (obsidian-dir-p (obsidian-descendant-of-p path obsidian-directory))
+	       (not-trash-p (obsidian-not-trash-p path))
+	       (not-temp-p (not (s-contains-p "~" relative-path))))
     t))
 
 (defun obsidian--file-relative-name (f)
@@ -124,18 +124,18 @@ FILE is an Org-roam file if:
   "Lists all Obsidian Notes files that are not in trash.
 
 Obsidian notes files:
-- Pass the `obsidian-file?' check"
+- Pass the `obsidian-file-p' check"
   (->> (directory-files-recursively obsidian-directory "\.*$")
-       (-filter #'obsidian-file?)))
+       (-filter #'obsidian-file-p)))
 
 (obsidian-comment
  "#tag1 #tag2"
 
  (setq sample-file "~/Sync/Zettelkasten/Literature/Самадхи у Кинга.md")
  (obsidian-descendant-of-p sample-file obsidian-directory) ;; => t
- (obsidian-file?)					   ;; => nil
- (obsidian-file? "~/Sync/Zettelkasten/Literature/Самадхи у Кинга.md") ;; => t
- (obsidian-file? "~/Sync/Zettelkasten/.trash/2021-10-26.md") ;; => nil
+ (obsidian-file-p)					   ;; => nil
+ (obsidian-file-p "~/Sync/Zettelkasten/Literature/Самадхи у Кинга.md") ;; => t
+ (obsidian-file-p "~/Sync/Zettelkasten/.trash/2021-10-26.md") ;; => nil
  )
 
 (defun obsidian-read-file-or-buffer (&optional file)
@@ -154,13 +154,13 @@ Argument S string to find tags in."
   (->> (s-match-strings-all obsidian--tag-regex s)
        -flatten))
 
-(defun obsidian-tag? (s)
+(defun obsidian-tag-p (s)
   "Return t if S will match `obsidian--tag-regex', else nil."
   (when (s-match obsidian--tag-regex s)
     t))
 
 (obsidian-comment
- (obsidian-tag? "#foo"))
+ (obsidian-tag-p "#foo"))
 
 (defun obsidian-find-tags-in-file (&optional file)
   "Return all tags in file or current buffer.
@@ -407,20 +407,26 @@ See `markdown-follow-link-at-point' and
 	 (choice (completing-read "Select file: " results)))
     (obsidian-find-file choice)))
 
-(add-hook 'markdown-mode-hook #'obsidian-enable-minor-mode)
+
+(define-globalized-minor-mode global-obsidian-mode obsidian-mode obsidian-enable-minor-mode
+  :predicate '(markdown-mode)
+  :group 'obsidian)
+
 (add-to-list 'company-backends 'obsidian-tags-backend)
 
-;; (obsidian-comment
-;;  (use-package obsidian
-;;    :ensure nil
-;;    :config (obsidian-specify-path "./tests/test_vault")
-;;    :custom
-;;    (obsidian-inbox-directory "Inbox")
-;;    :bind (:map obsidian-mode-map
-;; 	       ;; Replace C-c C-o with Obsidian.el's implementation. It's ok to use another key binding.
-;; 	       ("C-c C-o" . obsidian-follow-link-at-point)
-;; 	       ;; If you prefer you can use `obsidian-insert-wikilink'
-;; 	       ("C-c C-l" . obsidian-insert-link))))
+(obsidian-comment
+ (use-package obsidian
+   :ensure nil
+   :config
+   (obsidian-specify-path "./tests/test_vault")
+   (global-obsidian-mode t)
+   :custom
+   (obsidian-inbox-directory "Inbox")
+   :bind (:map obsidian-mode-map
+	       ;; Replace C-c C-o with Obsidian.el's implementation. It's ok to use another key binding.
+	       ("C-c C-o" . obsidian-follow-link-at-point)
+	       ;; If you prefer you can use `obsidian-insert-wikilink'
+	       ("C-c C-l" . obsidian-insert-link))))
 
 (provide 'obsidian)
 ;;; obsidian.el ends here
