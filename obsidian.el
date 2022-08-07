@@ -407,26 +407,27 @@ See `markdown-follow-link-at-point' and
 	 (choice (completing-read "Select file: " results)))
     (obsidian-find-file choice)))
 
-
+;;;###autoload
 (define-globalized-minor-mode global-obsidian-mode obsidian-mode obsidian-enable-minor-mode
   :predicate '(markdown-mode)
   :group 'obsidian)
 
 (add-to-list 'company-backends 'obsidian-tags-backend)
 
-(obsidian-comment
- (use-package obsidian
-   :ensure nil
-   :config
-   (obsidian-specify-path "./tests/test_vault")
-   (global-obsidian-mode t)
-   :custom
-   (obsidian-inbox-directory "Inbox")
-   :bind (:map obsidian-mode-map
-	       ;; Replace C-c C-o with Obsidian.el's implementation. It's ok to use another key binding.
-	       ("C-c C-o" . obsidian-follow-link-at-point)
-	       ;; If you prefer you can use `obsidian-insert-wikilink'
-	       ("C-c C-l" . obsidian-insert-link))))
+;; (obsidian-comment
+;;  (use-package obsidian
+;;    :ensure nil
+;;    :config
+;;    (obsidian-specify-path "./tests/test_vault")
+;;    (global-obsidian-mode t)
+;;    :custom
+;;    (obsidian-inbox-directory "Inbox")
+;;    :bind (:map obsidian-mode-map
+;; 	       ;; Replace C-c C-o with Obsidian.el's implementation. It's ok to use another key binding.
+;; 	       ("C-c C-o" . obsidian-follow-link-at-point)
+;; 	       ;; If you prefer you can use `obsidian-insert-wikilink'
+;; 	       ("C-c C-l" . obsidian-insert-link))))
+
 
 (provide 'obsidian)
 ;;; obsidian.el ends here
