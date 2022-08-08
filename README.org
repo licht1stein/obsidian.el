@@ -1,22 +1,55 @@
 #+TITLE: Obsidian Notes for Emacs
+[[https://melpa.org/#/obsidian][file:https://melpa.org/packages/obsidian-badge.svg]]
+
 Emacs front-end for [[https://obsidian.md/][Obsidian Notes]].
 
-* Install
-Using [[https://github.com/jwiegley/use-package][use-package]] and [[https://github.com/radian-software/straight.el][straight.el]]:
+* Installation
+Obsidian.el is available from [[https://melpa.org][MELPA]] and can be installed with:
+
+#+begin_src
+  M-x package-install RET obsidian RET
+#+end_src
+
+Put this in your ~init.el~:
+
+#+begin_src elisp
+  (require 'obsidian)
+  (obsidian-specify-path "~/MY_OBSIDIAN_FOLDER")
+  ;; If you want a different directory of `obsidian-capture':
+  (setq obsidian-inbox-directory "Inbox")
+
+  ;; Replace standard command with Obsidian.el's in obsidian vault:
+  (bind-key (kbd "C-c C-o") 'obsidian-follow-link-at-point 'obsidian-mode-map)
+
+  ;; Use either `obsidian-insert-wikilink' or `obsidian-insert-link':
+  (bind-key (kbd "C-c C-l") 'obsidian-insert-wikilink 'obsidian-mode-map)
+
+  ;; Optionally you can also bind `obsidian-jump' and `obsidian-capture'
+  ;; replace "YOUR_BINDING" with the key of your choice:
+  (bind-key (kbd "YOUR_BINDING") 'obsidian-jump)
+  (bind-key (kbd "YOUR_BINDING") 'obsidian-capture)
+
+  ;; Activate detectino of Obsidian vault
+  (global-obsidian-mode t)
+#+end_src
+
+*Or using [[https://github.com/jwiegley/use-package][use-package]]:*
 
 #+begin_src elisp
   (use-package obsidian
-    :straight (:type git :host github :repo "licht1stein/obsidian.el")
+    :ensure t
+    :demand t
     :config
     (obsidian-specify-path "~/MY_OBSIDIAN_FOLDER")
     (global-obsidian-mode t)
     :custom
+    ;; This directory will be used for `obsidian-capture' if set.
     (obsidian-inbox-directory "Inbox")
     :bind (:map obsidian-mode-map
 		;; Replace C-c C-o with Obsidian.el's implementation. It's ok to use another key binding.
 		("C-c C-o" . obsidian-follow-link-at-point)
 		;; If you prefer you can use `obsidian-insert-wikilink'
-		("C-c C-l" . obsidian-insert-link)))
+		("C-c C-l" . obsidian-insert-wikilink)))
 #+end_src
 
 Optionally you can specify ~obsidian-inbox-directory~, it will be used by ~obsidian-capture~ to store new notes into. If you don't set it the root folder of your Obsidian vault will be used.
