@@ -152,7 +152,7 @@ Use ~obsidian-capture~. If you specified ~obsidian-inbox-directory~, it will cre
 #+end_src
 
 ** Searching notes
-User ~obsidian-search~~ to look for a string or a regular expression:
+Use ~obsidian-search~ to look for a string or a regular expression:
 
 #+begin_src
   M-x obsidian-search RET query RET
