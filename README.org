@@ -27,6 +27,9 @@ Put this in your ~init.el~:
   ;; Optionally you can also bind `obsidian-jump' and `obsidian-capture':
   (bind-key (kbd "YOUR_BINDINNG") 'obsidian-jump)
   (bind-key (kbd "YOUR_BINDINNG") 'obsidian-capture)
+
+  ;; Activate detectino of Obsidian vault
+  (global-obsidian-mode t)
 #+end_src
 
 *Or using [[https://github.com/jwiegley/use-package][use-package]]:*
