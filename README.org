@@ -25,8 +25,8 @@ Put this in your ~init.el~:
   (bind-key (kbd "C-c C-l") 'obsidian-insert-wikilink 'obsidian-mode-map)
 
   ;; Optionally you can also bind `obsidian-jump' and `obsidian-capture':
-  (bind-key (kbd "YOUR_BINDINNG") 'obsidian-jump)
-  (bind-key (kbd "YOUR_BINDINNG") 'obsidian-capture)
+  (bind-key (kbd "YOUR_BINDING") 'obsidian-jump)
+  (bind-key (kbd "YOUR_BINDING") 'obsidian-capture)
 
   ;; Activate detectino of Obsidian vault
   (global-obsidian-mode t)
