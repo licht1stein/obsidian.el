@@ -1,5 +1,5 @@
 #+TITLE: Obsidian Notes for Emacs
-[[https://melpa.org/#/obsidian][[[https://melpa.org/#/obsidian][file:https://melpa.org/packages/obsidian-badge.svg]​]​]]
+[[https://melpa.org/#/obsidian][file:https://melpa.org/packages/obsidian-badge.svg]]
 
 Emacs front-end for [[https://obsidian.md/][Obsidian Notes]].
 
