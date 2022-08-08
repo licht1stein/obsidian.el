@@ -1,10 +1,10 @@
 #+TITLE: Obsidian Notes for Emacs
-[[https://melpa.org/#/obsidian][file:https://melpa.org/packages/obsidian-badge.svg]]
+[[https://melpa.org/#/obsidian][file:https://melpa.org/packages/obsidian-badge.svg]] [[https://stable.melpa.org/#/obsidian][file:https://stable.melpa.org/packages/obsidian-badge.svg]]
 
 Emacs front-end for [[https://obsidian.md/][Obsidian Notes]].
 
 * Installation
-Obsidian.el is available from [[https://melpa.org][MELPA]] and can be installed with:
+Obsidian.el is available from [[https://melpa.org][MELPA]] or [[https://stable.melpa.org/#/obsidian][MELPA Stable]] and can be installed with:
 
 #+begin_src
   M-x package-install RET obsidian RET
