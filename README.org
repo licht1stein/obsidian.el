@@ -1,12 +1,14 @@
 #+TITLE: Obsidian Notes for Emacs
+[[https://melpa.org/#/obsidian][[[https://melpa.org/#/obsidian][file:https://melpa.org/packages/obsidian-badge.svg]​]​]]
+
 Emacs front-end for [[https://obsidian.md/][Obsidian Notes]].
 
 * Install
-Using [[https://github.com/jwiegley/use-package][use-package]] and [[https://github.com/radian-software/straight.el][straight.el]]:
+Using [[https://github.com/jwiegley/use-package][use-package]]:
 
 #+begin_src elisp
   (use-package obsidian
-    :straight (:type git :host github :repo "licht1stein/obsidian.el")
+    :ensure t
     :config
     (obsidian-specify-path "~/MY_OBSIDIAN_FOLDER")
     (global-obsidian-mode t)
