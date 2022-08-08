@@ -18,7 +18,7 @@ Put this in your ~init.el~:
   ;; If you want a different directory of `obsidian-capture':
   (setq obsidian-inbox-directory "Inbox")
 
-  ;; Replace standard command with Obdisian.el's in obsidian vault:
+  ;; Replace standard command with Obsidian.el's in obsidian vault:
   (bind-key (kbd "C-c C-o") 'obsidian-follow-link-at-point 'obsidian-mode-map)
 
   ;; Use either `obsidian-insert-wikilink' or `obsidian-insert-link':
