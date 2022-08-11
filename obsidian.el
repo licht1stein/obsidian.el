@@ -5,8 +5,8 @@
 ;; Author: Mykhaylo Bilyanskyy
 ;; URL: https://github.com./licht1stein/obsidian.el
 ;; Keywords: obsidian, pkm, convenience
-;; Version: 1.1.0
-;; Package-Requires: ((emacs "27.2") (company "0.9.13") (s "1.12.0") (dash "2.13") (org "9.5.3") (markdown-mode "2.6") (elgrep "1.0.0"))
+;; Version: 1.1.1
+;; Package-Requires: ((emacs "27.2") (s "1.12.0") (dash "2.13") (org "9.5.3") (markdown-mode "2.6") (elgrep "1.0.0"))
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -40,7 +40,6 @@
 (require 's)
 
 (require 'cl-lib)
-(require 'company)
 
 (require 'org)
 (require 'markdown-mode)
@@ -231,10 +230,12 @@ lower and upper case versions of the tags."
 Argument COMMAND company command.
 Optional argument ARG word to complete.
 Optional argument IGNORED this is ignored."
-  (interactive (list 'interactive))
-
+  (interactive (if (and (featurep 'company)
+			(fboundp 'company-begin-backend))
+		   (company-begin-backend 'obsidian-tags-backend)
+		 (error "Company not installed")))
   (cl-case command
-    (interactive (company-begin-backend 'obsidian-tags-backend))
+
     (prefix (when (and
 		   (-contains-p local-minor-modes 'obsidian-mode)
 		   (looking-back obsidian--tag-regex nil))
@@ -413,7 +414,8 @@ See `markdown-follow-link-at-point' and
 ;;;###autoload
 (define-globalized-minor-mode global-obsidian-mode obsidian-mode obsidian-enable-minor-mode)
 
-(add-to-list 'company-backends 'obsidian-tags-backend)
+(when (boundp 'company-backends)
+  (add-to-list 'company-backends 'obsidian-tags-backend))
 
 ;; (obsidian-comment
 ;;  (use-package obsidian
