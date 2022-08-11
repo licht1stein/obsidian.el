@@ -4,10 +4,7 @@
 (defvar obsidian--test-dir "./tests/test_vault")
 (defvar obsidian--test--original-dir (or obsidian-directory obsidian--test-dir))
 (defvar obsidian--test--original-tags-list obsidian--tags-list)
-
-(describe "-comment macro"
-  (it "-comment macro expands to nil"
-    (expect (obsidian-comment (+ 1 1)) :to-equal nil)))
+(defvar obsidian--test-number-of-tags 6)
 
 (describe "check path setting"
   (before-all (obsidian-specify-path obsidian--test-dir))
@@ -56,7 +53,7 @@
   (after-all (obsidian-specify-path obsidian--test--original-dir))
 
   (it "find all tags in the vault"
-    (expect (length (obsidian-list-all-tags)) :to-equal 5)))
+    (expect (length (obsidian-list-all-tags)) :to-equal obsidian--test-number-of-tags)))
 
 (describe "obsidian-update"
   (before-all (progn
@@ -71,4 +68,4 @@
   (it "check tags are filled out after update"
     (expect (progn
 	      (obsidian-update)
-	      (length obsidian--tags-list)) :to-equal 5)))
+	      (length obsidian--tags-list)) :to-equal obsidian--test-number-of-tags)))
