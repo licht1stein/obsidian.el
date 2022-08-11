@@ -5,10 +5,6 @@
 (defvar obsidian--test--original-dir (or obsidian-directory obsidian--test-dir))
 (defvar obsidian--test--original-tags-list obsidian--tags-list)
 
-(describe "-comment macro"
-  (it "-comment macro expands to nil"
-    (expect (obsidian-comment (+ 1 1)) :to-equal nil)))
-
 (describe "check path setting"
   (before-all (obsidian-specify-path obsidian--test-dir))
   (after-all (obsidian-specify-path obsidian--test--original-dir))
