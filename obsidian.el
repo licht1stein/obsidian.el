@@ -204,7 +204,8 @@ At the moment updates only `obsidian--aliases-map' with found aliases."
 
 (defun obsidian--update-all-from-front-matter ()
   "Take all files in obsidian vault, parse front matter and update."
-  (-map #'obsidian--update-from-front-matter (obsidian-list-all-files)))
+  (-map #'obsidian--update-from-front-matter (obsidian-list-all-files))
+  (message "Obsidian aliases updated."))
 
 (defun obsidian-tag-p (s)
   "Return t if S will match `obsidian--tag-regex', else nil."
