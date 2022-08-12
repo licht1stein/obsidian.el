@@ -69,3 +69,31 @@
     (expect (progn
 	      (obsidian-update)
 	      (length obsidian--tags-list)) :to-equal obsidian--test-number-of-tags)))
+
+
+(defvar-local obsidian--test-correct-front-matter "---
+aliases: [AI, Artificial Intelligence]
+tags: [one, two, three]
+key4:
+- four
+- five
+- six
+---
+")
+(defvar obsidian--test-incorret-front-matter--not-start-of-file (s-concat "# Header\n" obsidian--test-correct-front-matter))
+
+(describe "obsidian-aliases"
+  (before-all (progn
+		(obsidian-specify-path obsidian--test-dir)
+		(setq obsidian--tags-list nil)))
+  (after-all (progn
+	       (obsidian-specify-path obsidian--test--original-dir)
+	       (setq obsidian--tags-list obsidian--test--original-tags-list)))
+
+  (it "check that front-matter is found"
+    (expect (gethash 'aliases (obsidian-find-yaml-front-matter obsidian--test-correct-front-matter))
+	    :to-equal ["AI" "Artificial Intelligence"]))
+
+  (it "check that front-matter is ignored if not at the top of file"
+    (expect (obsidian-find-yaml-front-matter obsidian--test-incorret-front-matter--not-start-of-file)
+	    :to-equal nil)))
