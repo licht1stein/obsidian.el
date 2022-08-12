@@ -164,9 +164,9 @@ Return nil if the front matter does not exist, or incorrectly delineated by
   (save-excursion
     (goto-char (point-min))
     (when-let
-	((startpoint (re-search-forward "^---" 4 t 1))
-	 (endpoint (re-search-forward "^---" nil t 1)))
-      (buffer-substring-no-properties startpoint endpoint))))
+	((startpoint (re-search-forward "\\(^---\\)" 4 t 1))
+	 (endpoint (re-search-forward "\\(^---\\)" nil t 1)))
+      (buffer-substring-no-properties startpoint (- endpoint 3)))))
 
 (defun obsidian-find-yaml-front-matter (s)
   "Find YAML front matter in S."
@@ -178,23 +178,33 @@ Return nil if the front matter does not exist, or incorrectly delineated by
 		 (nth 1)
 		 yaml-parse-string)))))
 
-(defun obsidian-find-aliases-in-string (s)
-  "Return all aliases in S."
-  (let* ((front-matter (-> s
-			   obsidian-find-yaml-front-matter)))
-    (if front-matter
-	(gethash 'aliases front-matter))))
+(defun obsidian--file-front-matter (file)
+  "Check if FILE has front matter and returned parsed to hash-table if it does."
+  (let* ((starts-with-dashes-p (with-temp-buffer
+				 (insert-file-contents file nil 0 3)
+				 (string= (buffer-string) "---"))))
+    (let* ((front-matter-s (with-temp-buffer
+			     (insert-file-contents file)
+			     (obsidian-get-yaml-front-matter))))
+      (if front-matter-s
+	  (yaml-parse-string front-matter-s)))))
 
-(defun obsidian-find-aliases-in-file-or-buffer (&optional file)
-  "Return all aliases in FILE or current buffer."
-  (-> (obsidian-read-file-or-buffer file)
-      obsidian-find-aliases-in-string))
+(defun obsidian--update-from-front-matter (file)
+  "Takes FILE, parses front matter and then updates anything that needs to be updated.
 
-(defun obsidian-update-aliases-from-file-or-buffer (&optional file)
-  "Update `obsidian--aliases-map' with aliases from FILE."
-  (let* ((filename (or file (buffer-file-name (current-buffer)))))
-    (->> (obsidian-find-aliases-in-file-or-buffer file)
-	 (-map (lambda (alias) (obsidian--add-alias alias filename))))))
+At the moment updates only `obsidian--aliases-map' with found aliases."
+  (let* ((dict (obsidian--file-front-matter file)))
+    (if dict
+	(let* ((aliases (gethash 'aliases dict))
+	       (alias (gethash 'alias dict))
+	       (all-aliases (-filter #'identity (append aliases (list alias)))))
+	  ;; Update aliases
+	  (-map (lambda (al) (if al (progn
+				      (obsidian--add-alias (format "%s" al) file)))) all-aliases)))))
+
+(defun obsidian--update-all-from-front-matter ()
+  "Take all files in obsidian vault, parse front matter and update."
+  (-map #'obsidian--update-from-front-matter (obsidian-list-all-files)))
 
 (defun obsidian-tag-p (s)
   "Return t if S will match `obsidian--tag-regex', else nil."
@@ -280,7 +290,9 @@ Optional argument IGNORED this is ignored."
   "Command update everything there is to update in obsidian.el (tags, links etc.)."
   (interactive)
   (obsidian-update-tags-list)
-  (obsidian-update-aliases))
+  ;; (obsidian-update-aliases)
+  (obsidian--update-all-from-front-matter)
+  )
 
 (defun obsidian--request-link ()
   "Service function to request user for link iput."
@@ -324,8 +336,7 @@ In the `obsidian-inbox-directory' if set otherwise in `obsidian-directory' root.
 (defun obsidian-jump ()
   "Jump to Obsidian note."
   (interactive)
-  (if (hash-table-empty-p obsidian--aliases-map)
-      (obsidian-update-aliases))
+  (obsidian-update)
   (let* ((files (obsidian-list-all-files))
 	 (dict (make-hash-table :test 'equal))
 	 (_ (-map (lambda (f) (puthash (file-relative-name f obsidian-directory) f dict)) files))
@@ -433,12 +444,6 @@ See `markdown-follow-link-at-point' and
     (->> (-map #'obsidian--extract-alias multiple)
 	 -flatten
 	 (-partition 2))))
-
-(defun obsidian-update-aliases ()
-  "Update all aliasesx."
-  (interactive)
-  (-map (lambda (alias) (obsidian--add-alias (car alias) (cadr alias))) (obsidian--find-all-aliases))
-  (message "Obsidian aliases updated."))
 
 (defun obsidian-search ()
   "Search Obsidian vault for input."
