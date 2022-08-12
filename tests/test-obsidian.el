@@ -5,6 +5,7 @@
 (defvar obsidian--test--original-dir (or obsidian-directory obsidian--test-dir))
 (defvar obsidian--test--original-tags-list obsidian--tags-list)
 (defvar obsidian--test-number-of-tags 6)
+(defvar obsidian--test-number-of-notes 8)
 
 (describe "check path setting"
   (before-all (obsidian-specify-path obsidian--test-dir))
@@ -39,7 +40,7 @@
   (after-all (obsidian-specify-path obsidian--test--original-dir))
 
   (it "check file count"
-    (expect (length (obsidian-list-all-files)) :to-equal 7)))
+    (expect (length (obsidian-list-all-files)) :to-equal obsidian--test-number-of-notes)))
 
 (describe "obsidian-find-tags"
   (before-all (obsidian-specify-path obsidian--test-dir))
