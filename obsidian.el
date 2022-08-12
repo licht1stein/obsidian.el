@@ -426,25 +426,6 @@ See `markdown-follow-link-at-point' and
   "Find RE in the Obsidian vault."
   (elgrep obsidian-directory "\.md" re :recursive t :case-fold-search t :exclude-file-re "~"))
 
-(defun obsidian--extract-alias (coll)
-  "Extract alias from one entry COLL returned from elgrep."
-  (let* ((file (car coll))
-	 (aliases-s  (-> coll
-			 cadr
-			 cadr
-			 (plist-get :match)))
-	 (aliases  (->> aliases-s
-			(s-split ",")
-			(-map #'s-trim))))
-    (-map (lambda (alias) (list alias file)) aliases)))
-
-(defun obsidian--find-all-aliases ()
-  "Find all aliases in Obsidian directory."
-  (let* ((multiple (elgrep obsidian-directory "\.md" "^aliases: \\[\\(?1:.*\\)\\]" :recursive t :case-fold-search t :exclude-file-re "~" :abs t)))
-    (->> (-map #'obsidian--extract-alias multiple)
-	 -flatten
-	 (-partition 2))))
-
 (defun obsidian-search ()
   "Search Obsidian vault for input."
   (interactive)
