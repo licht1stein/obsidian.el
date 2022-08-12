@@ -3,6 +3,8 @@
 
 Emacs front-end for [[https://obsidian.md/][Obsidian Notes]].
 
+#+TOC: headlines 1
+
 * Installation
 Obsidian.el is available from [[https://melpa.org][MELPA]] or [[https://stable.melpa.org/#/obsidian][MELPA Stable]] and can be installed with:
 
@@ -143,6 +145,9 @@ Quickly jump between notes using ~obsidian-jump~
 #+begin_src
   M-x obsidian-jump RET
 #+end_src
+
+*** Aliases
+If you have YAML front matter in your note, Obsidian.el will find aliases in it and add them to the ~obsidian-jump~ selection. Both ~aliases~ and ~alias~ keys are supported.
 
 ** Capturing new note
 Use ~obsidian-capture~. If you specified ~obsidian-inbox-directory~, it will create new notes in this directory. Otherwise in your Obsidian vault root directory:
