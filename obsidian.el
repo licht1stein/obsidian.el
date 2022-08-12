@@ -183,14 +183,15 @@ Return nil if the front matter does not exist, or incorrectly delineated by
   (let* ((starts-with-dashes-p (with-temp-buffer
 				 (insert-file-contents file nil 0 3)
 				 (string= (buffer-string) "---"))))
-    (let* ((front-matter-s (with-temp-buffer
-			     (insert-file-contents file)
-			     (obsidian-get-yaml-front-matter))))
-      (if front-matter-s
-	  (yaml-parse-string front-matter-s)))))
+    (if starts-with-dashes-p
+	(let* ((front-matter-s (with-temp-buffer
+				 (insert-file-contents file)
+				 (obsidian-get-yaml-front-matter))))
+	  (if front-matter-s
+	      (yaml-parse-string front-matter-s))))))
 
 (defun obsidian--update-from-front-matter (file)
-  "Takes FILE, parses front matter and then updates anything that needs to be updated.
+  "Takes FILE, parse front matter then update anything that needs to be updated.
 
 At the moment updates only `obsidian--aliases-map' with found aliases."
   (let* ((dict (obsidian--file-front-matter file)))
