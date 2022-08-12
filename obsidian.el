@@ -283,7 +283,7 @@ the mode, `toggle' toggles the state."
   ;; The initial value.
   :init-value nil
   :lighter " obs"
-  :after-hook (obsidian-update-tags-list)
+  :after-hook (obsidian-update)
   :keymap (make-sparse-keymap))
 
 (defun obsidian-prepare-tags-list (tags)
@@ -338,7 +338,7 @@ Optional argument IGNORED this is ignored."
   "Command update everything there is to update in obsidian.el (tags, links etc.)."
   (interactive)
   (obsidian-update-tags-list)
-  (message "obsidian.el updated"))
+  (obsidian-update-aliases))
 
 (defun obsidian--request-link ()
   "Service function to request user for link iput."
@@ -382,6 +382,8 @@ In the `obsidian-inbox-directory' if set otherwise in `obsidian-directory' root.
 (defun obsidian-jump ()
   "Jump to Obsidian note."
   (interactive)
+  (if (hash-table-empty-p obsidian--aliases-map)
+      (obsidian-update-aliases))
   (let* ((files (obsidian-list-all-files))
 	 (dict (make-hash-table :test 'equal))
 	 (_ (-map (lambda (f) (puthash (file-relative-name f obsidian-directory) f dict)) files))
@@ -496,7 +498,8 @@ See `markdown-follow-link-at-point' and
 (defun obsidian-update-aliases ()
   "Updates all aliases."
   (interactive)
-  (-map (lambda (alias) (obsidian--add-alias (car alias) (cadr alias))) (obsidian--find-all-aliases)))
+  (-map (lambda (alias) (obsidian--add-alias (car alias) (cadr alias))) (obsidian--find-all-aliases))
+  (message "Obsidian aliases updated."))
 
 (obsidian-comment
  (obsidian-update-aliases)
