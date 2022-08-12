@@ -91,18 +91,9 @@ When run interactively asks user to specify the path."
   "Find ALIAS in `obsidian--aliases-map' with optional DFLT."
   (gethash alias obsidian--aliases-map dflt))
 
-(obsidian-comment
- (obsidian--get-alias "alias1"))
-
 (defun obsidian--all-aliases ()
   "Return all existing aliases (without values)."
   (hash-table-keys obsidian--aliases-map))
-
-(obsidian-comment
- (setq obsidian--aliases-map (make-hash-table :test 'equal))
- (obsidian-specify-path)
- "Use the below vault for testing and development"
- (obsidian-specify-path "./tests/test_vault"))
 
 ;;; File utilities
 ;; Copied from org-roam's org-roam-descendant-of-p
@@ -150,16 +141,6 @@ Obsidian notes files:
   (->> (directory-files-recursively obsidian-directory "\.*$")
        (-filter #'obsidian-file-p)))
 
-(obsidian-comment
- "#tag1 #tag2"
-
- (setq sample-file "~/Sync/Zettelkasten/Literature/Самадхи у Кинга.md")
- (obsidian-descendant-of-p sample-file obsidian-directory) ;; => t
- (obsidian-file-p)					   ;; => nil
- (obsidian-file-p "~/Sync/Zettelkasten/Literature/Самадхи у Кинга.md") ;; => t
- (obsidian-file-p "~/Sync/Zettelkasten/.trash/2021-10-26.md") ;; => nil
- )
-
 (defun obsidian-read-file-or-buffer (&optional file)
   "Return string contents of a file or current buffer.
 
@@ -180,19 +161,15 @@ Argument S string to find tags in."
   "Return the text of the YAML front matter of the current buffer.
 Return nil if the front matter does not exist, or incorrectly delineated by
 '---'.  The front matter is required to be at the beginning of the file."
-
   (save-excursion
     (goto-char (point-min))
     (when-let
-        ((startpoint (re-search-forward
-                      "^---" 4 t 1))
-         ;; The beginning needs to be in the beginning of buffer
-         (endpoint (re-search-forward
-                    "^---" nil t 1)))
+	((startpoint (re-search-forward "^---" 4 t 1))
+	 (endpoint (re-search-forward "^---" nil t 1)))
       (buffer-substring-no-properties startpoint endpoint))))
 
 (defun obsidian-find-yaml-front-matter (s)
-  "Finds YAML front matter in S."
+  "Find YAML front matter in S."
   (if (s-starts-with-p "---" s)
       (let* ((split (s-split-up-to "---" s 2))
 	     (looks-like-yaml-p (eq (length split) 3)))
@@ -214,32 +191,15 @@ Return nil if the front matter does not exist, or incorrectly delineated by
       obsidian-find-aliases-in-string))
 
 (defun obsidian-update-aliases-from-file-or-buffer (&optional file)
-  "Updates `obsidian--aliases-map' with aliases from FILE."
+  "Update `obsidian--aliases-map' with aliases from FILE."
   (let* ((filename (or file (buffer-file-name (current-buffer)))))
     (->> (obsidian-find-aliases-in-file-or-buffer file)
-	 (-map (lambda (alias) (obsidian--add-alias alias (obsidian--file-relative-name) filename))))))
-
-(obsidian-comment
- (setq test-yaml "---
-aliases: [AI, Artificial Intelligence]
-tags: [one, two, three]
-key4:
-- four
-- five
-- six
----
-")
- (->> (obsidian-find-yaml-front-matter test-yaml)
-      (gethash 'aliases))
- (obsidian-find-aliases-in-string test-yaml))
+	 (-map (lambda (alias) (obsidian--add-alias alias filename))))))
 
 (defun obsidian-tag-p (s)
   "Return t if S will match `obsidian--tag-regex', else nil."
   (when (s-match obsidian--tag-regex s)
     t))
-
-(obsidian-comment
- (obsidian-tag-p "#foo"))
 
 (defun obsidian-find-tags-in-file (&optional file)
   "Return all tags in file or current buffer.
@@ -256,22 +216,11 @@ If FILE is not specified, use the current buffer"
        -flatten
        -distinct))
 
-(obsidian-comment
- (obsidian-read-file-or-buffer)
- (obsidian-read-file-or-buffer sample-file)
- (obsidian-find-tags "foo #foo # #тэг-такой spam") ;; => ("#foo" "#тэг-такой")
- (obsidian-find-tags-in-file)
- (obsidian-find-tags-in-file sample-file)
- (obsidian-list-all-tags))
-
 (defun obsidian-update-tags-list ()
   "Scans entire Obsidian vault and update all tags for completion."
   (->> (obsidian-list-all-tags)
        (setq obsidian--tags-list))
   (message "Obsidian tags updated"))
-
-(obsidian-comment
- (obsidian-update-tags-list))
 
 (define-minor-mode obsidian-mode
   "Toggle minor `obsidian-mode' on and off.
@@ -302,10 +251,6 @@ lower and upper case versions of the tags."
 	 (-map (lambda (s) (s-concat "#" s)))
 	 -distinct)))
 
-(obsidian-comment
- (->> (obsidian-list-all-tags)
-      (obsidian-prepare-tags-list)))
-
 (defun obsidian-tags-backend (command &optional arg &rest ignored)
   "Completion backend for company used by obsidian.el.
 Argument COMMAND company command.
@@ -330,9 +275,6 @@ Optional argument IGNORED this is ignored."
   (when (equal major-mode 'markdown-mode)
     (when (obsidian-file-p)
       (obsidian-mode t))))
-
-(obsidian-comment
- (derived-mode-p 'heroku-app-list-mode 'tabulated-list-mode))
 
 (defun obsidian-update ()
   "Command update everything there is to update in obsidian.el (tags, links etc.)."
@@ -412,11 +354,6 @@ Argument S relative file name to clean and convert to absolute."
 		 f)))
     (-> file obsidian--expand-file-name find-file)))
 
-(obsidian-comment
- (obsidian-prepare-file-path "subdir/1-sub.md")
- (obsidian-find-file "subdir/2-sub.md")
- (obsidian-find-file "1.md"))
-
 (defun obsidian-wiki-link-p ()
   "Return non-nil if `point' is at a true wiki link.
 A true wiki link name matches `markdown-regex-wiki-link' but does
@@ -479,6 +416,7 @@ See `markdown-follow-link-at-point' and
   (elgrep obsidian-directory "\.md" re :recursive t :case-fold-search t :exclude-file-re "~"))
 
 (defun obsidian--extract-alias (coll)
+  "Extract alias from one entry COLL returned from elgrep."
   (let* ((file (car coll))
 	 (aliases-s  (-> coll
 			 cadr
@@ -490,32 +428,17 @@ See `markdown-follow-link-at-point' and
     (-map (lambda (alias) (list alias file)) aliases)))
 
 (defun obsidian--find-all-aliases ()
+  "Find all aliases in Obsidian directory."
   (let* ((multiple (elgrep obsidian-directory "\.md" "^aliases: \\[\\(?1:.*\\)\\]" :recursive t :case-fold-search t :exclude-file-re "~" :abs t)))
     (->> (-map #'obsidian--extract-alias multiple)
 	 -flatten
 	 (-partition 2))))
 
 (defun obsidian-update-aliases ()
-  "Updates all aliases."
+  "Update all aliasesx."
   (interactive)
   (-map (lambda (alias) (obsidian--add-alias (car alias) (cadr alias))) (obsidian--find-all-aliases))
   (message "Obsidian aliases updated."))
-
-(obsidian-comment
- (obsidian-update-aliases)
- (obsidian--get-alias "alias1")
- (setq testel (->> (obsidian--find-all-aliases)
-		   car
-		   car))
- (obsidian--extract-alias testel)
- (setq testaliases-s (-> testel
-			 cadr
-			 cadr
-			 (plist-get :match)))
-
- )
-
-
 
 (defun obsidian-search ()
   "Search Obsidian vault for input."
@@ -541,19 +464,19 @@ See `markdown-follow-link-at-point' and
 (when (boundp 'company-backends)
   (add-to-list 'company-backends 'obsidian-tags-backend))
 
-(obsidian-comment
- (use-package obsidian
-   :ensure nil
-   :config
-   (obsidian-specify-path "./tests/test_vault")
-   (global-obsidian-mode t)
-   :custom
-   (obsidian-inbox-directory "Inbox")
-   :bind (:map obsidian-mode-map
-	       ;; Replace C-c C-o with Obsidian.el's implementation. It's ok to use another key binding.
-	       ("C-c C-o" . obsidian-follow-link-at-point)
-	       ;; If you prefer you can use `obsidian-insert-wikilink'
-	       ("C-c C-l" . obsidian-insert-link))))
+;; (obsidian-comment
+;;  (use-package obsidian
+;;    :ensure nil
+;;    :config
+;;    (obsidian-specify-path "./tests/test_vault")
+;;    (global-obsidian-mode t)
+;;    :custom
+;;    (obsidian-inbox-directory "Inbox")
+;;    :bind (:map obsidian-mode-map
+;; 	       ;; Replace C-c C-o with Obsidian.el's implementation. It's ok to use another key binding.
+;; 	       ("C-c C-o" . obsidian-follow-link-at-point)
+;; 	       ;; If you prefer you can use `obsidian-insert-wikilink'
+;; 	       ("C-c C-l" . obsidian-insert-link))))
 
 (provide 'obsidian)
 ;;; obsidian.el ends here
