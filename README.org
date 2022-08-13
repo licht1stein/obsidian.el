@@ -54,7 +54,8 @@ Put this in your ~init.el~:
 		("C-c C-l" . obsidian-insert-wikilink)))
 #+end_src
 
-Optionally you can specify ~obsidian-inbox-directory~, it will be used by ~obsidian-capture~ to store new notes into. If you don't set it the root folder of your Obsidian vault will be used.
+Optionally you can specify ~obsidian-inbox-directory~, it will be used by ~obsidian-capture~ to
+store new notes into. If you don't set it the root folder of your Obsidian vault will be used.
 
 * About Obsidian.el
 
@@ -85,6 +86,24 @@ When you require obsidian.el via ~use-package~ or in other ways (see snippet abo
 [[./resources/tag-completion.png]]
 
 Once the ~obsidian-mode~ is activated obsidian.el scans all markdown files in the vault for tags and links (links still WIP), and stores these lists in it's global variables. It also adds [[http://company-mode.github.io/][company-mode]] backends to suggest links and tags for completion.
+
+** [[https://github.com/abo-abo/hydra][Hydra]] menu
+
+When [[https://github.com/abo-abo/hydra][Hydra]] is installed, ~obsidian-hydra~ will be defined such that it can be used for bindings:
+
+#+begin_src elisp
+  (use-package obsidian
+    :requires hydra
+    ;; ..SNIP..
+    :bind (:map obsidian-mode-map
+                ("C-c M-o" . 'obsidian-hydra/body)  ;; Show hydra menu.
+
+                ;; Shadows comparable functions of markdown-mode-map.
+                ("C-c C-o" . 'obsidian-hydra/obsidian-follow-link-at-point)
+                ("C-c C-l" . 'obsidian-insert-wikilink)))
+#+end_src
+
+[[./resources/hydra-menu.png]]
 
 ** Manual re-scan
 You can update the lists of tags, links etc. manually if it's lagging for some reason by running an interactive command:
