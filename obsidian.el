@@ -446,7 +446,6 @@ See `markdown-follow-link-at-point' and
     (obsidian-find-file choice)))
 
 (when (eval-when-compile (require 'hydra nil t))
-(when (eval-when-compile (require 'hydra nil t))
 	(defhydra obsidian-hydra (:hint nil) "
 Obsidian
 _f_ollow at point   insert _w_ikilink          _q_uit
