@@ -92,15 +92,7 @@ Once the ~obsidian-mode~ is activated obsidian.el scans all markdown files in th
 When [[https://github.com/abo-abo/hydra][Hydra]] is installed, ~obsidian-hydra~ will be defined such that it can be used for bindings:
 
 #+begin_src elisp
-  (use-package obsidian
-    :requires hydra
-    ;; ..SNIP..
-    :bind (:map obsidian-mode-map
-                ("C-c M-o" . 'obsidian-hydra/body)  ;; Show hydra menu.
-
-                ;; Shadows comparable functions of markdown-mode-map.
-                ("C-c C-o" . 'obsidian-hydra/obsidian-follow-link-at-point)
-                ("C-c C-l" . 'obsidian-insert-wikilink)))
+  (bind-key (kbd "C-c M-o") 'obsidian-hydra/body 'obsidian-mode-map)
 #+end_src
 
 [[./resources/hydra-menu.png]]
