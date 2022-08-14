@@ -293,8 +293,7 @@ Optional argument IGNORED this is ignored."
   (interactive)
   (obsidian-update-tags-list)
   ;; (obsidian-update-aliases)
-  (obsidian--update-all-from-front-matter)
-  )
+  (obsidian--update-all-from-front-matter))
 
 (defun obsidian--request-link ()
   "Service function to request user for link iput."
@@ -446,25 +445,25 @@ See `markdown-follow-link-at-point' and
 	 (choice (completing-read "Select file: " results)))
     (obsidian-find-file choice)))
 
-(when (eval-when-compile
-        (require 'hydra nil t))
-  (defhydra obsidian-hydra (:hint nil)
-    "
+(when (eval-when-compile (require 'hydra nil t))
+  (defhydra obsidian-hydra (:hint nil) "
 Obsidian
 _f_ollow at point   insert _w_ikilink          _q_uit
 _j_ump to note      insert _l_ink
 _t_ag find          _c_apture new note
 _s_earch by expr.   _u_pdate tags/alises etc.
-"
-    ("c" obsidian-capture)
-    ("f" obsidian-follow-link-at-point)
-    ("j" obsidian-jump)
-    ("l" obsidian-insert-link :color blue)
-    ("q" nil :color blue)
-    ("s" obsidian-search)
-    ("t" obsidian-tag-find)
-    ("u" obsidian-update)
-    ("w" obsidian-insert-wikilink :color blue)))
+" ("c" obsidian-capture)
+("f" obsidian-follow-link-at-point)
+("j" obsidian-jump)
+("l" obsidian-insert-link
+ :color blue)
+("q" nil
+ :color blue)
+("s" obsidian-search)
+("t" obsidian-tag-find)
+("u" obsidian-update)
+("w" obsidian-insert-wikilink
+ :color blue)))
 
 ;;;###autoload
 (define-globalized-minor-mode global-obsidian-mode obsidian-mode obsidian-enable-minor-mode)
