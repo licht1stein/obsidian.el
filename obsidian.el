@@ -100,7 +100,7 @@ When run interactively asks user to specify the path."
   "Return t if A is descendant of B."
   (unless (equal (file-truename a) (file-truename b))
     (string-prefix-p (replace-regexp-in-string "^\\([A-Za-z]\\):" #'downcase (expand-file-name b) t t)
-		     (replace-regexp-in-string "^\\([A-Za-z]\\):" #'downcase (expand-file-name a) t t))))
+                     (replace-regexp-in-string "^\\([A-Za-z]\\):" #'downcase (expand-file-name a) t t))))
 
 (defun obsidian-not-trash-p (file)
   "Return t if FILE is not in .trash of Obsidian."
@@ -116,12 +116,12 @@ FILE is an Org-roam file if:
 - It is not in .trash
 - It is not an Emacs temp file"
   (-when-let* ((path (or file (-> (buffer-base-buffer) buffer-file-name)))
-	       (relative-path (file-relative-name path obsidian-directory))
-	       (ext (file-name-extension relative-path))
-	       (md-p (string= ext "md"))
-	       (obsidian-dir-p (obsidian-descendant-of-p path obsidian-directory))
-	       (not-trash-p (obsidian-not-trash-p path))
-	       (not-temp-p (not (s-contains-p "~" relative-path))))
+               (relative-path (file-relative-name path obsidian-directory))
+               (ext (file-name-extension relative-path))
+               (md-p (string= ext "md"))
+               (obsidian-dir-p (obsidian-descendant-of-p path obsidian-directory))
+               (not-trash-p (obsidian-not-trash-p path))
+               (not-temp-p (not (s-contains-p "~" relative-path))))
     t))
 
 (defun obsidian--file-relative-name (f)
@@ -146,8 +146,8 @@ Obsidian notes files:
 If FILE is not specified, use the current buffer."
   (if file
       (with-temp-buffer
-	(insert-file-contents file)
-	(buffer-substring-no-properties (point-min) (point-max)))
+        (insert-file-contents file)
+        (buffer-substring-no-properties (point-min) (point-max)))
     (buffer-substring-no-properties (point-min) (point-max))))
 
 (defun obsidian-find-tags (s)
@@ -163,31 +163,31 @@ Return nil if the front matter does not exist, or incorrectly delineated by
   (save-excursion
     (goto-char (point-min))
     (when-let
-	((startpoint (re-search-forward "\\(^---\\)" 4 t 1))
-	 (endpoint (re-search-forward "\\(^---\\)" nil t 1)))
+        ((startpoint (re-search-forward "\\(^---\\)" 4 t 1))
+         (endpoint (re-search-forward "\\(^---\\)" nil t 1)))
       (buffer-substring-no-properties startpoint (- endpoint 3)))))
 
 (defun obsidian-find-yaml-front-matter (s)
   "Find YAML front matter in S."
   (if (s-starts-with-p "---" s)
       (let* ((split (s-split-up-to "---" s 2))
-	     (looks-like-yaml-p (eq (length split) 3)))
-	(if looks-like-yaml-p
-	    (->> split
-		 (nth 1)
-		 yaml-parse-string)))))
+             (looks-like-yaml-p (eq (length split) 3)))
+        (if looks-like-yaml-p
+            (->> split
+                 (nth 1)
+                 yaml-parse-string)))))
 
 (defun obsidian--file-front-matter (file)
   "Check if FILE has front matter and returned parsed to hash-table if it does."
   (let* ((starts-with-dashes-p (with-temp-buffer
-				 (insert-file-contents file nil 0 3)
-				 (string= (buffer-string) "---"))))
+                                 (insert-file-contents file nil 0 3)
+                                 (string= (buffer-string) "---"))))
     (if starts-with-dashes-p
-	(let* ((front-matter-s (with-temp-buffer
-				 (insert-file-contents file)
-				 (obsidian-get-yaml-front-matter))))
-	  (if front-matter-s
-	      (yaml-parse-string front-matter-s))))))
+        (let* ((front-matter-s (with-temp-buffer
+                                 (insert-file-contents file)
+                                 (obsidian-get-yaml-front-matter))))
+          (if front-matter-s
+              (yaml-parse-string front-matter-s))))))
 
 (defun obsidian--update-from-front-matter (file)
   "Takes FILE, parse front matter then update anything that needs to be updated.
@@ -195,12 +195,12 @@ Return nil if the front matter does not exist, or incorrectly delineated by
 At the moment updates only `obsidian--aliases-map' with found aliases."
   (let* ((dict (obsidian--file-front-matter file)))
     (if dict
-	(let* ((aliases (gethash 'aliases dict))
-	       (alias (gethash 'alias dict))
-	       (all-aliases (-filter #'identity (append aliases (list alias)))))
-	  ;; Update aliases
-	  (-map (lambda (al) (if al (progn
-				      (obsidian--add-alias (format "%s" al) file)))) all-aliases)))))
+        (let* ((aliases (gethash 'aliases dict))
+               (alias (gethash 'alias dict))
+               (all-aliases (-filter #'identity (append aliases (list alias)))))
+          ;; Update aliases
+          (-map (lambda (al) (if al (progn
+                                      (obsidian--add-alias (format "%s" al) file)))) all-aliases)))))
 
 (defun obsidian--update-all-from-front-matter ()
   "Take all files in obsidian vault, parse front matter and update."
@@ -254,13 +254,13 @@ Sometimes it's convenient to capitalize a tag, for example when using it
 at the start of the sentence.  This function allows completion with both
 lower and upper case versions of the tags."
   (let* ((lower-case (->> tags
-			  (-map (lambda (s) (s-replace "#" "" s)))
-			  (-map #'s-downcase)))
-	 (capitalized (-map #'s-capitalize lower-case))
-	 (merged (-concat tags lower-case capitalized)))
+                          (-map (lambda (s) (s-replace "#" "" s)))
+                          (-map #'s-downcase)))
+         (capitalized (-map #'s-capitalize lower-case))
+         (merged (-concat tags lower-case capitalized)))
     (->> merged
-	 (-map (lambda (s) (s-concat "#" s)))
-	 -distinct)))
+         (-map (lambda (s) (s-concat "#" s)))
+         -distinct)))
 
 (defun obsidian-tags-backend (command &optional arg &rest ignored)
   "Completion backend for company used by obsidian.el.
@@ -268,18 +268,18 @@ Argument COMMAND company command.
 Optional argument ARG word to complete.
 Optional argument IGNORED this is ignored."
   (interactive (if (and (featurep 'company)
-			(fboundp 'company-begin-backend))
-		   (company-begin-backend 'obsidian-tags-backend)
-		 (error "Company not installed")))
+                        (fboundp 'company-begin-backend))
+                   (company-begin-backend 'obsidian-tags-backend)
+                 (error "Company not installed")))
   (cl-case command
 
     (prefix (when (and
-		   (-contains-p local-minor-modes 'obsidian-mode)
-		   (looking-back obsidian--tag-regex nil))
-	      (match-string 0)))
+                   (-contains-p local-minor-modes 'obsidian-mode)
+                   (looking-back obsidian--tag-regex nil))
+              (match-string 0)))
     (candidates (->> obsidian--tags-list
-		     obsidian-prepare-tags-list
-		     (-filter (lambda (s) (s-starts-with-p arg s)))))))
+                     obsidian-prepare-tags-list
+                     (-filter (lambda (s) (s-starts-with-p arg s)))))))
 
 (defun obsidian-enable-minor-mode ()
   "Check if current buffer is an `obsidian-file-p' and toggle `obsidian-mode'."
@@ -298,23 +298,23 @@ Optional argument IGNORED this is ignored."
 (defun obsidian--request-link ()
   "Service function to request user for link iput."
   (let* ((all-files (->> (obsidian-list-all-files) (-map (lambda (f) (file-relative-name f obsidian-directory)))))
-	       (region (when (use-region-p)
-		               (buffer-substring-no-properties (region-beginning) (region-end))))
-	       (chosen-file (completing-read "Link: " all-files))
-	       (default-description (-> chosen-file file-name-nondirectory file-name-sans-extension))
-	       (description (read-from-minibuffer "Description (optional): " (or region default-description))))
+         (region (when (use-region-p)
+                   (buffer-substring-no-properties (region-beginning) (region-end))))
+         (chosen-file (completing-read "Link: " all-files))
+         (default-description (-> chosen-file file-name-nondirectory file-name-sans-extension))
+         (description (read-from-minibuffer "Description (optional): " (or region default-description))))
     (list :file chosen-file :description description)))
 
 (defun obsidian-insert-wikilink ()
   "Insert a link to file in wikiling format."
   (interactive)
   (let* ((file (obsidian--request-link))
-	 (filename (plist-get file :file))
-	 (description (plist-get file :description))
-	 (no-ext (file-name-sans-extension filename))
-	 (link (if (and description (not (s-ends-with-p description no-ext)))
-		   (s-concat "[[" no-ext "|" description"]]")
-		 (s-concat "[[" no-ext "]]"))))
+         (filename (plist-get file :file))
+         (description (plist-get file :description))
+         (no-ext (file-name-sans-extension filename))
+         (link (if (and description (not (s-ends-with-p description no-ext)))
+                   (s-concat "[[" no-ext "|" description"]]")
+                 (s-concat "[[" no-ext "]]"))))
     (insert link)))
 
 (defun obsidian-insert-link ()
@@ -322,7 +322,7 @@ Optional argument IGNORED this is ignored."
   (interactive)
   (let* ((file (obsidian--request-link)))
     (-> (s-concat "[" (plist-get file :description) "](" (->> (plist-get file :file) (s-replace " " "%20")) ")")
-	insert)))
+        insert)))
 
 ;;;###autoload
 (defun obsidian-capture ()
@@ -331,8 +331,8 @@ Optional argument IGNORED this is ignored."
 In the `obsidian-inbox-directory' if set otherwise in `obsidian-directory' root."
   (interactive)
   (let* ((title (read-from-minibuffer "Title: "))
-	       (filename (s-concat obsidian-directory "/" obsidian-inbox-directory "/" title ".md"))
-	       (clean-filename (s-replace "//" "/" filename)))
+         (filename (s-concat obsidian-directory "/" obsidian-inbox-directory "/" title ".md"))
+         (clean-filename (s-replace "//" "/" filename)))
     (find-file (expand-file-name clean-filename) t)))
 
 ;;;###autoload
@@ -341,11 +341,11 @@ In the `obsidian-inbox-directory' if set otherwise in `obsidian-directory' root.
   (interactive)
   (obsidian-update)
   (let* ((files (obsidian-list-all-files))
-	       (dict (make-hash-table :test 'equal))
-	       (_ (-map (lambda (f) (puthash (file-relative-name f obsidian-directory) f dict)) files))
-	       (choices (-sort #'string< (-distinct (-concat (obsidian--all-aliases) (hash-table-keys dict)))))
-	       (choice (completing-read "Jump to: " choices))
-	       (target (obsidian--get-alias choice (gethash choice dict))))
+         (dict (make-hash-table :test 'equal))
+         (_ (-map (lambda (f) (puthash (file-relative-name f obsidian-directory) f dict)) files))
+         (choices (-sort #'string< (-distinct (-concat (obsidian--all-aliases) (hash-table-keys dict)))))
+         (choice (completing-read "Jump to: " choices))
+         (target (obsidian--get-alias choice (gethash choice dict))))
     (find-file target)))
 
 (defun obsidian-prepare-file-path (s)
@@ -361,11 +361,11 @@ Argument S relative file name to clean and convert to absolute."
 (defun obsidian-find-file (f)
   "Take file F and either opens directly or offer choice if multiple match."
   (let* ((all-files (->> (obsidian-list-all-files) (-map #'obsidian--file-relative-name)))
-	 (matches (obsidian--match-files f all-files))
-	 (file (if (> (length matches) 1)
-		   (let* ((choice (completing-read "Jump to: " matches)))
-		     choice)
-		 f)))
+         (matches (obsidian--match-files f all-files))
+         (file (if (> (length matches) 1)
+                   (let* ((choice (completing-read "Jump to: " matches)))
+                     choice)
+                 f)))
     (-> file obsidian--expand-file-name find-file)))
 
 (defun obsidian-wiki-link-p ()
@@ -376,10 +376,10 @@ the data returned by `match-data'.  Note that the potential wiki
 link name must be available via `match-string'."
   (let ((case-fold-search nil))
     (and (thing-at-point-looking-at markdown-regex-wiki-link)
-	 (not (markdown-code-block-at-point-p))
-	 (or (not buffer-file-name)
-	     (not (string-equal (buffer-file-name)
-				(markdown-wiki-link-link)))))))
+         (not (markdown-code-block-at-point-p))
+         (or (not buffer-file-name)
+             (not (string-equal (buffer-file-name)
+                                (markdown-wiki-link-link)))))))
 
 (defun obsidian-wiki->normal (f)
   "Add extension to wiki link F if none."
@@ -393,24 +393,24 @@ link name must be available via `match-string'."
   ;; (obsidian-wiki-link-p)
   (thing-at-point-looking-at markdown-regex-wiki-link)
   (let* ((url (->> (match-string-no-properties 3)
-		   s-trim)))
+                   s-trim)))
     (if (s-contains-p ":" url)
-	(browse-url url)
+        (browse-url url)
       (-> url
-	  obsidian-prepare-file-path
-	  obsidian-wiki->normal
-	  message
-	  obsidian-find-file))))
+          obsidian-prepare-file-path
+          obsidian-wiki->normal
+          message
+          obsidian-find-file))))
 
 (defun obsidian-follow-markdown-link-at-point ()
   "Find and follow markdown link at point."
   (interactive)
   (let ((normalized (s-replace "%20" " " (markdown-link-url))))
     (if (s-contains-p ":" normalized)
-	(browse-url normalized)
+        (browse-url normalized)
       (-> normalized
-	  obsidian-prepare-file-path
-	  obsidian-find-file))))
+          obsidian-prepare-file-path
+          obsidian-find-file))))
 
 (defun obsidian-follow-link-at-point ()
   "Follow thing at point if possible, such as a reference link or wiki link.
@@ -421,9 +421,9 @@ See `markdown-follow-link-at-point' and
 `markdown-follow-wiki-link-at-point'."
   (interactive)
   (cond ((markdown-link-p)
-	       (obsidian-follow-markdown-link-at-point))
-	      ((obsidian-wiki-link-p)
-	       (obsidian-follow-wiki-link-at-point))))
+         (obsidian-follow-markdown-link-at-point))
+        ((obsidian-wiki-link-p)
+         (obsidian-follow-wiki-link-at-point))))
 
 (defun obsidian--grep (re)
   "Find RE in the Obsidian vault."
@@ -434,7 +434,7 @@ See `markdown-follow-link-at-point' and
   "Search Obsidian vault for input."
   (interactive)
   (let* ((query (-> (read-from-minibuffer "Search query or regex: ")))
-	       (results (obsidian--grep query)))
+         (results (obsidian--grep query)))
     (message (s-concat "Found " (pp-to-string (length results)) " matches"))
     (let* ((choice (completing-read "Select file: " results)))
       (obsidian-find-file choice))))
@@ -445,8 +445,8 @@ See `markdown-follow-link-at-point' and
   (interactive)
   (obsidian-update-tags-list)
   (let* ((tag (completing-read "Select tag: " (->> obsidian--tags-list (-map 's-downcase) -distinct (-sort 'string-lessp))))
-	       (results (obsidian--grep tag))
-	       (choice (completing-read "Select file: " results)))
+         (results (obsidian--grep tag))
+         (choice (completing-read "Select file: " results)))
     (obsidian-find-file choice)))
 
 ;;;###autoload
@@ -464,10 +464,10 @@ See `markdown-follow-link-at-point' and
 ;;    :custom
 ;;    (obsidian-inbox-directory "Inbox")
 ;;    :bind (:map obsidian-mode-map
-;; 	       ;; Replace C-c C-o with Obsidian.el's implementation. It's ok to use another key binding.
-;; 	       ("C-c C-o" . obsidian-follow-link-at-point)
-;; 	       ;; If you prefer you can use `obsidian-insert-wikilink'
-;; 	       ("C-c C-l" . obsidian-insert-link))))
+;;         ;; Replace C-c C-o with Obsidian.el's implementation. It's ok to use another key binding.
+;;         ("C-c C-o" . obsidian-follow-link-at-point)
+;;         ;; If you prefer you can use `obsidian-insert-wikilink'
+;;         ("C-c C-l" . obsidian-insert-link))))
 
 (provide 'obsidian)
 ;;; obsidian.el ends here
