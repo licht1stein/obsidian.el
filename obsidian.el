@@ -5,8 +5,8 @@
 ;; Author: Mykhaylo Bilyanskyy
 ;; URL: https://github.com./licht1stein/obsidian.el
 ;; Keywords: obsidian, pkm, convenience
-;; Version: 1.1.2
-;; Package-Requires: ((emacs "27.2") (s "1.12.0") (dash "2.13") (org "9.5.3") (markdown-mode "2.6") (elgrep "1.0.0") (yaml "0.5.1"))
+;; Version: 1.1.3
+;; Package-Requires: ((emacs "27.2") (s "1.12.0") (dash "2.13") (markdown-mode "2.6") (elgrep "1.0.0") (yaml "0.5.1"))
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -41,7 +41,6 @@
 
 (require 'cl-lib)
 
-(require 'org)
 (require 'markdown-mode)
 
 (require 'elgrep)
@@ -299,11 +298,11 @@ Optional argument IGNORED this is ignored."
 (defun obsidian--request-link ()
   "Service function to request user for link iput."
   (let* ((all-files (->> (obsidian-list-all-files) (-map (lambda (f) (file-relative-name f obsidian-directory)))))
-	 (region (when (org-region-active-p)
-		   (buffer-substring-no-properties (region-beginning) (region-end))))
-	 (chosen-file (completing-read "Link: " all-files))
-	 (default-description (-> chosen-file file-name-nondirectory file-name-sans-extension))
-	 (description (read-from-minibuffer "Description (optional): " (or region default-description))))
+	       (region (when (use-region-p)
+		               (buffer-substring-no-properties (region-beginning) (region-end))))
+	       (chosen-file (completing-read "Link: " all-files))
+	       (default-description (-> chosen-file file-name-nondirectory file-name-sans-extension))
+	       (description (read-from-minibuffer "Description (optional): " (or region default-description))))
     (list :file chosen-file :description description)))
 
 (defun obsidian-insert-wikilink ()
@@ -325,26 +324,28 @@ Optional argument IGNORED this is ignored."
     (-> (s-concat "[" (plist-get file :description) "](" (->> (plist-get file :file) (s-replace " " "%20")) ")")
 	insert)))
 
+;;;###autoload
 (defun obsidian-capture ()
   "Create new obsidian note.
 
 In the `obsidian-inbox-directory' if set otherwise in `obsidian-directory' root."
   (interactive)
   (let* ((title (read-from-minibuffer "Title: "))
-	 (filename (s-concat obsidian-directory "/" obsidian-inbox-directory "/" title ".md"))
-	 (clean-filename (s-replace "//" "/" filename)))
+	       (filename (s-concat obsidian-directory "/" obsidian-inbox-directory "/" title ".md"))
+	       (clean-filename (s-replace "//" "/" filename)))
     (find-file (expand-file-name clean-filename) t)))
 
+;;;###autoload
 (defun obsidian-jump ()
   "Jump to Obsidian note."
   (interactive)
   (obsidian-update)
   (let* ((files (obsidian-list-all-files))
-	 (dict (make-hash-table :test 'equal))
-	 (_ (-map (lambda (f) (puthash (file-relative-name f obsidian-directory) f dict)) files))
-	 (choices (-sort #'string< (-distinct (-concat (obsidian--all-aliases) (hash-table-keys dict)))))
-	 (choice (completing-read "Jump to: " choices))
-	 (target (obsidian--get-alias choice (gethash choice dict))))
+	       (dict (make-hash-table :test 'equal))
+	       (_ (-map (lambda (f) (puthash (file-relative-name f obsidian-directory) f dict)) files))
+	       (choices (-sort #'string< (-distinct (-concat (obsidian--all-aliases) (hash-table-keys dict)))))
+	       (choice (completing-read "Jump to: " choices))
+	       (target (obsidian--get-alias choice (gethash choice dict))))
     (find-file target)))
 
 (defun obsidian-prepare-file-path (s)
@@ -420,30 +421,32 @@ See `markdown-follow-link-at-point' and
 `markdown-follow-wiki-link-at-point'."
   (interactive)
   (cond ((markdown-link-p)
-	 (obsidian-follow-markdown-link-at-point))
-	((obsidian-wiki-link-p)
-	 (obsidian-follow-wiki-link-at-point))))
+	       (obsidian-follow-markdown-link-at-point))
+	      ((obsidian-wiki-link-p)
+	       (obsidian-follow-wiki-link-at-point))))
 
 (defun obsidian--grep (re)
   "Find RE in the Obsidian vault."
   (elgrep obsidian-directory "\.md" re :recursive t :case-fold-search t :exclude-file-re "~"))
 
+;;;###autoload
 (defun obsidian-search ()
   "Search Obsidian vault for input."
   (interactive)
   (let* ((query (-> (read-from-minibuffer "Search query or regex: ")))
-	 (results (obsidian--grep query)))
+	       (results (obsidian--grep query)))
     (message (s-concat "Found " (pp-to-string (length results)) " matches"))
     (let* ((choice (completing-read "Select file: " results)))
       (obsidian-find-file choice))))
 
+;;;###autoload
 (defun obsidian-tag-find ()
   "Find all notes with a tag."
   (interactive)
   (obsidian-update-tags-list)
   (let* ((tag (completing-read "Select tag: " (->> obsidian--tags-list (-map 's-downcase) -distinct (-sort 'string-lessp))))
-	 (results (obsidian--grep tag))
-	 (choice (completing-read "Select file: " results)))
+	       (results (obsidian--grep tag))
+	       (choice (completing-read "Select file: " results)))
     (obsidian-find-file choice)))
 
 ;;;###autoload
