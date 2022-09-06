@@ -5,7 +5,7 @@
 (defvar obsidian--test--original-dir (or obsidian-directory obsidian--test-dir))
 (defvar obsidian--test--original-tags-list obsidian--tags-list)
 (defvar obsidian--test-number-of-tags 6)
-(defvar obsidian--test-number-of-notes 8)
+(defvar obsidian--test-number-of-notes 9)
 
 (describe "check path setting"
   (before-all (obsidian-specify-path obsidian--test-dir))
