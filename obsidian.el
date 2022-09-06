@@ -205,7 +205,10 @@ At the moment updates only `obsidian--aliases-map' with found aliases."
 
 (defun obsidian--update-all-from-front-matter ()
   "Take all files in obsidian vault, parse front matter and update."
-  (-map #'obsidian--update-from-front-matter (obsidian-list-all-files))
+  (-map (lambda (f) (condition-case err
+                        (obsidian--update-from-front-matter f)
+                      (error (message "Error updating YAML front matter in file %s. Error: %s" f (error-message-string err)))))
+        (obsidian-list-all-files))
   (message "Obsidian aliases updated."))
 
 (defun obsidian-tag-p (s)
@@ -292,9 +295,7 @@ Optional argument IGNORED this is ignored."
   "Command update everything there is to update in obsidian.el (tags, links etc.)."
   (interactive)
   (obsidian-update-tags-list)
-  ;; (obsidian-update-aliases)
-  (obsidian--update-all-from-front-matter)
-  )
+  (obsidian--update-all-from-front-matter))
 
 (defun obsidian--request-link ()
   "Service function to request user for link iput."
@@ -306,6 +307,7 @@ Optional argument IGNORED this is ignored."
          (description (read-from-minibuffer "Description (optional): " (or region default-description))))
     (list :file chosen-file :description description)))
 
+;;;###autoload
 (defun obsidian-insert-wikilink ()
   "Insert a link to file in wikiling format."
   (interactive)
@@ -318,6 +320,7 @@ Optional argument IGNORED this is ignored."
                  (s-concat "[[" no-ext "]]"))))
     (insert link)))
 
+;;;###autoload
 (defun obsidian-insert-link ()
   "Insert a link to file in markdown format."
   (interactive)
@@ -413,6 +416,7 @@ link name must be available via `match-string'."
           obsidian-prepare-file-path
           obsidian-find-file))))
 
+;;;###autoload
 (defun obsidian-follow-link-at-point ()
   "Follow thing at point if possible, such as a reference link or wiki link.
 Opens inline and reference links in a browser.  Opens wiki links
