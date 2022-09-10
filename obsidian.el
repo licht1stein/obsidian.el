@@ -6,7 +6,7 @@
 ;; URL: https://github.com./licht1stein/obsidian.el
 ;; Keywords: obsidian, pkm, convenience
 ;; Version: 1.1.3
-;; Package-Requires: ((emacs "27.2") (s "1.12.0") (dash "2.13") (org "9.5.3") (markdown-mode "2.6") (elgrep "1.0.0") (yaml "0.5.1"))
+;; Package-Requires: ((emacs "27.2") (s "1.12.0") (dash "2.13") (markdown-mode "2.6") (elgrep "1.0.0") (yaml "0.5.1"))
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -41,7 +41,6 @@
 
 (require 'cl-lib)
 
-(require 'org)
 (require 'markdown-mode)
 
 (require 'elgrep)
@@ -64,6 +63,7 @@
 
 (eval-when-compile (defvar local-minor-modes))
 
+;;;###autoload
 (defun obsidian-specify-path (&optional path)
   "Specifies obsidian folder PATH to obsidian-folder variable.
 
@@ -205,7 +205,10 @@ At the moment updates only `obsidian--aliases-map' with found aliases."
 
 (defun obsidian--update-all-from-front-matter ()
   "Take all files in obsidian vault, parse front matter and update."
-  (-map #'obsidian--update-from-front-matter (obsidian-list-all-files))
+  (-map (lambda (f) (condition-case err
+                        (obsidian--update-from-front-matter f)
+                      (error (message "Error updating YAML front matter in file %s. Error: %s" f (error-message-string err)))))
+        (obsidian-list-all-files))
   (message "Obsidian aliases updated."))
 
 (defun obsidian-tag-p (s)
@@ -292,19 +295,19 @@ Optional argument IGNORED this is ignored."
   "Command update everything there is to update in obsidian.el (tags, links etc.)."
   (interactive)
   (obsidian-update-tags-list)
-  ;; (obsidian-update-aliases)
   (obsidian--update-all-from-front-matter))
 
 (defun obsidian--request-link ()
   "Service function to request user for link iput."
   (let* ((all-files (->> (obsidian-list-all-files) (-map (lambda (f) (file-relative-name f obsidian-directory)))))
-         (region (when (org-region-active-p)
+         (region (when (use-region-p)
                    (buffer-substring-no-properties (region-beginning) (region-end))))
          (chosen-file (completing-read "Link: " all-files))
          (default-description (-> chosen-file file-name-nondirectory file-name-sans-extension))
          (description (read-from-minibuffer "Description (optional): " (or region default-description))))
     (list :file chosen-file :description description)))
 
+;;;###autoload
 (defun obsidian-insert-wikilink ()
   "Insert a link to file in wikiling format."
   (interactive)
@@ -317,6 +320,7 @@ Optional argument IGNORED this is ignored."
                  (s-concat "[[" no-ext "]]"))))
     (insert link)))
 
+;;;###autoload
 (defun obsidian-insert-link ()
   "Insert a link to file in markdown format."
   (interactive)
@@ -324,6 +328,7 @@ Optional argument IGNORED this is ignored."
     (-> (s-concat "[" (plist-get file :description) "](" (->> (plist-get file :file) (s-replace " " "%20")) ")")
         insert)))
 
+;;;###autoload
 (defun obsidian-capture ()
   "Create new obsidian note.
 
@@ -334,6 +339,7 @@ In the `obsidian-inbox-directory' if set otherwise in `obsidian-directory' root.
          (clean-filename (s-replace "//" "/" filename)))
     (find-file (expand-file-name clean-filename) t)))
 
+;;;###autoload
 (defun obsidian-jump ()
   "Jump to Obsidian note."
   (interactive)
@@ -410,6 +416,7 @@ link name must be available via `match-string'."
           obsidian-prepare-file-path
           obsidian-find-file))))
 
+;;;###autoload
 (defun obsidian-follow-link-at-point ()
   "Follow thing at point if possible, such as a reference link or wiki link.
 Opens inline and reference links in a browser.  Opens wiki links
@@ -427,6 +434,7 @@ See `markdown-follow-link-at-point' and
   "Find RE in the Obsidian vault."
   (elgrep obsidian-directory "\.md" re :recursive t :case-fold-search t :exclude-file-re "~"))
 
+;;;###autoload
 (defun obsidian-search ()
   "Search Obsidian vault for input."
   (interactive)
@@ -436,6 +444,7 @@ See `markdown-follow-link-at-point' and
     (let* ((choice (completing-read "Select file: " results)))
       (obsidian-find-file choice))))
 
+;;;###autoload
 (defun obsidian-tag-find ()
   "Find all notes with a tag."
   (interactive)
@@ -479,10 +488,10 @@ _s_earch by expr.   _u_pdate tags/alises etc.
 ;;    :custom
 ;;    (obsidian-inbox-directory "Inbox")
 ;;    :bind (:map obsidian-mode-map
-;;          ;; Replace C-c C-o with Obsidian.el's implementation. It's ok to use another key binding.
-;;          ("C-c C-o" . obsidian-follow-link-at-point)
-;;          ;; If you prefer you can use `obsidian-insert-wikilink'
-;;          ("C-c C-l" . obsidian-insert-link))))
+;;         ;; Replace C-c C-o with Obsidian.el's implementation. It's ok to use another key binding.
+;;         ("C-c C-o" . obsidian-follow-link-at-point)
+;;         ;; If you prefer you can use `obsidian-insert-wikilink'
+;;         ("C-c C-l" . obsidian-insert-link))))
 
 (provide 'obsidian)
 ;;; obsidian.el ends here
