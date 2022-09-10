@@ -6,27 +6,6 @@ on:
       - main
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        emacs_version:
-          - 28.1
-          - snapshot
-
-    steps:
-      - uses: purcell/setup-emacs@master
-        with:
-          version: ${{ matrix.emacs_version }}
-
-      - uses: actions/checkout@v2
-
-      - name: Install Eldev
-        run: curl -fsSL https://raw.github.com/org-roam/org-roam/master/github-eldev | sh
-
-      - name: Lint
-        run: make lint
-
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -48,6 +27,9 @@ jobs:
 
       - name: Install dependencies
         run: make prepare
+
+      - name: Lint
+        run: make lint
 
       - name: Test
         run: make test
