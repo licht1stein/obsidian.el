@@ -3,7 +3,27 @@
 
 Emacs front-end for [[https://obsidian.md/][Obsidian Notes]].
 
-#+TOC: headlines 1
+* Table of Contents                                                     :toc:
+- [[#installation][Installation]]
+- [[#about-obsidianel][About Obsidian.el]]
+  - [[#what-should-we-keep-doing-in-obsidian][What should we keep doing in Obsidian?]]
+  - [[#what-should-be-possible-to-do-in-emacs][What should be possible to do in Emacs?]]
+- [[#how-does-obsidianel-work][How does obsidian.el work?]]
+  - [[#obsidian-mode][obsidian-mode]]
+  - [[#company-mode-completion][company-mode completion]]
+  - [[#hydra-menu][Hydra menu]]
+  - [[#manual-re-scan][Manual re-scan]]
+  - [[#following-links][Following links]]
+  - [[#following-backlinks][Following backlinks]]
+  - [[#inserting-links][Inserting links]]
+  - [[#jumping-between-notes][Jumping between notes]]
+  - [[#capturing-new-note][Capturing new note]]
+  - [[#searching-notes][Searching notes]]
+  - [[#finding-all-notes-with-a-tag][Finding all notes with a tag]]
+- [[#why-obsidianel-and-not][Why obsidian.el and not...]]
+  - [[#obsidian-app-itself-athens-research-or-any-other-great-app][Obsidian App itself, Athens Research or any other great app?]]
+  - [[#org-roam-or-any-other-great-emacs-libraries][Org-roam or any other great Emacs libraries?]]
+- [[#gratitude][Gratitude]]
 
 * Installation
 Obsidian.el is available from [[https://melpa.org][MELPA]] or [[https://stable.melpa.org/#/obsidian][MELPA Stable]] and can be installed with:
