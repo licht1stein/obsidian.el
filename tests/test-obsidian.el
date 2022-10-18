@@ -98,3 +98,25 @@ key4:
   (it "check that front-matter is ignored if not at the top of file"
     (expect (obsidian-find-yaml-front-matter obsidian--test-incorret-front-matter--not-start-of-file)
 	    :to-equal nil)))
+
+(describe "obsidian--link-p"
+  (it "non link"
+    (expect (obsidian--link-p "not link") :to-equal nil))
+
+  (it "wiki link"
+    (expect (obsidian--link-p "[[foo.md]]") :to-equal t)
+    (expect (obsidian--link-p "[[foo]]") :to-equal t)
+    (expect (obsidian--link-p "[[foo|annotated link]]") :to-equal t))
+
+  (it "markdown link"
+    (expect (obsidian--link-p "[foo](bar)") :to-equal t)
+    (expect (obsidian--link-p "[foo](bar.md)") :to-equal t)))
+
+(describe "obsidian--find-links-to-file"
+  (before-all (obsidian-specify-path obsidian--test-dir))
+  (after-all (obsidian-specify-path obsidian--test--original-dir))
+
+  (it "1.md"
+    (expect (obsidian--find-links-to-file "1.md") :to-equal '("2.md"))))
+
+(provide 'test-obsidian)
