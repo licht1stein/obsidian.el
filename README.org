@@ -128,6 +128,14 @@ Note that the Obsidian app replaces spaces with ~%20~ when inserting markdown li
 
 Both these types of links are correctly handled by ~obsidian-follow-link-at-point~.
 
+** Following backlinks
+You can quickly jump to backlinks to current file using ~obsidian-backlink-jump~
+
+#+begin_src
+  M-x obsidian-backlink-jump RET
+#+end_src
+
+
 *** Multiple matches
 Obsidian doesn't insert relative path by default, only does it when there are multiple files with the same name. ~obsidian-follow-link-at-point~ handles this correctly. Every time you follow a link it checks, if there's only one match for the filename linked. If there's just one it simply opens that file. If there's more than one it prompts you to select which file to open.
 
@@ -162,13 +170,6 @@ Quickly jump between notes using ~obsidian-jump~
 
 #+begin_src
   M-x obsidian-jump RET
-#+end_src
-
-** Following backlinks
-You can quickly jump to backlinks to current file using ~obsidian-backlink-jump~
-
-#+begin_src
-  M-x obsidian-backlink-jump RET
 #+end_src
 
 *** Aliases
