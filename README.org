@@ -26,6 +26,10 @@ Put this in your ~init.el~:
   ;; Use either `obsidian-insert-wikilink' or `obsidian-insert-link':
   (bind-key (kbd "C-c C-l") 'obsidian-insert-wikilink 'obsidian-mode-map)
 
+  ;; Following backlinks
+  (bind-key (kbd "C-c C-b") 'obsidian-backlink-jump 'obsidian-mode-map)
+
+
   ;; Optionally you can also bind `obsidian-jump' and `obsidian-capture'
   ;; replace "YOUR_BINDING" with the key of your choice:
   (bind-key (kbd "YOUR_BINDING") 'obsidian-jump)
@@ -48,10 +52,12 @@ Put this in your ~init.el~:
     ;; This directory will be used for `obsidian-capture' if set.
     (obsidian-inbox-directory "Inbox")
     :bind (:map obsidian-mode-map
-		;; Replace C-c C-o with Obsidian.el's implementation. It's ok to use another key binding.
-		("C-c C-o" . obsidian-follow-link-at-point)
-		;; If you prefer you can use `obsidian-insert-link'
-		("C-c C-l" . obsidian-insert-wikilink)))
+    ;; Replace C-c C-o with Obsidian.el's implementation. It's ok to use another key binding.
+    ("C-c C-o" . obsidian-follow-link-at-point)
+    ;; Jump to backlinks
+    ("C-c C-b" . obsidian-backlink-jump)
+    ;; If you prefer you can use `obsidian-insert-link'
+    ("C-c C-l" . obsidian-insert-wikilink)))
 #+end_src
 
 Optionally you can specify ~obsidian-inbox-directory~, it will be used by ~obsidian-capture~ to
@@ -74,7 +80,8 @@ Obsidian.el must empower us to stay in Emacs for things that make sense in Emacs
 - [X] Jumping between notes
 - [X] Searching all notes
 - [X] Finding all notes with a tag
-- [ ] Viewing and following backlinks
+- [X] Following backlinks
+- [ ] Viewing backlinks in a separate list
 
 When all of the above is ready we will almost never need the Obsidian app on desktop, but will still be able to use it on mobile or when specifically needed.
 
@@ -157,6 +164,13 @@ Quickly jump between notes using ~obsidian-jump~
   M-x obsidian-jump RET
 #+end_src
 
+** Following backlinks
+You can quickly jump to backlinks to current file using ~obsidian-backlink-jump~
+
+#+begin_src
+  M-x obsidian-backlink-jump RET
+#+end_src
+
 *** Aliases
 If you have YAML front matter in your note, Obsidian.el will find aliases in it and add them to the ~obsidian-jump~ selection. Both ~aliases~ and ~alias~ keys are supported.
 
@@ -193,6 +207,7 @@ Use ~obsidian-tag-find~ to list all notes that contain a tag. Let's you choose a
 - [X] Obsidian minor for matching .md files
 - [X] Jumping between notes
 - [X] Following links
+- [X] Following backlinks
 
 * Why obsidian.el and not...
 ** Obsidian App itself, Athens Research or any other great app?
