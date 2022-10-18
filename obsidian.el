@@ -76,8 +76,10 @@ When run interactively asks user to specify the path."
 
 (defvar obsidian--tag-regex "#[[:alnum:]-_/+]+" "Regex pattern used to find tags in Obsidian files.")
 
-(defvar obsidian--basic-wikilink-regex "\\[\\[[[:graph:][:blank:]]*\\]\\]" "Regex pattern used to find wikilinks.")
-(defvar obsidian--basic-markdown-link-regex "\\[[[:graph:][:blank:]]+\\]\([[:graph:][:blank:]]*\)" "Regex pattern used to find markdown links.")
+(defvar obsidian--basic-wikilink-regex "\\[\\[[[:graph:][:blank:]]*\\]\\]"
+  "Regex pattern used to find wikilinks.")
+(defvar obsidian--basic-markdown-link-regex "\\[[[:graph:][:blank:]]+\\]\([[:graph:][:blank:]]*\)"
+  "Regex pattern used to find markdown links.")
 
 (defvar obsidian--aliases-map (make-hash-table :test 'equal) "Alist of all Obsidian aliases.")
 
@@ -447,11 +449,11 @@ See `markdown-follow-link-at-point' and
 
 (defun obsidian--elgrep-get-context (match)
   "Get :context out of MATCH produced by elgrep."
-    (let* ((result (->> match
+  (let* ((result (->> match
                       (nth 1)
                       -flatten))
          (context (plist-get result :context)))
-      context))
+    context))
 
 (defun obsidian--mention-link-p (match)
   "Check if MATCH produced by `obsidian--grep' is a link."
