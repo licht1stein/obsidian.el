@@ -444,8 +444,8 @@ See `markdown-follow-link-at-point' and
 
 (defun obsidian--link-p (s)
   "Check if S matches any of the link regexes."
-  (or (s-matches-p obsidian--basic-wikilink-regex s)
-      (s-matches-p obsidian--basic-markdown-link-regex s)))
+  (or (s-match obsidian--basic-wikilink-regex s)
+      (s-match obsidian--basic-markdown-link-regex s)))
 
 (defun obsidian--elgrep-get-context (match)
   "Get :context out of MATCH produced by elgrep."

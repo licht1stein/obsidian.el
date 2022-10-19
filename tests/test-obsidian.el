@@ -104,13 +104,13 @@ key4:
     (expect (obsidian--link-p "not link") :to-equal nil))
 
   (it "wiki link"
-    (expect (obsidian--link-p "[[foo.md]]") :to-equal t)
-    (expect (obsidian--link-p "[[foo]]") :to-equal t)
-    (expect (obsidian--link-p "[[foo|annotated link]]") :to-equal t))
+    (expect (obsidian--link-p "[[foo.md]]") :to-be-truthy)
+    (expect (obsidian--link-p "[[foo]]") :to-be-truthy)
+    (expect (obsidian--link-p "[[foo|annotated link]]") :to-be-truthy))
 
   (it "markdown link"
-    (expect (obsidian--link-p "[foo](bar)") :to-equal t)
-    (expect (obsidian--link-p "[foo](bar.md)") :to-equal t)))
+    (expect (obsidian--link-p "[foo](bar)") :to-be-truthy)
+    (expect (obsidian--link-p "[foo](bar.md)") :to-be-truthy)))
 
 (describe "obsidian--find-links-to-file"
   (before-all (obsidian-specify-path obsidian--test-dir))
@@ -118,5 +118,13 @@ key4:
 
   (it "1.md"
     (expect (obsidian--find-links-to-file "1.md") :to-equal '("2.md"))))
+
+(describe "extract elgrep context"
+  (before-all (obsidian-specify-path obsidian--test-dir))
+  (after-all (obsidian-specify-path obsidian--test--original-dir))
+
+  (it "correct extraction"
+      (expect
+       (obsidian--elgrep-get-context (car (obsidian--grep "subdir/2-sub.md"))) :to-equal "[insert link md](subdir/2-sub.md) text after markdown link")))
 
 (provide 'test-obsidian)
