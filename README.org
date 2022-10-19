@@ -23,6 +23,7 @@ Emacs front-end for [[https://obsidian.md/][Obsidian Notes]].
 - [[#why-obsidianel-and-not][Why obsidian.el and not...]]
   - [[#obsidian-app-itself-athens-research-or-any-other-great-app][Obsidian App itself, Athens Research or any other great app?]]
   - [[#org-roam-or-any-other-great-emacs-libraries][Org-roam or any other great Emacs libraries?]]
+- [[#contributing][Contributing]]
 - [[#gratitude][Gratitude]]
 
 * Installation
@@ -238,6 +239,9 @@ Easy. When on desktop they are simply not Emacs.  Not even Obsidian itself. Emac
 The answer is mostly the same for all of them. Mobile support. Or rather — NO mobile support. I don't buy into the story that "you don't really need your PKM system on mobile", and "serious work is done only on desktop" etc. These are just excuses for the impossibility of building a full-fledged mobile version of Emacs.
 
 So there were two ways to go about it: build a mobile app for something like org-roam (which would be cool, but is above my front-end skills) or build a light-weight Emacs client for something like Obsidian. I chose the simpler task.
+
+* Contributing
+PRs and issues are very welcome. In order to develop locally you need to install [[https://github.com/doublep/eldev/][eldev]]. After that you can run ~make~ commands, in particular ~make test~ and ~make lint~ to make sure that your code will pass all MELPA checks.
 
 * Gratitude
 - The work on Obsidian.el was made considerably easier and definitely more fun thanks to the great work of [[https://github.com/magnars][Magnar Sveen]] and his packages [[https://github.com/magnars/dash.el][dash.el]] and [[https://github.com/magnars/s.el][s.el]]. Thank you for making Elisp almost as convenient as Clojure!
