@@ -46,6 +46,12 @@
 (require 'elgrep)
 (require 'yaml)
 
+;; Inspired by RamdaJS's tap function
+(defun obsidian-tap (a f)
+  "Evaluate (F A) for its side-effects but returns A."
+  (funcall f a)
+  a)
+
 ;; Clojure style comment
 (defmacro obsidian-comment (&rest _)
   "Ignore body, yield nil."
@@ -411,7 +417,7 @@ link name must be available via `match-string'."
       (-> url
           obsidian-prepare-file-path
           obsidian-wiki->normal
-          message
+          (obsidian-tap #'message)
           obsidian-find-file))))
 
 (defun obsidian-follow-markdown-link-at-point ()
