@@ -217,6 +217,13 @@ Use ~obsidian-tag-find~ to list all notes that contain a tag. Let's you choose a
   M-x obsidian-tag-find RET
 #+end_src
 
+** Move note to another folder
+Use ~obsidian-move-file~ to move current note to another folder:
+
+#+begin_src
+  M-x obsidian-move-file RET
+#+end_src
+
 *** Development tasks
 - [X] Specify Obsidian folder and save it in variables
 - [X] Enumerate files in the Obsidian folder and save a list
