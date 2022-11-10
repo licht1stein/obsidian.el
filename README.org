@@ -50,7 +50,7 @@ Put this in your ~init.el~:
      (local-set-key (kbd "C-c C-o") 'obsidian-follow-link-at-point)
 
      ;; Use either `obsidian-insert-wikilink' or `obsidian-insert-link':
-     (local-set-key (kbd "C-c c-l") 'obsidian-insert-wikilink)
+     (local-set-key (kbd "C-c C-l") 'obsidian-insert-wikilink)
 
      ;; Following backlinks
      (local-set-key (kbd "C-c C-b") 'obsidian-backlink-jump)))
