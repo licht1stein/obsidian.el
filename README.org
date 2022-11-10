@@ -60,7 +60,7 @@ Put this in your ~init.el~:
   (global-set-key (kbd "YOUR_BINDING") 'obsidian-jump)
   (global-set-key (kbd "YOUR_BINDING") 'obsidian-capture)
 
-  ;; Activate detectino of Obsidian vault
+  ;; Activate detection of Obsidian vault
   (global-obsidian-mode t)
 #+end_src
 
