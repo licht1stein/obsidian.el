@@ -5,7 +5,7 @@
 ;; Author: Mykhaylo Bilyanskyy
 ;; URL: https://github.com./licht1stein/obsidian.el
 ;; Keywords: obsidian, pkm, convenience
-;; Version: 1.1.8
+;; Version: 1.1.9
 ;; Package-Requires: ((emacs "27.2") (s "1.12.0") (dash "2.13") (markdown-mode "2.5") (elgrep "1.0.0") (yaml "0.5.1"))
 
 ;; This file is NOT part of GNU Emacs.
@@ -118,6 +118,10 @@ When run interactively asks user to specify the path."
   "Return t if FILE is not in .trash of Obsidian."
   (not (s-contains-p "/.trash" file)))
 
+(defun obsidian-not-dot-obsidian-p (file)
+    "Return t if FILE is not in .obsidian dir of Obsidian."
+    (not (s-contains-p "/.obsidian" file)))
+
 (defun obsidian-user-directory-p (&optional file)
   "Return t if FILE is a user defined directory inside `obsidian-directory'."
   (and (file-directory-p file)
@@ -139,6 +143,7 @@ FILE is an Org-roam file if:
                (md-p (string= ext "md"))
                (obsidian-dir-p (obsidian-descendant-of-p path obsidian-directory))
                (not-trash-p (obsidian-not-trash-p path))
+               (not-dot-obsidian (obsidian-not-dot-obsidian-p path))
                (not-temp-p (not (s-contains-p "~" relative-path))))
     t))
 
@@ -473,7 +478,7 @@ See `markdown-follow-link-at-point' and
 
 (defun obsidian--grep (re)
   "Find RE in the Obsidian vault."
-  (elgrep obsidian-directory "\.md" re :recursive t :case-fold-search t :exclude-file-re "~"))
+  (elgrep obsidian-directory "\.md" re :recursive t :case-fold-search t :exclude-file-re "~" :exclude-dir-re ".obsidian"))
 
 (defun obsidian--link-p (s)
   "Check if S matches any of the link regexes."
