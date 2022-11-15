@@ -119,8 +119,8 @@ When run interactively asks user to specify the path."
   (not (s-contains-p "/.trash" file)))
 
 (defun obsidian-not-dot-obsidian-p (file)
-    "Return t if FILE is not in .obsidian dir of Obsidian."
-    (not (s-contains-p "/.obsidian" file)))
+  "Return t if FILE is not in .obsidian dir of Obsidian."
+  (not (s-contains-p "/.obsidian" file)))
 
 (defun obsidian-user-directory-p (&optional file)
   "Return t if FILE is a user defined directory inside `obsidian-directory'."
@@ -478,7 +478,11 @@ See `markdown-follow-link-at-point' and
 
 (defun obsidian--grep (re)
   "Find RE in the Obsidian vault."
-  (elgrep obsidian-directory "\.md" re :recursive t :case-fold-search t :exclude-file-re "~" :exclude-dir-re ".obsidian"))
+  (elgrep obsidian-directory "\.md" re
+          :recursive t
+          :case-fold-search t
+          :exclude-file-re "~"
+          :exclude-dir-re ".obsidian"))
 
 (defun obsidian--link-p (s)
   "Check if S matches any of the link regexes."
