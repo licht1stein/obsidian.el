@@ -296,11 +296,10 @@ lower and upper case versions of the tags."
          (-map (lambda (s) (s-concat "#" s)))
          -distinct)))
 
-(defun obsidian-tags-backend (command &optional arg &rest ignored)
+(defun obsidian-tags-backend (command &rest arg)
   "Completion backend for company used by obsidian.el.
 Argument COMMAND company command.
-Optional argument ARG word to complete.
-Optional argument IGNORED this is ignored."
+Optional argument ARG word to complete."
   (interactive (if (and (featurep 'company)
                         (fboundp 'company-begin-backend))
                    (company-begin-backend 'obsidian-tags-backend)
@@ -313,7 +312,7 @@ Optional argument IGNORED this is ignored."
               (match-string 0)))
     (candidates (->> obsidian--tags-list
                      obsidian-prepare-tags-list
-                     (-filter (lambda (s) (s-starts-with-p arg s)))))))
+                     (-filter (lambda (s) (s-starts-with-p (car arg) s)))))))
 
 (defun obsidian-enable-minor-mode ()
   "Check if current buffer is an `obsidian-file-p' and toggle `obsidian-mode'."
