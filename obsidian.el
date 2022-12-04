@@ -491,9 +491,11 @@ See `markdown-follow-link-at-point' and
 
 (defun obsidian--elgrep-get-context (match)
   "Get :context out of MATCH produced by elgrep."
-  (mapcar 
-   (lambda (element) (plist-get (-flatten element) :context))
-   match))
+  (let* ((result (->> match
+                      (nth 1)
+                      -flatten))
+         (context (plist-get result :context)))
+    context))
 
 (defun obsidian--mention-link-p (match)
   "Check if MATCHES produced by `obsidian--grep' contain a link."
