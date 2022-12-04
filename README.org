@@ -20,6 +20,7 @@ Emacs front-end for [[https://obsidian.md/][Obsidian Notes]].
   - [[#capturing-new-note][Capturing new note]]
   - [[#searching-notes][Searching notes]]
   - [[#finding-all-notes-with-a-tag][Finding all notes with a tag]]
+  - [[#move-note-to-another-folder][Move note to another folder]]
 - [[#why-obsidianel-and-not][Why obsidian.el and not...]]
   - [[#obsidian-app-itself-athens-research-or-any-other-great-app][Obsidian App itself, Athens Research or any other great app?]]
   - [[#org-roam-or-any-other-great-emacs-libraries][Org-roam or any other great Emacs libraries?]]
@@ -41,22 +42,25 @@ Put this in your ~init.el~:
   ;; If you want a different directory of `obsidian-capture':
   (setq obsidian-inbox-directory "Inbox")
 
-  ;; Replace standard command with Obsidian.el's in obsidian vault:
-  (bind-key (kbd "C-c C-o") 'obsidian-follow-link-at-point 'obsidian-mode-map)
+  ;; Define obsidian-mode bindings
+  (add-hook
+   'obsidian-mode-hook
+   (lambda ()
+     ;; Replace standard command with Obsidian.el's in obsidian vault:
+     (local-set-key (kbd "C-c C-o") 'obsidian-follow-link-at-point)
 
-  ;; Use either `obsidian-insert-wikilink' or `obsidian-insert-link':
-  (bind-key (kbd "C-c C-l") 'obsidian-insert-wikilink 'obsidian-mode-map)
+     ;; Use either `obsidian-insert-wikilink' or `obsidian-insert-link':
+     (local-set-key (kbd "C-c C-l") 'obsidian-insert-wikilink)
 
-  ;; Following backlinks
-  (bind-key (kbd "C-c C-b") 'obsidian-backlink-jump 'obsidian-mode-map)
-
+     ;; Following backlinks
+     (local-set-key (kbd "C-c C-b") 'obsidian-backlink-jump)))
 
   ;; Optionally you can also bind `obsidian-jump' and `obsidian-capture'
   ;; replace "YOUR_BINDING" with the key of your choice:
-  (bind-key (kbd "YOUR_BINDING") 'obsidian-jump)
-  (bind-key (kbd "YOUR_BINDING") 'obsidian-capture)
+  (global-set-key (kbd "YOUR_BINDING") 'obsidian-jump)
+  (global-set-key (kbd "YOUR_BINDING") 'obsidian-capture)
 
-  ;; Activate detectino of Obsidian vault
+  ;; Activate detection of Obsidian vault
   (global-obsidian-mode t)
 #+end_src
 
@@ -215,6 +219,13 @@ Use ~obsidian-tag-find~ to list all notes that contain a tag. Let's you choose a
 
 #+begin_src
   M-x obsidian-tag-find RET
+#+end_src
+
+** Move note to another folder
+Use ~obsidian-move-file~ to move current note to another folder:
+
+#+begin_src
+  M-x obsidian-move-file RET
 #+end_src
 
 *** Development tasks

@@ -5,7 +5,7 @@
 ;; Author: Mykhaylo Bilyanskyy
 ;; URL: https://github.com./licht1stein/obsidian.el
 ;; Keywords: obsidian, pkm, convenience
-;; Version: 1.1.6
+;; Version: 1.1.9
 ;; Package-Requires: ((emacs "27.2") (s "1.12.0") (dash "2.13") (markdown-mode "2.5") (elgrep "1.0.0") (yaml "0.5.1"))
 
 ;; This file is NOT part of GNU Emacs.
@@ -45,6 +45,12 @@
 
 (require 'elgrep)
 (require 'yaml)
+
+;; Inspired by RamdaJS's tap function
+(defun obsidian-tap (a f)
+  "Evaluate (F A) for its side-effects but return A."
+  (funcall f a)
+  a)
 
 ;; Clojure style comment
 (defmacro obsidian-comment (&rest _)
@@ -112,6 +118,16 @@ When run interactively asks user to specify the path."
   "Return t if FILE is not in .trash of Obsidian."
   (not (s-contains-p "/.trash" file)))
 
+(defun obsidian-not-dot-obsidian-p (file)
+  "Return t if FILE is not in .obsidian dir of Obsidian."
+  (not (s-contains-p "/.obsidian" file)))
+
+(defun obsidian-user-directory-p (&optional file)
+  "Return t if FILE is a user defined directory inside `obsidian-directory'."
+  (and (file-directory-p file)
+       (not (s-contains-p "/.obsidian" file))
+       (not (s-contains-p "/.trash" file))))
+
 (defun obsidian-file-p (&optional file)
   "Return t if FILE is an obsidian.el file, nil otherwise.
 
@@ -127,6 +143,7 @@ FILE is an Org-roam file if:
                (md-p (string= ext "md"))
                (obsidian-dir-p (obsidian-descendant-of-p path obsidian-directory))
                (not-trash-p (obsidian-not-trash-p path))
+               (not-dot-obsidian (obsidian-not-dot-obsidian-p path))
                (not-temp-p (not (s-contains-p "~" relative-path))))
     t))
 
@@ -145,6 +162,11 @@ Obsidian notes files:
 - Pass the `obsidian-file-p' check"
   (->> (directory-files-recursively obsidian-directory "\.*$")
        (-filter #'obsidian-file-p)))
+
+(defun obsidian-list-all-directories ()
+  "Lists all Obsidian sub folders."
+  (->> (directory-files-recursively obsidian-directory "" t)
+       (-filter #'obsidian-user-directory-p)))
 
 (defun obsidian-read-file-or-buffer (&optional file)
   "Return string contents of a file or current buffer.
@@ -274,11 +296,10 @@ lower and upper case versions of the tags."
          (-map (lambda (s) (s-concat "#" s)))
          -distinct)))
 
-(defun obsidian-tags-backend (command &optional arg &rest ignored)
+(defun obsidian-tags-backend (command &rest arg)
   "Completion backend for company used by obsidian.el.
 Argument COMMAND company command.
-Optional argument ARG word to complete.
-Optional argument IGNORED this is ignored."
+Optional argument ARG word to complete."
   (interactive (if (and (featurep 'company)
                         (fboundp 'company-begin-backend))
                    (company-begin-backend 'obsidian-tags-backend)
@@ -291,7 +312,7 @@ Optional argument IGNORED this is ignored."
               (match-string 0)))
     (candidates (->> obsidian--tags-list
                      obsidian-prepare-tags-list
-                     (-filter (lambda (s) (s-starts-with-p arg s)))))))
+                     (-filter (lambda (s) (s-starts-with-p (car arg) s)))))))
 
 (defun obsidian-enable-minor-mode ()
   "Check if current buffer is an `obsidian-file-p' and toggle `obsidian-mode'."
@@ -360,6 +381,22 @@ In the `obsidian-inbox-directory' if set otherwise in `obsidian-directory' root.
          (target (obsidian--get-alias choice (gethash choice dict))))
     (find-file target)))
 
+;;;###autoload
+(defun obsidian-move-file ()
+  "Move current note to another directory."
+  (interactive)
+  (when (not (obsidian-file-p (buffer-file-name)))
+    (user-error "Current file is not an obsidian-file"))
+  (let* ((dict (make-hash-table :test 'equal))
+         (_ (-map (lambda (d)
+                    (puthash (file-relative-name d obsidian-directory) d dict))
+                  (obsidian-list-all-directories)))
+         (choice (completing-read "Move to: " (hash-table-keys dict)))
+         (new-file-directory (file-name-as-directory (gethash choice dict)))
+         (new-file-path (expand-file-name (file-name-nondirectory (buffer-file-name)) new-file-directory)))
+    (rename-file (buffer-file-name) new-file-directory)
+    (write-file new-file-path)))
+
 (defun obsidian-prepare-file-path (s)
   "Replace %20 with spaces in file path.
 Argument S relative file name to clean and convert to absolute."
@@ -411,7 +448,7 @@ link name must be available via `match-string'."
       (-> url
           obsidian-prepare-file-path
           obsidian-wiki->normal
-          message
+          (obsidian-tap #'message)
           obsidian-find-file))))
 
 (defun obsidian-follow-markdown-link-at-point ()
@@ -440,12 +477,17 @@ See `markdown-follow-link-at-point' and
 
 (defun obsidian--grep (re)
   "Find RE in the Obsidian vault."
-  (elgrep obsidian-directory "\.md" re :recursive t :case-fold-search t :exclude-file-re "~"))
+  (elgrep obsidian-directory "\.md" re
+          :recursive t
+          :case-fold-search t
+          :exclude-file-re "~"
+          :exclude-dir-re ".obsidian"))
 
 (defun obsidian--link-p (s)
   "Check if S matches any of the link regexes."
+  (if (not s) nil 
   (or (s-matches-p obsidian--basic-wikilink-regex s)
-      (s-matches-p obsidian--basic-markdown-link-regex s)))
+      (s-matches-p obsidian--basic-markdown-link-regex s))))
 
 (defun obsidian--elgrep-get-context (match)
   "Get :context out of MATCH produced by elgrep."
@@ -454,8 +496,10 @@ See `markdown-follow-link-at-point' and
    match))
 
 (defun obsidian--mention-link-p (match)
-  "Check if MATCH produced by `obsidian--grep' contains a link."
-  (obsidian--link-p (format "%s" (obsidian--elgrep-get-context match))))
+  "Check if MATCHES produced by `obsidian--grep' contain a link."
+          (mapcar (lambda (element) 
+                    (if (listp element) 
+                        (obsidian--link-p (obsidian--elgrep-get-context element)))nil) match))
 
 (defun obsidian--find-links-to-file (filename)
   "Find any mention of FILENAME in the vault."
