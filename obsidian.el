@@ -501,7 +501,7 @@ See `markdown-follow-link-at-point' and
   "Check if MATCHES produced by `obsidian--grep' contain a link."
           (mapcar (lambda (element) 
                     (if (listp element) 
-                        (obsidian--link-p (obsidian--elgrep-get-context element)))nil) match))
+                        (obsidian--link-p (obsidian--elgrep-get-context element)))) match))
 
 (defun obsidian--find-links-to-file (filename)
   "Find any mention of FILENAME in the vault."
