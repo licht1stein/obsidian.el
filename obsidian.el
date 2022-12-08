@@ -485,7 +485,7 @@ See `markdown-follow-link-at-point' and
 
 (defun obsidian--link-p (s)
   "Check if S matches any of the link regexes."
-  (if (not s) nil 
+  (when s 
   (or (s-matches-p obsidian--basic-wikilink-regex s)
       (s-matches-p obsidian--basic-markdown-link-regex s))))
 
@@ -500,7 +500,7 @@ See `markdown-follow-link-at-point' and
 (defun obsidian--mention-link-p (match)
   "Check if MATCHES produced by `obsidian--grep' contain a link."
           (mapcar (lambda (element) 
-                    (if (listp element) 
+                    (when (listp element) 
                         (obsidian--link-p (obsidian--elgrep-get-context element)))) match))
 
 (defun obsidian--find-links-to-file (filename)
