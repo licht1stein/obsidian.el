@@ -485,8 +485,9 @@ See `markdown-follow-link-at-point' and
 
 (defun obsidian--link-p (s)
   "Check if S matches any of the link regexes."
-  (or (s-matches-p obsidian--basic-wikilink-regex s)
-      (s-matches-p obsidian--basic-markdown-link-regex s)))
+  (when s
+    (or (s-matches-p obsidian--basic-wikilink-regex s)
+        (s-matches-p obsidian--basic-markdown-link-regex s))))
 
 (defun obsidian--elgrep-get-context (match)
   "Get :context out of MATCH produced by elgrep."
@@ -497,15 +498,18 @@ See `markdown-follow-link-at-point' and
     context))
 
 (defun obsidian--mention-link-p (match)
-  "Check if MATCH produced by `obsidian--grep' is a link."
-  (obsidian--link-p (obsidian--elgrep-get-context match)))
+  "Check if 'MATCH' produced by `obsidian--grep' is a link."
+  (mapcar (lambda (element)
+            (when (listp element)
+              (obsidian--link-p (obsidian--elgrep-get-context element)))) match))
 
 (defun obsidian--find-links-to-file (filename)
   "Find any mention of FILENAME in the vault."
-  (->> (file-name-sans-extension filename)
+  (->> (file-name-sans-extension (file-name-nondirectory filename))
        obsidian--grep
        (-filter #'obsidian--mention-link-p)
-       (-map #'car)))
+       (-map #'car)
+       (-filter (lambda (name) (not (string-equal name filename))))))
 
 (defun obsidian--completing-read-for-matches (coll)
   "Take a COLL of matches produced by elgrep and make a list for completing read."
@@ -517,7 +521,7 @@ See `markdown-follow-link-at-point' and
 (defun obsidian-backlink-jump ()
   "Select a backlink to this file and follow it."
   (interactive)
-  (let* ((backlinks (obsidian--find-links-to-file (file-name-nondirectory (buffer-file-name))))
+  (let* ((backlinks (obsidian--find-links-to-file (obsidian--file-relative-name (buffer-file-name))))
          (dict (obsidian--completing-read-for-matches backlinks))
          (choices (-sort #'string< (-distinct (hash-table-keys dict)))))
     (if choices
