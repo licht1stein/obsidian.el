@@ -505,10 +505,11 @@ See `markdown-follow-link-at-point' and
 
 (defun obsidian--find-links-to-file (filename)
   "Find any mention of FILENAME in the vault."
-  (->> (file-name-sans-extension filename)
+  (->> (file-name-sans-extension (file-name-nondirectory filename))
        obsidian--grep
        (-filter #'obsidian--mention-link-p)
-       (-map #'car)))
+       (-map #'car)
+       (-filter (lambda (name) (not (string-equal name filename))))))
 
 (defun obsidian--completing-read-for-matches (coll)
   "Take a COLL of matches produced by elgrep and make a list for completing read."
@@ -520,7 +521,7 @@ See `markdown-follow-link-at-point' and
 (defun obsidian-backlink-jump ()
   "Select a backlink to this file and follow it."
   (interactive)
-  (let* ((backlinks (obsidian--find-links-to-file (file-name-nondirectory (buffer-file-name))))
+  (let* ((backlinks (obsidian--find-links-to-file (obsidian--file-relative-name (buffer-file-name))))
          (dict (obsidian--completing-read-for-matches backlinks))
          (choices (-sort #'string< (-distinct (hash-table-keys dict)))))
     (if choices
