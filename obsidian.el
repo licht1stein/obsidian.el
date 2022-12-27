@@ -497,19 +497,26 @@ See `markdown-follow-link-at-point' and
            (context (plist-get result :context)))
       context)))
 
-(defun obsidian--mention-link-p (match)
+(defun obsidian--mention-link-to-p (filename match)
   "Check if `MATCH' produced by `obsidian--grep' contain a link."
-  (let* ((result (mapcar (lambda (element)
-                           (if (listp element)
-                               (obsidian--link-p (obsidian--elgrep-get-context element)))) (cdr match))))
-    (car (member t result))))
+;;  (message "FILENAME ---> %s" filename)
+;;  (message "MATCH ---> %s" match)
 
+  (let* ((result (mapcar (lambda (element)
+                           ;; (message "ELEMENT ---> %s" (obsidian--elgrep-get-context element))
+                           (if (listp element)
+                               (and
+                                (obsidian--link-p (obsidian--elgrep-get-context element))
+                                (string-match-p (format "\\b%s\\b" filename) (format "%s" (obsidian--elgrep-get-context element)))))) (cdr match))))
+;;    (message (format "RESULT ---> %s" result))
+    (when (remove nil result) t)
+))
 
 (defun obsidian--find-links-to-file (filename)
   "Find any mention of FILENAME in the vault."
   (->> (file-name-sans-extension filename)
        obsidian--grep
-       (-filter #'obsidian--mention-link-p)
+       (-filter (lambda (x) (obsidian--mention-link-to-p (file-name-sans-extension filename) x)))
        (-map #'car)))
 
 (defun obsidian--completing-read-for-matches (coll)
