@@ -485,26 +485,35 @@ See `markdown-follow-link-at-point' and
 
 (defun obsidian--link-p (s)
   "Check if S matches any of the link regexes."
-  (or (s-matches-p obsidian--basic-wikilink-regex s)
-      (s-matches-p obsidian--basic-markdown-link-regex s)))
+  (when s
+    (or (s-matches-p obsidian--basic-wikilink-regex s)
+        (s-matches-p obsidian--basic-markdown-link-regex s))))
 
 (defun obsidian--elgrep-get-context (match)
   "Get :context out of MATCH produced by elgrep."
-  (let* ((result (->> match
-                      (nth 1)
-                      -flatten))
-         (context (plist-get result :context)))
-    context))
+  (when match
+    (let* ((result (->> match
+                        -flatten))
+           (context (plist-get result :context)))
+      context)))
 
-(defun obsidian--mention-link-p (match)
-  "Check if MATCH produced by `obsidian--grep' is a link."
-  (obsidian--link-p (obsidian--elgrep-get-context match)))
+(defun obsidian--mention-link-to-p (filename match)
+  "Check if `MATCH' produced by `obsidian--grep' contain a link to `FILENAME'."
+  (let* ((result (mapcar (lambda (element)
+                           ;; (message "ELEMENT ---> %s" (obsidian--elgrep-get-context element))
+                           (if (listp element)
+                               (and
+                                (obsidian--link-p (obsidian--elgrep-get-context element))
+                                (string-match-p (format "\\b%s\\b" filename)
+                                                (format "%s" (obsidian--elgrep-get-context element))))))
+                         (cdr match))))
+    (when (remove nil result) t)))
 
 (defun obsidian--find-links-to-file (filename)
   "Find any mention of FILENAME in the vault."
   (->> (file-name-sans-extension filename)
        obsidian--grep
-       (-filter #'obsidian--mention-link-p)
+       (-filter (lambda (x) (obsidian--mention-link-to-p (file-name-sans-extension filename) x)))
        (-map #'car)))
 
 (defun obsidian--completing-read-for-matches (coll)
