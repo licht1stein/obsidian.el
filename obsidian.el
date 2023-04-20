@@ -411,10 +411,12 @@ Argument S relative file name to clean and convert to absolute."
   "Take file F and either opens directly or offer choice if multiple match."
   (let* ((all-files (->> (obsidian-list-all-files) (-map #'obsidian--file-relative-name)))
          (matches (obsidian--match-files f all-files))
-         (file (if (> (length matches) 1)
-                   (let* ((choice (completing-read "Jump to: " matches)))
-                     choice)
-                 f)))
+         (file (cl-case (length matches)
+                 (0 f)
+                 (1 (car matches))
+                 (t
+                  (let* ((choice (completing-read "Jump to: " matches)))
+                    choice)))))
     (-> file obsidian--expand-file-name find-file)))
 
 (defun obsidian-wiki-link-p ()
