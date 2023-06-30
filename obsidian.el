@@ -155,13 +155,23 @@ FILE is an Org-roam file if:
   "Take relative file name F and return expanded name."
   (expand-file-name f obsidian-directory))
 
+(defvar obsidian-files-cache nil "Cache for Obsidian files.")
+
 (defun obsidian-list-all-files ()
   "Lists all Obsidian Notes files that are not in trash.
 
 Obsidian notes files:
 - Pass the `obsidian-file-p' check"
-  (->> (directory-files-recursively obsidian-directory "\.*$")
-       (-filter #'obsidian-file-p)))
+  (unless obsidian-files-cache
+    (setq obsidian-files-cache
+          (->> (directory-files-recursively obsidian-directory "\.*$")
+               (-filter #'obsidian-file-p))))
+  obsidian-files-cache)
+
+(defun obsidian-clear-cache ()
+  "Clears the cache."
+  (interactive)
+  (setq obsidian-files-cache nil))
 
 (defun obsidian-list-all-directories ()
   "Lists all Obsidian sub folders."
