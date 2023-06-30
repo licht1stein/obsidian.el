@@ -156,22 +156,32 @@ FILE is an Org-roam file if:
   (expand-file-name f obsidian-directory))
 
 (defvar obsidian-files-cache nil "Cache for Obsidian files.")
+(defvar obsidian-cache-timestamp nil "The time when the cache was last updated.")
+
+(defcustom obsidian-cache-expiry 3600
+  "The number of seconds before the Obsidian cache expires."
+  :type 'integer
+  :group 'obsidian)
 
 (defun obsidian-list-all-files ()
   "Lists all Obsidian Notes files that are not in trash.
 
 Obsidian notes files:
 - Pass the `obsidian-file-p' check"
-  (unless obsidian-files-cache
-    (setq obsidian-files-cache
-          (->> (directory-files-recursively obsidian-directory "\.*$")
-               (-filter #'obsidian-file-p))))
+  (let ((current-time (float-time)))
+    (when (or (not obsidian-files-cache)
+              (> (- current-time obsidian-cache-timestamp) obsidian-cache-expiry))
+      (setq obsidian-files-cache
+            (->> (directory-files-recursively obsidian-directory "\.*$")
+                 (-filter #'obsidian-file-p)))
+      (setq obsidian-cache-timestamp current-time)))
   obsidian-files-cache)
 
 (defun obsidian-clear-cache ()
   "Clears the cache."
   (interactive)
-  (setq obsidian-files-cache nil))
+  (setq obsidian-files-cache nil)
+  (setq obsidian-cache-timestamp nil))
 
 (defun obsidian-list-all-directories ()
   "Lists all Obsidian sub folders."
