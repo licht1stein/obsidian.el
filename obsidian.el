@@ -369,6 +369,13 @@ Optional argument ARG word to complete."
                  (s-concat "[[" no-ext "]]"))))
     (insert link)))
 
+(defun obsidian-onetime-cache-clear-hook ()
+  "Add a buffer-local after-save-hook to clear the cache once."
+  (let ((hook (lambda ()
+                (obsidian-clear-cache)
+                (remove-hook 'after-save-hook hook t))))
+    (add-hook 'after-save-hook hook nil t)))
+
 ;;;###autoload
 (defun obsidian-insert-link ()
   "Insert a link to file in markdown format."
@@ -387,7 +394,7 @@ In the `obsidian-inbox-directory' if set otherwise in `obsidian-directory' root.
          (filename (s-concat obsidian-directory "/" obsidian-inbox-directory "/" title ".md"))
          (clean-filename (s-replace "//" "/" filename)))
     (find-file (expand-file-name clean-filename) t)
-    (add-hook 'after-save-hook 'obsidian-clear-cache nil t)))
+    (obsidian-onetime-cache-clear-hook)))
 
 ;;;###autoload
 (defun obsidian-jump ()
@@ -438,7 +445,10 @@ Argument S relative file name to clean and convert to absolute."
                  (t
                   (let* ((choice (completing-read "Jump to: " matches)))
                     choice)))))
-    (-> file obsidian--expand-file-name find-file)))
+    (let ((buf (-> file obsidian--expand-file-name find-file)))
+      (when (and (not (file-exists-p file)) (buffer-live-p buf))
+        (with-current-buffer buf
+          (obsidian-onetime-cache-clear-hook)))))
 
 (defun obsidian-wiki-link-p ()
   "Return non-nil if `point' is at a true wiki link.
