@@ -24,6 +24,7 @@ Emacs front-end for [[https://obsidian.md/][Obsidian Notes]].
 - [[#why-obsidianel-and-not][Why obsidian.el and not...]]
   - [[#obsidian-app-itself-athens-research-or-any-other-great-app][Obsidian App itself, Athens Research or any other great app?]]
   - [[#org-roam-or-any-other-great-emacs-libraries][Org-roam or any other great Emacs libraries?]]
+- [[#versioning][Versioning]]
 - [[#contributing][Contributing]]
 - [[#gratitude][Gratitude]]
 
@@ -251,6 +252,9 @@ The answer is mostly the same for all of them. Mobile support. Or rather — NO 
 
 So there were two ways to go about it: build a mobile app for something like org-roam (which would be cool, but is above my front-end skills) or build a light-weight Emacs client for something like Obsidian. I chose the simpler task.
 
+* Versioning
+The project uses [[https://github.com/ptaoussanis/encore/blob/master/BREAK-VERSIONING.md][break versioning]], meaning that upgrading from 1.0.x to 1.0.y will always be safe, upgrading from 1.x.x to 1.y.x might break something small, and upgrade from x.x.x to y.x.x will break almost everything.
+
 * Contributing
 PRs and issues are very welcome. In order to develop locally you need to install [[https://github.com/doublep/eldev/][eldev]]. After that you can run ~make~ commands, in particular ~make test~ and ~make lint~ to make sure that your code will pass all MELPA checks.
 
@@ -258,3 +262,5 @@ PRs and issues are very welcome. In order to develop locally you need to install
 - The work on Obsidian.el was made considerably easier and definitely more fun thanks to the great work of [[https://github.com/magnars][Magnar Sveen]] and his packages [[https://github.com/magnars/dash.el][dash.el]] and [[https://github.com/magnars/s.el][s.el]]. Thank you for making Elisp almost as convenient as Clojure!
 
 - During the development of Obsidian.el I have learned and copied from the code of the amazing [[https://github.com/org-roam/org-roam][org-roam]] package. Thank you!
+
+
