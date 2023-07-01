@@ -386,7 +386,8 @@ In the `obsidian-inbox-directory' if set otherwise in `obsidian-directory' root.
   (let* ((title (read-from-minibuffer "Title: "))
          (filename (s-concat obsidian-directory "/" obsidian-inbox-directory "/" title ".md"))
          (clean-filename (s-replace "//" "/" filename)))
-    (find-file (expand-file-name clean-filename) t)))
+    (find-file (expand-file-name clean-filename) t)
+    (add-hook 'after-save-hook 'obsidian-clear-cache nil t)))
 
 ;;;###autoload
 (defun obsidian-jump ()
