@@ -369,13 +369,6 @@ Optional argument ARG word to complete."
                  (s-concat "[[" no-ext "]]"))))
     (insert link)))
 
-(defun obsidian-onetime-cache-clear-hook ()
-  "Add a buffer-local after-save-hook to clear the cache once."
-  (let ((hook (lambda ()
-                (obsidian-clear-cache)
-                (remove-hook 'after-save-hook hook t))))
-    (add-hook 'after-save-hook hook nil t)))
-
 ;;;###autoload
 (defun obsidian-insert-link ()
   "Insert a link to file in markdown format."
@@ -390,11 +383,11 @@ Optional argument ARG word to complete."
 
 In the `obsidian-inbox-directory' if set otherwise in `obsidian-directory' root."
   (interactive)
+  (obsidian-clear-cache)
   (let* ((title (read-from-minibuffer "Title: "))
          (filename (s-concat obsidian-directory "/" obsidian-inbox-directory "/" title ".md"))
          (clean-filename (s-replace "//" "/" filename)))
-    (find-file (expand-file-name clean-filename) t)
-    (obsidian-onetime-cache-clear-hook)))
+    (find-file (expand-file-name clean-filename) t)))
 
 ;;;###autoload
 (defun obsidian-jump ()
@@ -437,6 +430,7 @@ Argument S relative file name to clean and convert to absolute."
 
 (defun obsidian-find-file (f)
   "Take file F and either opens directly or offer choice if multiple match."
+  (obsidian-clear-cache)
   (let* ((all-files (->> (obsidian-list-all-files) (-map #'obsidian--file-relative-name)))
          (matches (obsidian--match-files f all-files))
          (file (cl-case (length matches)
@@ -445,10 +439,7 @@ Argument S relative file name to clean and convert to absolute."
                  (t
                   (let* ((choice (completing-read "Jump to: " matches)))
                     choice)))))
-    (let ((buf (-> file obsidian--expand-file-name find-file)))
-      (when (and (not (file-exists-p file)) (buffer-live-p buf))
-        (with-current-buffer buf
-          (obsidian-onetime-cache-clear-hook)))))
+    (-> file obsidian--expand-file-name find-file)))
 
 (defun obsidian-wiki-link-p ()
   "Return non-nil if `point' is at a true wiki link.
