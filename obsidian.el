@@ -5,7 +5,7 @@
 ;; Author: Mykhaylo Bilyanskyy
 ;; URL: https://github.com./licht1stein/obsidian.el
 ;; Keywords: obsidian, pkm, convenience
-;; Version: 1.1.11
+;; Version: 1.2.0
 ;; Package-Requires: ((emacs "27.2") (s "1.12.0") (dash "2.13") (markdown-mode "2.5") (elgrep "1.0.0") (yaml "0.5.1"))
 
 ;; This file is NOT part of GNU Emacs.
@@ -163,22 +163,29 @@ FILE is an Org-roam file if:
   :type 'integer
   :group 'obsidian)
 
+(defun obsidian-cache-needs-reset-p ()
+  "Check if `obsidian-file-cache' is empty or expired."
+  (or (not obsidian-files-cache)
+      (> (- (float-time) obsidian-cache-timestamp) obsidian-cache-expiry)))
+
+(defun obsidian-reset-cache ()
+  "Clear and reset obsidian cache."
+  (setq obsidian-files-cache
+        (->> (directory-files-recursively obsidian-directory "\.*$")
+             (-filter #'obsidian-file-p)))
+  (setq obsidian-cache-timestamp (float-time)))
+
 (defun obsidian-list-all-files ()
   "Lists all Obsidian Notes files that are not in trash.
 
 Obsidian notes files:
 - Pass the `obsidian-file-p' check"
-  (let ((current-time (float-time)))
-    (when (or (not obsidian-files-cache)
-              (> (- current-time obsidian-cache-timestamp) obsidian-cache-expiry))
-      (setq obsidian-files-cache
-            (->> (directory-files-recursively obsidian-directory "\.*$")
-                 (-filter #'obsidian-file-p)))
-      (setq obsidian-cache-timestamp current-time)))
+  (when (obsidian-cache-needs-reset-p)
+    (obsidian-reset-cache))
   obsidian-files-cache)
 
 (defun obsidian-clear-cache ()
-  "Clears the cache."
+  "Clears the obsidiean.el cache."
   (interactive)
   (setq obsidian-files-cache nil)
   (setq obsidian-cache-timestamp nil))
