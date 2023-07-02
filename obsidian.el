@@ -155,13 +155,33 @@ FILE is an Org-roam file if:
   "Take relative file name F and return expanded name."
   (expand-file-name f obsidian-directory))
 
+(defvar obsidian-files-cache nil "Cache for Obsidian files.")
+(defvar obsidian-cache-timestamp nil "The time when the cache was last updated.")
+
+(defcustom obsidian-cache-expiry 3600
+  "The number of seconds before the Obsidian cache expires."
+  :type 'integer
+  :group 'obsidian)
+
 (defun obsidian-list-all-files ()
   "Lists all Obsidian Notes files that are not in trash.
 
 Obsidian notes files:
 - Pass the `obsidian-file-p' check"
-  (->> (directory-files-recursively obsidian-directory "\.*$")
-       (-filter #'obsidian-file-p)))
+  (let ((current-time (float-time)))
+    (when (or (not obsidian-files-cache)
+              (> (- current-time obsidian-cache-timestamp) obsidian-cache-expiry))
+      (setq obsidian-files-cache
+            (->> (directory-files-recursively obsidian-directory "\.*$")
+                 (-filter #'obsidian-file-p)))
+      (setq obsidian-cache-timestamp current-time)))
+  obsidian-files-cache)
+
+(defun obsidian-clear-cache ()
+  "Clears the cache."
+  (interactive)
+  (setq obsidian-files-cache nil)
+  (setq obsidian-cache-timestamp nil))
 
 (defun obsidian-list-all-directories ()
   "Lists all Obsidian sub folders."
@@ -363,6 +383,7 @@ Optional argument ARG word to complete."
 
 In the `obsidian-inbox-directory' if set otherwise in `obsidian-directory' root."
   (interactive)
+  (obsidian-clear-cache)
   (let* ((title (read-from-minibuffer "Title: "))
          (filename (s-concat obsidian-directory "/" obsidian-inbox-directory "/" title ".md"))
          (clean-filename (s-replace "//" "/" filename)))
@@ -412,7 +433,9 @@ Argument S relative file name to clean and convert to absolute."
   (let* ((all-files (->> (obsidian-list-all-files) (-map #'obsidian--file-relative-name)))
          (matches (obsidian--match-files f all-files))
          (file (cl-case (length matches)
-                 (0 f)
+                 (0 (progn
+                      (obsidian-clear-cache)
+                      f))
                  (1 (car matches))
                  (t
                   (let* ((choice (completing-read "Jump to: " matches)))
