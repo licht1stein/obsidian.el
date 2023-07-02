@@ -185,7 +185,9 @@ Obsidian notes files:
   obsidian-files-cache)
 
 (defun obsidian-clear-cache ()
-  "Clears the obsidiean.el cache."
+  "Clears the obsidiean.el cache.
+
+If you need to run this manually, please report this as an issue on Github."
   (interactive)
   (setq obsidian-files-cache nil)
   (setq obsidian-cache-timestamp nil))
