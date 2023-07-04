@@ -5,7 +5,7 @@
 ;; Author: Mykhaylo Bilyanskyy
 ;; URL: https://github.com./licht1stein/obsidian.el
 ;; Keywords: obsidian, pkm, convenience
-;; Version: 1.2.0
+;; Version: 1.2.1
 ;; Package-Requires: ((emacs "27.2") (s "1.12.0") (dash "2.13") (markdown-mode "2.5") (elgrep "1.0.0") (yaml "0.5.1"))
 
 ;; This file is NOT part of GNU Emacs.
@@ -261,13 +261,11 @@ At the moment updates only `obsidian--aliases-map' with found aliases."
 
 (defun obsidian--update-all-from-front-matter ()
   "Take all files in obsidian vault, parse front matter and update."
-  (-map
-   (lambda (f)
-     (condition-case err
-         (obsidian--update-from-front-matter f)
-       (error (message "Error updating YAML front matter in file %s. Error: %s"
-                       f (error-message-string err)))))
-   (obsidian-list-all-files))
+  (dolist (f (obsidian-list-all-files))
+   (condition-case err
+       (obsidian--update-from-front-matter f)
+     (error (message "Error updating YAML front matter in file %s. Error: %s"
+                     f (error-message-string err)))))
   (message "Obsidian aliases updated."))
 
 (defun obsidian-tag-p (s)
