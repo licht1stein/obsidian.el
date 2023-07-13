@@ -67,6 +67,10 @@
   "Subdir to create notes using `obsidian-capture'."
   :type 'directory)
 
+(defcustom obsidian-links-use-vault-path nil
+  "If true, the full vault path for a link will be used instead of just the filename."
+  :type 'boolean)
+
 (eval-when-compile (defvar local-minor-modes))
 
 ;;;###autoload
@@ -353,21 +357,29 @@ Optional argument ARG word to complete."
   (obsidian-update-tags-list)
   (obsidian--update-all-from-front-matter))
 
-(defun obsidian--request-link ()
-  "Service function to request user for link input."
+(defun obsidian--request-link (&optional toggle-path)
+  "Service function to request user for link input.
+
+TOGGLE-PATH is a boolean that will toggle the behavior of
+`obsidian-use-vault-path' for this single link insertion."
   (let* ((all-files (->> (obsidian-list-all-files) (-map (lambda (f) (file-relative-name f obsidian-directory)))))
          (region (when (use-region-p)
                    (buffer-substring-no-properties (region-beginning) (region-end))))
-         (chosen-file (file-name-nondirectory (completing-read "Link: " all-files)))
-         (default-description (file-name-sans-extension chosen-file))
-         (description (read-from-minibuffer "Description (optional): " (or region default-description))))
-    (list :file chosen-file :description description)))
+         (chosen-file (completing-read "Link: " all-files))
+         (filename-only (file-name-nondirectory chosen-file))
+         (default-description (file-name-sans-extension filename-only))
+         (description (read-from-minibuffer "Description (optional): " (or region default-description)))
+         (file-link (if obsidian-links-use-vault-path
+                        (if toggle-path filename-only chosen-file)
+                      (if toggle-path chosen-file filename-only)))
+         )
+    (list :file file-link :description description)))
 
 ;;;###autoload
 (defun obsidian-insert-wikilink ()
   "Insert a link to file in wikiling format."
   (interactive)
-  (let* ((file (obsidian--request-link))
+  (let* ((file (obsidian--request-link current-prefix-arg))
          (filename (plist-get file :file))
          (description (plist-get file :description))
          (no-ext (file-name-sans-extension filename))
@@ -380,7 +392,7 @@ Optional argument ARG word to complete."
 (defun obsidian-insert-link ()
   "Insert a link to file in markdown format."
   (interactive)
-  (let* ((file (obsidian--request-link)))
+  (let* ((file (obsidian--request-link current-prefix-arg)))
     (-> (s-concat "[" (plist-get file :description) "](" (->> (plist-get file :file) (s-replace " " "%20")) ")")
         insert)))
 
