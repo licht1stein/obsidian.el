@@ -354,12 +354,13 @@ Optional argument ARG word to complete."
   (obsidian--update-all-from-front-matter))
 
 (defun obsidian--request-link ()
-  "Service function to request user for link iput."
+  "Service function to request user for link input."
   (let* ((all-files (->> (obsidian-list-all-files) (-map (lambda (f) (file-relative-name f obsidian-directory)))))
          (region (when (use-region-p)
                    (buffer-substring-no-properties (region-beginning) (region-end))))
-         (chosen-file (completing-read "Link: " all-files))
-         (default-description (-> chosen-file file-name-nondirectory file-name-sans-extension))
+         (chosen-file (file-name-nondirectory (completing-read "Link: " all-files)))
+         (default-description (file-name-sans-extension chosen-file))
+
          (description (read-from-minibuffer "Description (optional): " (or region default-description))))
     (list :file chosen-file :description description)))
 
