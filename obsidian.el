@@ -360,7 +360,6 @@ Optional argument ARG word to complete."
                    (buffer-substring-no-properties (region-beginning) (region-end))))
          (chosen-file (file-name-nondirectory (completing-read "Link: " all-files)))
          (default-description (file-name-sans-extension chosen-file))
-
          (description (read-from-minibuffer "Description (optional): " (or region default-description))))
     (list :file chosen-file :description description)))
 
