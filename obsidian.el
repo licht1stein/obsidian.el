@@ -376,10 +376,10 @@ TOGGLE-PATH is a boolean that will toggle the behavior of
     (list :file file-link :description description)))
 
 ;;;###autoload
-(defun obsidian-insert-wikilink ()
+(defun obsidian-insert-wikilink (&optional arg)
   "Insert a link to file in wikiling format."
-  (interactive)
-  (let* ((file (obsidian--request-link current-prefix-arg))
+  (interactive "P")
+  (let* ((file (obsidian--request-link arg))
          (filename (plist-get file :file))
          (description (plist-get file :description))
          (no-ext (file-name-sans-extension filename))
@@ -389,10 +389,10 @@ TOGGLE-PATH is a boolean that will toggle the behavior of
     (insert link)))
 
 ;;;###autoload
-(defun obsidian-insert-link ()
+(defun obsidian-insert-link (&optional arg)
   "Insert a link to file in markdown format."
-  (interactive)
-  (let* ((file (obsidian--request-link current-prefix-arg)))
+  (interactive "P")
+  (let* ((file (obsidian--request-link arg)))
     (-> (s-concat "[" (plist-get file :description) "](" (->> (plist-get file :file) (s-replace " " "%20")) ")")
         insert)))
 
