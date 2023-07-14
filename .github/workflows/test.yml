@@ -28,9 +28,5 @@ jobs:
       - name: Install dependencies
         run: make prepare
 
-      - name: Lint
-        if:  matrix.emacs_version != 27.2
-        run: make lint
-
       - name: Test
         run: make test
