@@ -357,6 +357,12 @@ Optional argument ARG word to complete."
   (obsidian-update-tags-list)
   (obsidian--update-all-from-front-matter))
 
+(defun obsidian--format-link (file-path toggle)
+  "Format link based on `obsidian-use-vault-path' and an optional prefix argument"
+  (if obsidian-links-use-vault-path
+      (if toggle (file-name-nondirectory file-path) file-path)
+    (if toggle file-path (file-name-nondirectory file-path))))
+
 (defun obsidian--request-link (&optional toggle-path)
   "Service function to request user for link input.
 
@@ -366,13 +372,9 @@ TOGGLE-PATH is a boolean that will toggle the behavior of
          (region (when (use-region-p)
                    (buffer-substring-no-properties (region-beginning) (region-end))))
          (chosen-file (completing-read "Link: " all-files))
-         (filename-only (file-name-nondirectory chosen-file))
-         (default-description (file-name-sans-extension filename-only))
+         (default-description (-> chosen-file file-name-nondirectory file-name-sans-extension))
          (description (read-from-minibuffer "Description (optional): " (or region default-description)))
-         (file-link (if obsidian-links-use-vault-path
-                        (if toggle-path filename-only chosen-file)
-                      (if toggle-path chosen-file filename-only)))
-         )
+         (file-link (obsidian--format-link chosen-file toggle-path)))
     (list :file file-link :description description)))
 
 ;;;###autoload
