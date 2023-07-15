@@ -391,11 +391,12 @@ Optional argument ARG word to complete."
 
 In the `obsidian-inbox-directory' if set otherwise in `obsidian-directory' root."
   (interactive)
-  (obsidian-clear-cache)
   (let* ((title (read-from-minibuffer "Title: "))
          (filename (s-concat obsidian-directory "/" obsidian-inbox-directory "/" title ".md"))
          (clean-filename (s-replace "//" "/" filename)))
-    (find-file (expand-file-name clean-filename) t)))
+    (find-file (expand-file-name clean-filename) t)
+    (save-buffer)
+    (add-to-list 'obsidian-files-cache clean-filename)))
 
 ;;;###autoload
 (defun obsidian-jump ()
