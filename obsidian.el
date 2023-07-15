@@ -350,6 +350,7 @@ Optional argument ARG word to complete."
 (defun obsidian-update ()
   "Command update everything there is to update in obsidian.el (tags, links etc.)."
   (interactive)
+  (obsidian-reset-cache)
   (obsidian-update-tags-list)
   (obsidian--update-all-from-front-matter))
 
