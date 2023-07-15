@@ -467,7 +467,6 @@ Argument S relative file name to clean and convert to absolute."
                  (t
                   (let* ((choice (completing-read "Jump to: " matches)))
                     choice)))))
-    ;; (-> file obsidian--expand-file-name find-file)
     (obsidian--find-file-with-window (obsidian--expand-file-name file) arg)))
 
 (defun obsidian-wiki-link-p ()
@@ -490,7 +489,7 @@ link name must be available via `match-string'."
     (s-concat f ".md")))
 
 (defun obsidian-follow-wiki-link-at-point (&optional arg)
-  "Find Wiki Link at point."
+  "Find Wiki Link at point. Opens wiki links in other window if ARG is non-nil."
   (interactive "P")
   ;; (obsidian-wiki-link-p)
   (thing-at-point-looking-at markdown-regex-wiki-link)
@@ -505,7 +504,8 @@ link name must be available via `match-string'."
           (obsidian-find-file arg)))))
 
 (defun obsidian-follow-markdown-link-at-point (&optional arg)
-  "Find and follow markdown link at point."
+  "Find and follow markdown link at point.
+Opens markdown links in other window if ARG is non-nil.."
   (interactive "P")
   (let ((normalized (s-replace "%20" " " (markdown-link-url))))
     (if (s-contains-p ":" normalized)
