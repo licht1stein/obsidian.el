@@ -451,7 +451,11 @@ Argument S relative file name to clean and convert to absolute."
   "Filter ALL-FILES to return list with same name as F."
   (-filter (lambda (el) (s-ends-with-p f el)) all-files))
 
-(defun obsidian-find-file (f)
+(defun obsidian--find-file-with-window (file-name &optional arg)
+  "Open file FILE-NAME in same window if ARG is nil, in other window if ARG is set"
+  (if arg (find-file-other-window file-name) (find-file file-name)))
+
+(defun obsidian-find-file (f &optional arg)
   "Take file F and either opens directly or offer choice if multiple match."
   (let* ((all-files (->> (obsidian-list-all-files) (-map #'obsidian--file-relative-name)))
          (matches (obsidian--match-files f all-files))
@@ -463,7 +467,8 @@ Argument S relative file name to clean and convert to absolute."
                  (t
                   (let* ((choice (completing-read "Jump to: " matches)))
                     choice)))))
-    (-> file obsidian--expand-file-name find-file)))
+    ;; (-> file obsidian--expand-file-name find-file)
+    (obsidian--find-file-with-window (obsidian--expand-file-name file) arg)))
 
 (defun obsidian-wiki-link-p ()
   "Return non-nil if `point' is at a true wiki link.
@@ -484,9 +489,9 @@ link name must be available via `match-string'."
       f
     (s-concat f ".md")))
 
-(defun obsidian-follow-wiki-link-at-point ()
+(defun obsidian-follow-wiki-link-at-point (&optional arg)
   "Find Wiki Link at point."
-  (interactive)
+  (interactive "P")
   ;; (obsidian-wiki-link-p)
   (thing-at-point-looking-at markdown-regex-wiki-link)
   (let* ((url (->> (match-string-no-properties 3)
@@ -497,31 +502,31 @@ link name must be available via `match-string'."
           obsidian-prepare-file-path
           obsidian-wiki->normal
           (obsidian-tap #'message)
-          obsidian-find-file))))
+          (obsidian-find-file arg)))))
 
-(defun obsidian-follow-markdown-link-at-point ()
+(defun obsidian-follow-markdown-link-at-point (&optional arg)
   "Find and follow markdown link at point."
-  (interactive)
+  (interactive "P")
   (let ((normalized (s-replace "%20" " " (markdown-link-url))))
     (if (s-contains-p ":" normalized)
         (browse-url normalized)
       (-> normalized
           obsidian-prepare-file-path
-          obsidian-find-file))))
+          (obsidian-find-file arg)))))
 
 ;;;###autoload
-(defun obsidian-follow-link-at-point ()
+(defun obsidian-follow-link-at-point (&optional arg)
   "Follow thing at point if possible, such as a reference link or wiki link.
 Opens inline and reference links in a browser.  Opens wiki links
 to other files in the current window, or the another window if
 ARG is non-nil.
 See `markdown-follow-link-at-point' and
 `markdown-follow-wiki-link-at-point'."
-  (interactive)
+  (interactive "P")
   (cond ((markdown-link-p)
-         (obsidian-follow-markdown-link-at-point))
+         (obsidian-follow-markdown-link-at-point arg))
         ((obsidian-wiki-link-p)
-         (obsidian-follow-wiki-link-at-point))))
+         (obsidian-follow-wiki-link-at-point arg))))
 
 (defun obsidian--grep (re)
   "Find RE in the Obsidian vault."
