@@ -451,10 +451,6 @@ Argument S relative file name to clean and convert to absolute."
   "Filter ALL-FILES to return list with same name as F."
   (-filter (lambda (el) (s-ends-with-p f el)) all-files))
 
-(defun obsidian--find-file-with-window (file-name &optional arg)
-  "Open file FILE-NAME in same window if ARG is nil, in other window if ARG is set"
-  (if arg (find-file-other-window file-name) (find-file file-name)))
-
 (defun obsidian-find-file (f &optional arg)
   "Take file F and either opens directly or offer choice if multiple match."
   (let* ((all-files (->> (obsidian-list-all-files) (-map #'obsidian--file-relative-name)))
@@ -466,8 +462,9 @@ Argument S relative file name to clean and convert to absolute."
                  (1 (car matches))
                  (t
                   (let* ((choice (completing-read "Jump to: " matches)))
-                    choice)))))
-    (obsidian--find-file-with-window (obsidian--expand-file-name file) arg)))
+                    choice))))
+         (find-fn (if arg #'find-file-other-window #'find-file)))
+    (funcall find-fn (obsidian--expand-file-name file))))
 
 (defun obsidian-wiki-link-p ()
   "Return non-nil if `point' is at a true wiki link.
