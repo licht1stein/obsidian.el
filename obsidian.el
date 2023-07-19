@@ -402,8 +402,8 @@ If text is highlighted, the highlighted text will be replaced by the link."
          (file (s-replace " " "%20" file-raw))
          (description (plist-get file-plist :description))
          (link-str (s-concat "[" description "](" file ")")))
-    ;; (if (use-region-p)
-    ;;     (delete-active-region))
+    (if (use-region-p)
+        (delete-active-region))
     (insert link-str)))
 
 ;;;###autoload
