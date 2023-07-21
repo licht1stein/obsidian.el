@@ -358,11 +358,16 @@ Optional argument ARG word to complete."
   (obsidian-update-tags-list)
   (obsidian--update-all-from-front-matter))
 
-(defun obsidian--format-link (file-path toggle)
-  "Format link based on `obsidian-use-vault-path' and an optional prefix argument"
-  (if obsidian-links-use-vault-path
-      (if toggle (file-name-nondirectory file-path) file-path)
-    (if toggle file-path (file-name-nondirectory file-path))))
+(defun obsidian--format-link (file-path &optional toggle)
+  "Format link based on `obsidian-use-vault-path' and an optional prefix argument
+
+If link contains a colon (:), it is assumed to not be an Obsidian link
+and is returned unmodified."
+  (if (s-contains-p ":" file-path)
+      file-path
+      (if obsidian-links-use-vault-path
+          (if toggle (file-name-nondirectory file-path) file-path)
+        (if toggle file-path (file-name-nondirectory file-path)))))
 
 (defun obsidian--request-link (&optional toggle-path)
   "Service function to request user for link input.
