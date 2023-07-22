@@ -398,11 +398,18 @@ TOGGLE-PATH is a boolean that will toggle the behavior of
 
 ;;;###autoload
 (defun obsidian-insert-link (&optional arg)
-  "Insert a link to file in markdown format."
+  "Insert a link to file in markdown format.
+
+If text is highlighted, the highlighted text will be replaced by the link."
   (interactive "P")
-  (let* ((file (obsidian--request-link arg)))
-    (-> (s-concat "[" (plist-get file :description) "](" (->> (plist-get file :file) (s-replace " " "%20")) ")")
-        insert)))
+  (let* ((file-plist (obsidian--request-link arg))
+         (file-raw (plist-get file-plist :file))
+         (file (s-replace " " "%20" file-raw))
+         (description (plist-get file-plist :description))
+         (link-str (s-concat "[" description "](" file ")")))
+    (if (use-region-p)
+        (delete-active-region))
+    (insert link-str)))
 
 ;;;###autoload
 (defun obsidian-capture ()
