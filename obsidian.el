@@ -463,14 +463,32 @@ Argument S relative file name to clean and convert to absolute."
   "Filter ALL-FILES to return list with same name as F."
   (-filter (lambda (el) (s-ends-with-p f el)) all-files))
 
+
+(defun obsidian--prepare-new-file-from-rel-path (p)
+  "Create file if it doesn't exist and return full system path for relative path P.
+
+If the file include directories in its path, we create the file relative to
+`obsidian-directory'. If there are no paths, we create the new file in
+`obsidian-inbox-directory' if set, otherwise in `obsidian-directory'."
+  (let* ((f (if (not (file-name-extension p)) (s-concat p ".md") p))
+         (filename (if (s-contains-p "/" f)
+                       (s-concat obsidian-directory "/" f)
+                     (s-concat obsidian-directory "/"
+                               obsidian-inbox-directory "/" f)))
+         (cleaned (s-replace "//" "/" filename)))
+    (if (not (f-exists-p cleaned))
+        (progn
+          (f-mkdir-full-path (f-dirname cleaned))
+          (f-touch cleaned)
+          (add-to-list 'obsidian-files-cache cleaned)))
+    cleaned))
+
 (defun obsidian-find-file (f &optional arg)
   "Take file F and either opens directly or offer choice if multiple match."
   (let* ((all-files (->> (obsidian-list-all-files) (-map #'obsidian--file-relative-name)))
          (matches (obsidian--match-files f all-files))
          (file (cl-case (length matches)
-                 (0 (progn
-                      (obsidian-clear-cache)
-                      f))
+                 (0 (obsidian--prepare-new-file-from-rel-path f))
                  (1 (car matches))
                  (t
                   (let* ((choice (completing-read "Jump to: " matches)))
