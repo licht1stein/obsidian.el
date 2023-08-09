@@ -1,0 +1,3 @@
+Words in a file that should be totally ignored because it includes a tilde
+
+#tilde #ignore

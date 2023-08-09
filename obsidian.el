@@ -71,6 +71,10 @@
   "If true, the full vault path for a link will be used instead of just the filename."
   :type 'boolean)
 
+(defcustom obsidian-include-hidden-files t
+  "If true, files beginning with a period are considered valid Obsidian files"
+  :type 'boolean)
+
 (eval-when-compile (defvar local-minor-modes))
 
 ;;;###autoload
@@ -132,6 +136,10 @@ When run interactively asks user to specify the path."
        (not (s-contains-p "/.obsidian" file))
        (not (s-contains-p "/.trash" file))))
 
+(defun obsidian-dot-file-p (p)
+  "Return t if path P points to a dot file"
+  (s-starts-with-p "." (file-name-base p)))
+
 (defun obsidian-file-p (&optional file)
   "Return t if FILE is an obsidian.el file, nil otherwise.
 
@@ -139,13 +147,15 @@ If FILE is not specified, use the current buffer's file-path.
 FILE is an Org-roam file if:
 - It's located somewhere under `obsidian-directory
 - It is a markdown .md file
-- It is not in .trash
-- It is not an Emacs temp file"
+- Is not a dot file or, if `obsidian-include-hidden-files' is t, then:
+  - It is not in .trash
+  - It is not an Emacs temp file"
   (-when-let* ((path (or file (-> (buffer-base-buffer) buffer-file-name)))
                (relative-path (file-relative-name path obsidian-directory))
                (ext (file-name-extension relative-path))
                (md-p (string= ext "md"))
                (obsidian-dir-p (obsidian-descendant-of-p path obsidian-directory))
+               (not-dot-file (or obsidian-include-hidden-files (not (obsidian-dot-file-p path))))
                (not-trash-p (obsidian-not-trash-p path))
                (not-dot-obsidian (obsidian-not-dot-obsidian-p path))
                (not-temp-p (not (s-contains-p "~" relative-path))))
@@ -560,7 +570,7 @@ See `markdown-follow-link-at-point' and
   (elgrep obsidian-directory "\.md" re
           :recursive t
           :case-fold-search t
-          :exclude-file-re "~"
+          :exclude-file-re (if obsidian-include-hidden-files "~" "^\\.\\|~")
           :exclude-dir-re ".obsidian"))
 
 (defun obsidian--link-p (s)

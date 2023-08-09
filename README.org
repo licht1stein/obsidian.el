@@ -130,6 +130,9 @@ When [[https://github.com/abo-abo/hydra][Hydra]] is installed, ~obsidian-hydra~ 
 
 [[./resources/hydra-menu.png]]
 
+** Including hidden dot files
+Obsidian does not track hidden files; obsidian.el can be configured to either track them or ignore them by setting the value of `obsidian-include-hidden-files`.
+
 ** Manual re-scan
 You can update the lists of tags, links etc. manually if it's lagging for some reason by running an interactive command:
 
