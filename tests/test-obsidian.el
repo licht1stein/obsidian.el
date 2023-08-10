@@ -4,8 +4,10 @@
 (defvar obsidian--test-dir "./tests/test_vault")
 (defvar obsidian--test--original-dir (or obsidian-directory obsidian--test-dir))
 (defvar obsidian--test--original-tags-list obsidian--tags-list)
-(defvar obsidian--test-number-of-tags 6)
-(defvar obsidian--test-number-of-notes 9)
+(defvar obsidian--test-number-of-tags 9)
+(defvar obsidian--test-number-of-visible-tags 6)
+(defvar obsidian--test-number-of-notes 11)
+(defvar obsidian--test-number-of-visible-notes 9)
 
 (describe "check path setting"
   (before-all (obsidian-specify-path obsidian--test-dir))
@@ -42,6 +44,19 @@
   (it "check file count"
     (expect (length (obsidian-list-all-files)) :to-equal obsidian--test-number-of-notes)))
 
+(describe "obsidian-list-all-visible-files"
+   (before-all (progn
+                 (obsidian-specify-path obsidian--test-dir)
+                 (setq obsidian-include-hidden-files nil)
+                 (obsidian-update)))
+   (after-all (progn
+                (obsidian-specify-path obsidian--test--original-dir)
+                (setq obsidian-include-hidden-files t)
+                (obsidian-update)))
+
+  (it "check file count"
+    (expect (length (obsidian-list-all-files)) :to-equal obsidian--test-number-of-visible-notes)))
+
 (describe "obsidian-find-tags"
   (before-all (obsidian-specify-path obsidian--test-dir))
   (after-all (obsidian-specify-path obsidian--test--original-dir))
@@ -55,6 +70,19 @@
 
   (it "find all tags in the vault"
     (expect (length (obsidian-list-all-tags)) :to-equal obsidian--test-number-of-tags)))
+
+(describe "obsidian-list-visible-tags"
+  (before-all (progn
+                (obsidian-specify-path obsidian--test-dir)
+                (setq obsidian-include-hidden-files nil)
+                (obsidian-update)))
+  (after-all (progn
+               (obsidian-specify-path obsidian--test--original-dir)
+               (setq obsidian-include-hidden-files t)
+               (obsidian-update)))
+
+  (it "find all tags in the vault"
+    (expect (length (obsidian-list-all-tags)) :to-equal obsidian--test-number-of-visible-tags)))
 
 (describe "obsidian-update"
   (before-all (progn
