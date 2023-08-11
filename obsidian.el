@@ -36,7 +36,6 @@
 ;; app for syncing and doing more specialized stuff, like viewing notes graphs.
 
 ;;; Code:
-(require 'f)
 (require 'dash)
 (require 's)
 
