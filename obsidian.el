@@ -486,7 +486,7 @@ If the file include directories in its path, we create the file relative to
                      (s-concat obsidian-directory "/"
                                obsidian-inbox-directory "/" f)))
          (cleaned (s-replace "//" "/" filename)))
-    (if (not (f-exists-p cleaned))
+    (if (not (file-exists-p cleaned))
         (progn
           (f-mkdir-full-path (f-dirname cleaned))
           (f-touch cleaned)
