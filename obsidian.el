@@ -6,7 +6,7 @@
 ;; URL: https://github.com./licht1stein/obsidian.el
 ;; Keywords: obsidian, pkm, convenience
 ;; Version: 1.3.4
-;; Package-Requires: ((emacs "27.2") (s "1.12.0") (dash "2.13") (markdown-mode "2.5") (elgrep "1.0.0") (yaml "0.5.1"))
+;; Package-Requires: ((emacs "27.2") (f "0.2.0") (s "1.12.0") (dash "2.13") (markdown-mode "2.5") (elgrep "1.0.0") (yaml "0.5.1"))
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -36,6 +36,7 @@
 ;; app for syncing and doing more specialized stuff, like viewing notes graphs.
 
 ;;; Code:
+(require 'f)
 (require 'dash)
 (require 's)
 
