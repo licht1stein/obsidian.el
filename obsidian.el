@@ -77,6 +77,13 @@
 
 (eval-when-compile (defvar local-minor-modes))
 
+(defun directory-files-pre28 (orig-func dir &optional full match nosort ignored)
+  "Version of `directory-files' compatible with Emacs versions < 28"
+  (apply orig-func dir full match nosort))
+
+(if (< emacs-major-version 28)
+      (advice-add 'directory-files :around #'directory-files-pre28))
+
 ;;;###autoload
 (defun obsidian-specify-path (&optional path)
   "Specifies obsidian folder PATH to obsidian-folder variable.
