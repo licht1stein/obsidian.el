@@ -545,7 +545,12 @@ link name must be available via `match-string'."
   "Add extension to wiki link F if none."
   (if (file-name-extension f)
       f
-    (s-concat f ".md")))
+    (s-concat (obsidian--remove-section f) ".md")))
+
+(defsubst obsidian--remove-section (s)
+  "Remove section from file path.
+   From 'filename#section' keep only the 'filename'."
+   (replace-regexp-in-string "#.*$" "" s))
 
 (defun obsidian-follow-wiki-link-at-point (&optional arg)
   "Find Wiki Link at point. Opens wiki links in other window if ARG is non-nil."
