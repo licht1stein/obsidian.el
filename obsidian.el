@@ -222,8 +222,7 @@ If you need to run this manually, please report this as an issue on Github."
   "Return string contents of a file or current buffer.
 
 If FILE is not specified, use the current buffer."
-  ;; (if (and file (file-exists-p file))
-  (if file
+  (if (and file (file-exists-p file))
       (with-temp-buffer
         (insert-file-contents file)
         (buffer-substring-no-properties (point-min) (point-max)))
@@ -504,7 +503,7 @@ If the file include directories in its path, we create the file relative to
                      (s-concat obsidian-directory "/"
                                obsidian-inbox-directory "/" f)))
          (cleaned (s-replace "//" "/" filename)))
-    (if (not (file-exists-p cleaned))
+    (if (not (f-exists-p cleaned))
         (progn
           (f-mkdir-full-path (f-dirname cleaned))
           (f-touch cleaned)
