@@ -5,7 +5,7 @@
 ;; Author: Mykhaylo Bilyanskyy
 ;; URL: https://github.com./licht1stein/obsidian.el
 ;; Keywords: obsidian, pkm, convenience
-;; Version: 1.3.4
+;; Version: 1.3.5
 ;; Package-Requires: ((emacs "27.2") (s "1.12.0") (dash "2.13") (markdown-mode "2.5") (elgrep "1.0.0") (yaml "0.5.1"))
 
 ;; This file is NOT part of GNU Emacs.
@@ -76,6 +76,13 @@
   :type 'boolean)
 
 (eval-when-compile (defvar local-minor-modes))
+
+(defun directory-files-pre28 (orig-func dir &optional full match nosort ignored)
+  "Version of `directory-files' compatible with Emacs versions < 28"
+  (apply orig-func dir full match nosort))
+
+(if (< emacs-major-version 28)
+      (advice-add 'directory-files :around #'directory-files-pre28))
 
 ;;;###autoload
 (defun obsidian-specify-path (&optional path)
@@ -380,6 +387,16 @@ and is returned unmodified."
           (if toggle (file-name-nondirectory file-path) file-path)
         (if toggle file-path (file-name-nondirectory file-path)))))
 
+(defun obsidian--verify-relative-path (f)
+  "Check that file F exists, and create it if it does not. F will be a relative path."
+  (if (s-contains-p ":" f)
+      f
+    (let* ((obs-path (obsidian--expand-file-name f))
+           (exists (seq-contains-p obsidian-files-cache obs-path)))
+      (if (not exists)
+          (obsidian--file-relative-name (obsidian--prepare-new-file-from-rel-path f))
+        f))))
+
 (defun obsidian--request-link (&optional toggle-path)
   "Service function to request user for link input.
 
@@ -389,9 +406,10 @@ TOGGLE-PATH is a boolean that will toggle the behavior of
          (region (when (use-region-p)
                    (buffer-substring-no-properties (region-beginning) (region-end))))
          (chosen-file (completing-read "Link: " all-files))
-         (default-description (-> chosen-file file-name-nondirectory file-name-sans-extension))
+         (verified-file (obsidian--verify-relative-path chosen-file))
+         (default-description (-> verified-file file-name-nondirectory file-name-sans-extension))
          (description (read-from-minibuffer "Description (optional): " (or region default-description)))
-         (file-link (obsidian--format-link chosen-file toggle-path)))
+         (file-link (obsidian--format-link verified-file toggle-path)))
     (list :file file-link :description description)))
 
 ;;;###autoload
@@ -472,8 +490,7 @@ Argument S relative file name to clean and convert to absolute."
 
 (defun obsidian--match-files (f all-files)
   "Filter ALL-FILES to return list with same name as F."
-  (-filter (lambda (el) (s-ends-with-p f el)) all-files))
-
+  (-filter (lambda (el) (s-equals-p f (obsidian--file-relative-name el))) all-files))
 
 (defun obsidian--prepare-new-file-from-rel-path (p)
   "Create file if it doesn't exist and return full system path for relative path P.
