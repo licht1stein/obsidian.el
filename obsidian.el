@@ -492,7 +492,7 @@ Argument S relative file name to clean and convert to absolute."
 
 (defun obsidian--match-files (f all-files)
   "Filter ALL-FILES to return list with same name as F."
-  (-filter (lambda (el) (s-equals-p f (obsidian--file-relative-name el))) all-files))
+  (-filter (lambda (el) (or (s-equals-p f el) (s-ends-with-p (concat "/" f) el))) all-files))
 
 (defun obsidian--prepare-new-file-from-rel-path (p)
   "Create file if it doesn't exist and return full system path for relative path P.
