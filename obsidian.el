@@ -76,6 +76,12 @@
   "If true, files beginning with a period are considered valid Obsidian files."
   :type 'boolean)
 
+;;;###autoload
+(defcustom obsidian-wiki-link-create-file-in-inbox t
+  "Controls where to create a new file from a wiki link if its target is missing.
+    If it is true, create in inbox, otherwise next to the current buffer."
+  :type 'boolean)
+
 (eval-when-compile (defvar local-minor-modes))
 
 (defun obsidian--directory-files-pre28 (orig-func dir &optional full match nosort ignored)
@@ -520,13 +526,21 @@ If ARG is set, the file will be opened in other window."
   (let* ((all-files (->> (obsidian-list-all-files) (-map #'obsidian--file-relative-name)))
          (matches (obsidian--match-files f all-files))
          (file (cl-case (length matches)
-                 (0 (obsidian--prepare-new-file-from-rel-path f))
+                 (0 (obsidian--prepare-new-file-from-rel-path (obsidian--maybe-in-same-dir f)))
                  (1 (car matches))
                  (t
                   (let* ((choice (completing-read "Jump to: " matches)))
                     choice))))
          (find-fn (if arg #'find-file-other-window #'find-file)))
     (funcall find-fn (obsidian--expand-file-name file))))
+
+(defun obsidian--maybe-in-same-dir (f)
+  "If `f` contains '/', returns f, otherwise with buffer, relative to the buffer"
+  (if (s-contains-p "/" f)
+    f
+    (if obsidian-wiki-link-create-file-in-inbox
+      f
+      (concat (file-relative-name (file-name-directory (buffer-file-name)) obsidian-directory) "/" f))))
 
 (defun obsidian-wiki-link-p ()
   "Return non-nil if `point' is at a true wiki link.
