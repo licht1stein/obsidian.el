@@ -6,7 +6,7 @@
 ;; URL: https://github.com./licht1stein/obsidian.el
 ;; Keywords: obsidian, pkm, convenience
 ;; Version: 1.3.5
-;; Package-Requires: ((emacs "27.2") (s "1.12.0") (dash "2.13") (markdown-mode "2.5") (elgrep "1.0.0") (yaml "0.5.1"))
+;; Package-Requires: ((emacs "27.2") (f "0.2.0") (s "1.12.0") (dash "2.13") (markdown-mode "2.5") (elgrep "1.0.0") (yaml "0.5.1"))
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -36,6 +36,7 @@
 ;; app for syncing and doing more specialized stuff, like viewing notes graphs.
 
 ;;; Code:
+(require 'f)
 (require 'dash)
 (require 's)
 
@@ -72,17 +73,24 @@
   :type 'boolean)
 
 (defcustom obsidian-include-hidden-files t
-  "If true, files beginning with a period are considered valid Obsidian files"
+  "If true, files beginning with a period are considered valid Obsidian files."
   :type 'boolean)
 
 (eval-when-compile (defvar local-minor-modes))
 
-(defun directory-files-pre28 (orig-func dir &optional full match nosort ignored)
-  "Version of `directory-files' compatible with Emacs versions < 28"
+(defun obsidian--directory-files-pre28 (orig-func dir &optional full match nosort ignored)
+  "Version of `directory-files' compatible with Emacs versions < 28.
+
+ORIG-FUNC is the original `directory-files' function that is going to be
+advised,and DIR and the directory of files on which `directory-files' will
+be called.
+FULL, MATCH, and NOSORT are the optional arguments for the `directory-files'
+function, while IGNORED is the optional 4th argument used with newer versions
+of `dirctory-files'."
   (apply orig-func dir full match nosort))
 
 (if (< emacs-major-version 28)
-      (advice-add 'directory-files :around #'directory-files-pre28))
+    (advice-add 'directory-files :around #'obsidian--directory-files-pre28))
 
 ;;;###autoload
 (defun obsidian-specify-path (&optional path)
@@ -144,7 +152,7 @@ When run interactively asks user to specify the path."
        (not (s-contains-p "/.trash" file))))
 
 (defun obsidian-dot-file-p (p)
-  "Return t if path P points to a dot file"
+  "Return t if path P points to a dot file."
   (s-starts-with-p "." (file-name-base p)))
 
 (defun obsidian-file-p (&optional file)
@@ -283,10 +291,10 @@ At the moment updates only `obsidian--aliases-map' with found aliases."
 (defun obsidian--update-all-from-front-matter ()
   "Take all files in obsidian vault, parse front matter and update."
   (dolist (f (obsidian-list-all-files))
-   (condition-case err
-       (obsidian--update-from-front-matter f)
-     (error (message "Error updating YAML front matter in file %s. Error: %s"
-                     f (error-message-string err)))))
+    (condition-case err
+        (obsidian--update-from-front-matter f)
+      (error (message "Error updating YAML front matter in file %s. Error: %s"
+                      f (error-message-string err)))))
   (message "Obsidian aliases updated."))
 
 (defun obsidian-tag-p (s)
@@ -376,21 +384,22 @@ Optional argument ARG word to complete."
   (obsidian--update-all-from-front-matter))
 
 (defun obsidian--format-link (file-path &optional toggle)
-  "Format link based on `obsidian-use-vault-path' and an optional prefix argument
+  "Format link from FILE-PATH based on `obsidian-links-use-vault-path'.
 
-If link contains a colon (:), it is assumed to not be an Obsidian link
-and is returned unmodified."
+Will format FILE-PATH based on `obsidian-links-use-vault-path' and an optional
+prefix argument TOGGLE. If link contains a colon (:), it is assumed to not be an
+Obsidian link and is returned unmodified."
   (if (s-contains-p ":" file-path)
       file-path
-      (if obsidian-links-use-vault-path
-          (if toggle (file-name-nondirectory file-path) file-path)
-        (if toggle file-path (file-name-nondirectory file-path)))))
+    (if obsidian-links-use-vault-path
+        (if toggle (file-name-nondirectory file-path) file-path)
+      (if toggle file-path (file-name-nondirectory file-path)))))
 
 (defun obsidian--request-link (&optional toggle-path)
   "Service function to request user for link input.
 
 TOGGLE-PATH is a boolean that will toggle the behavior of
-`obsidian-use-vault-path' for this single link insertion."
+`obsidian-links-use-vault-path' for this single link insertion."
   (let* ((all-files (->> (obsidian-list-all-files) (-map (lambda (f) (file-relative-name f obsidian-directory)))))
          (region (when (use-region-p)
                    (buffer-substring-no-properties (region-beginning) (region-end))))
@@ -402,7 +411,10 @@ TOGGLE-PATH is a boolean that will toggle the behavior of
 
 ;;;###autoload
 (defun obsidian-insert-wikilink (&optional arg)
-  "Insert a link to file in wikiling format."
+  "Insert a link to file in wikilink format.
+
+If ARG is set, the value of `obsidian-links-use-vault-path' will be toggled for
+the current link insertion."
   (interactive "P")
   (let* ((file (obsidian--request-link arg))
          (filename (plist-get file :file))
@@ -417,7 +429,9 @@ TOGGLE-PATH is a boolean that will toggle the behavior of
 (defun obsidian-insert-link (&optional arg)
   "Insert a link to file in markdown format.
 
-If text is highlighted, the highlighted text will be replaced by the link."
+If ARG is set, the value of `obsidian-links-use-vault-path' will be toggled for
+this link insertion. If text is highlighted, the highlighted text will be
+replaced by the link."
   (interactive "P")
   (let* ((file-plist (obsidian--request-link arg))
          (file-raw (plist-get file-plist :file))
@@ -500,7 +514,9 @@ If the file include directories in its path, we create the file relative to
     cleaned))
 
 (defun obsidian-find-file (f &optional arg)
-  "Take file F and either opens directly or offer choice if multiple match."
+  "Take file F and either opens directly or offer choice if multiple match.
+
+If ARG is set, the file will be opened in other window."
   (let* ((all-files (->> (obsidian-list-all-files) (-map #'obsidian--file-relative-name)))
          (matches (obsidian--match-files f all-files))
          (file (cl-case (length matches)
