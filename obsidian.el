@@ -231,7 +231,6 @@ If you need to run this manually, please report this as an issue on Github."
 
 If FILE is not specified, use the current buffer."
   (if (and file (file-exists-p file))
-      ;; TODO: Will this work as intended if using a buffer?
       (with-temp-buffer
         (insert-file-contents file)
         (buffer-substring-no-properties (point-min) (point-max)))
