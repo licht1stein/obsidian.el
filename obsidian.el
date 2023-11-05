@@ -76,6 +76,11 @@
   "If true, files beginning with a period are considered valid Obsidian files."
   :type 'boolean)
 
+(defcustom obsidian-daily-notes-directory obsidian-inbox-directory 
+  "Subdir to create daily notes with `obsidian-daily-note'. Default: the inbox directory"
+  :type 'directory
+)
+
 (eval-when-compile (defvar local-minor-modes))
 
 (defun obsidian--directory-files-pre28 (orig-func dir &optional full match nosort ignored)
@@ -465,6 +470,21 @@ In the `obsidian-inbox-directory' if set otherwise in `obsidian-directory' root.
     (find-file (expand-file-name clean-filename) t)
     (save-buffer)
     (add-to-list 'obsidian-files-cache clean-filename)))
+  
+;;;###autoload
+(defun obsidian-daily-note ()
+  "Create new obsidian daily note.
+
+In the `obsidian-daily-notes-directory' if set otherwise in `obsidian-inbox-directory' - if that's also unset,
+in `obsidian-directory' root.
+."
+  (interactive)
+  (let* ((title (format-time-string "%Y-%m-%d"))
+         (filename (s-concat obsidian-directory "/" obsidian-daily-notes-directory "/" title ".md"))
+         (clean-filename (s-replace "//" "/" filename)))
+    (find-file (expand-file-name clean-filename) t)
+    (save-buffer)
+    (add-to-list 'obsidian-files-cache clean-filename)))
 
 ;;;###autoload
 (defun obsidian-jump ()
@@ -684,11 +704,12 @@ See `markdown-follow-link-at-point' and
     "
 Obsidian
 _f_ollow at point   insert _w_ikilink          _q_uit
-_j_ump to note      insert _l_ink
+_j_ump to note      insert _l_ink              capture daily _n_ote
 _t_ag find          _c_apture new note
 _s_earch by expr.   _u_pdate tags/alises etc.
 "
     ("c" obsidian-capture)
+    ("n" obsidian-daily-note)
     ("f" obsidian-follow-link-at-point)
     ("j" obsidian-jump)
     ("l" obsidian-insert-link :color blue)
