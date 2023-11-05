@@ -82,6 +82,10 @@
     If it is true, create in inbox, otherwise next to the current buffer."
   :type 'boolean)
 
+(defcustom obsidian-daily-notes-directory obsidian-inbox-directory 
+  "Subdir to create daily notes with `obsidian-daily-note'. Default: the inbox directory"
+  :type 'directory)
+
 (eval-when-compile (defvar local-minor-modes))
 
 (defun obsidian--directory-files-pre28 (orig-func dir &optional full match nosort ignored)
@@ -236,7 +240,7 @@ If you need to run this manually, please report this as an issue on Github."
   "Return string contents of a file or current buffer.
 
 If FILE is not specified, use the current buffer."
-  (if file
+  (if (and file (file-exists-p file))
       (with-temp-buffer
         (insert-file-contents file)
         (buffer-substring-no-properties (point-min) (point-max)))
@@ -401,6 +405,16 @@ Obsidian link and is returned unmodified."
         (if toggle (file-name-nondirectory file-path) file-path)
       (if toggle file-path (file-name-nondirectory file-path)))))
 
+(defun obsidian--verify-relative-path (f)
+  "Check that file F exists, and create it if it does not. F will be a relative path."
+  (if (s-contains-p ":" f)
+      f
+    (let* ((obs-path (obsidian--expand-file-name f))
+           (exists (seq-contains-p obsidian-files-cache obs-path)))
+      (if (not exists)
+          (obsidian--file-relative-name (obsidian--prepare-new-file-from-rel-path f))
+        f))))
+
 (defun obsidian--request-link (&optional toggle-path)
   "Service function to request user for link input.
 
@@ -410,9 +424,10 @@ TOGGLE-PATH is a boolean that will toggle the behavior of
          (region (when (use-region-p)
                    (buffer-substring-no-properties (region-beginning) (region-end))))
          (chosen-file (completing-read "Link: " all-files))
-         (default-description (-> chosen-file file-name-nondirectory file-name-sans-extension))
+         (verified-file (obsidian--verify-relative-path chosen-file))
+         (default-description (-> verified-file file-name-nondirectory file-name-sans-extension))
          (description (read-from-minibuffer "Description (optional): " (or region default-description)))
-         (file-link (obsidian--format-link chosen-file toggle-path)))
+         (file-link (obsidian--format-link verified-file toggle-path)))
     (list :file file-link :description description)))
 
 ;;;###autoload
@@ -456,6 +471,21 @@ In the `obsidian-inbox-directory' if set otherwise in `obsidian-directory' root.
   (interactive)
   (let* ((title (read-from-minibuffer "Title: "))
          (filename (s-concat obsidian-directory "/" obsidian-inbox-directory "/" title ".md"))
+         (clean-filename (s-replace "//" "/" filename)))
+    (find-file (expand-file-name clean-filename) t)
+    (save-buffer)
+    (add-to-list 'obsidian-files-cache clean-filename)))
+  
+;;;###autoload
+(defun obsidian-daily-note ()
+  "Create new obsidian daily note.
+
+In the `obsidian-daily-notes-directory' if set otherwise in `obsidian-inbox-directory' - if that's also unset,
+in `obsidian-directory' root.
+."
+  (interactive)
+  (let* ((title (format-time-string "%Y-%m-%d"))
+         (filename (s-concat obsidian-directory "/" obsidian-daily-notes-directory "/" title ".md"))
          (clean-filename (s-replace "//" "/" filename)))
     (find-file (expand-file-name clean-filename) t)
     (save-buffer)
@@ -687,11 +717,12 @@ See `markdown-follow-link-at-point' and
     "
 Obsidian
 _f_ollow at point   insert _w_ikilink          _q_uit
-_j_ump to note      insert _l_ink
+_j_ump to note      insert _l_ink              capture daily _n_ote
 _t_ag find          _c_apture new note
 _s_earch by expr.   _u_pdate tags/alises etc.
 "
     ("c" obsidian-capture)
+    ("n" obsidian-daily-note)
     ("f" obsidian-follow-link-at-point)
     ("j" obsidian-jump)
     ("l" obsidian-insert-link :color blue)
