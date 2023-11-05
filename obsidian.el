@@ -230,7 +230,7 @@ If you need to run this manually, please report this as an issue on Github."
   "Return string contents of a file or current buffer.
 
 If FILE is not specified, use the current buffer."
-  (if file
+  (if (and file (file-exists-p file))
       (with-temp-buffer
         (insert-file-contents file)
         (buffer-substring-no-properties (point-min) (point-max)))
