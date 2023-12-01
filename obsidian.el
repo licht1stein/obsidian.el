@@ -382,9 +382,9 @@ Optional argument ARG word to complete."
 
 (defun obsidian-enable-minor-mode ()
   "Check if current buffer is an `obsidian-file-p' and toggle `obsidian-mode'."
-  (when (equal major-mode 'markdown-mode)
-    (when (obsidian-file-p)
-      (obsidian-mode t))))
+  (and (derived-mode-p 'markdown-mode)
+       (obsidian-file-p)
+       (obsidian-mode t)))
 
 (defun obsidian-update ()
   "Command update everything there is to update in obsidian.el (tags, links etc.)."
