@@ -249,8 +249,11 @@ If FILE is not specified, use the current buffer."
 (defun obsidian-find-tags (s)
   "Find all #tags in string.
 Argument S string to find tags in."
-  (->> (s-match-strings-all obsidian--tag-regex s)
-       -flatten))
+  (let ((front-matter (obsidian-find-yaml-front-matter s))
+        (add-tag (lambda (tag) (concat "#" tag))))
+    (->> (s-match-strings-all obsidian--tag-regex s)
+         (append (and front-matter (mapcar add-tag (gethash 'tags front-matter))))
+         -flatten)))
 
 (defun obsidian-get-yaml-front-matter ()
   "Return the text of the YAML front matter of the current buffer.
