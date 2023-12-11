@@ -21,6 +21,7 @@ Emacs front-end for [[https://obsidian.md/][Obsidian Notes]].
   - [[#searching-notes][Searching notes]]
   - [[#finding-all-notes-with-a-tag][Finding all notes with a tag]]
   - [[#move-note-to-another-folder][Move note to another folder]]
+  - [[#templates][Templates]]
 - [[#why-obsidianel-and-not][Why obsidian.el and not...]]
   - [[#obsidian-app-itself-athens-research-or-any-other-great-app][Obsidian App itself, Athens Research or any other great app?]]
   - [[#org-roam-or-any-other-great-emacs-libraries][Org-roam or any other great Emacs libraries?]]
@@ -42,6 +43,17 @@ Put this in your ~init.el~:
   (obsidian-specify-path "~/MY_OBSIDIAN_FOLDER")
   ;; If you want a different directory of `obsidian-capture':
   (setq obsidian-inbox-directory "Inbox")
+  ;; Clicking on a wiki link referring a non-existing file the file can be
+  ;; created in the inbox (t) or next to the file with the link (nil).
+  ;; Default: t - creating in the inbox
+  ;(setq obsidian-wiki-link-create-file-in-inbox nil)
+  ;; You may want to define a folder for daily notes. By default it is the inbox.
+  ;(setq obsidian-daily-notes-directory "Daily Notes")
+  ;; Directory of note templates, unset (nil) by default
+  ;(setq obsidian-templates-directory "Templates")
+  ;; Daily Note template name - requires a template directory. Default: Daily Note Template.md
+  ;(setq obsidian-daily-note-template "Daily Note Template.md")
+
 
   ;; Define obsidian-mode bindings
   (add-hook
@@ -56,10 +68,11 @@ Put this in your ~init.el~:
      ;; Following backlinks
      (local-set-key (kbd "C-c C-b") 'obsidian-backlink-jump)))
 
-  ;; Optionally you can also bind `obsidian-jump' and `obsidian-capture'
+  ;; Optionally you can also bind a few functions:
   ;; replace "YOUR_BINDING" with the key of your choice:
-  (global-set-key (kbd "YOUR_BINDING") 'obsidian-jump)
-  (global-set-key (kbd "YOUR_BINDING") 'obsidian-capture)
+  (global-set-key (kbd "YOUR_BINDING") 'obsidian-jump)       ;; Opening a note
+  (global-set-key (kbd "YOUR_BINDING") 'obsidian-capture)    ;; Capturing a new note in the inbox
+  (global-set-key (kbd "YOUR_BINDING") 'obsidian-daily-note) ;; Creating daily note
 
   ;; Activate detection of Obsidian vault
   (global-obsidian-mode t)
@@ -77,6 +90,16 @@ Put this in your ~init.el~:
     :custom
     ;; This directory will be used for `obsidian-capture' if set.
     (obsidian-inbox-directory "Inbox")
+    ;; Create missing files in inbox? - when clicking on a wiki link
+    ;; t: in inbox, nil: next to the file with the link
+    ;; default: t
+    ;(obsidian-wiki-link-create-file-in-inbox nil)
+    ;; The directory for daily notes (file name is YYYY-MM-DD.md)
+    (obsidian-daily-notes-directory "Daily Notes")
+    ;; Directory of note templates, unset (nil) by default
+    ;(obsidian-templates-directory "Templates")
+    ;; Daily Note template name - requires a template directory. Default: Daily Note Template.md
+    ;(setq obsidian-daily-note-template "Daily Note Template.md")
     :bind (:map obsidian-mode-map
     ;; Replace C-c C-o with Obsidian.el's implementation. It's ok to use another key binding.
     ("C-c C-o" . obsidian-follow-link-at-point)
@@ -233,6 +256,11 @@ Use ~obsidian-move-file~ to move current note to another folder:
 #+begin_src
   M-x obsidian-move-file RET
 #+end_src
+
+** Templates
+
+Obsidian.el has a basic template support, where the Obsidian app's template placeholders can be used,
+without customization. {{title}}, {{date}}, and {{time}} can be used. {{title}} is the name of the file without the extension.
 
 *** Development tasks
 - [X] Specify Obsidian folder and save it in variables

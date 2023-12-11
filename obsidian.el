@@ -86,6 +86,16 @@
   "Subdir to create daily notes with `obsidian-daily-note'. Default: the inbox directory"
   :type 'directory)
 
+(defcustom obsidian-templates-directory nil
+  "Subdir containing templates"
+  :type 'directory
+)
+
+(defcustom obsidian-daily-note-template "Daily Note Template.md"
+  "Daily notes' template filename in templates directory"
+  :type 'file
+)
+
 (eval-when-compile (defvar local-minor-modes))
 
 (defun obsidian--directory-files-pre28 (orig-func dir &optional full match nosort ignored)
@@ -492,6 +502,10 @@ in `obsidian-directory' root.
          (clean-filename (s-replace "//" "/" filename)))
     (find-file (expand-file-name clean-filename) t)
     (save-buffer)
+    (if (and obsidian-templates-directory obsidian-daily-note-template (eq (buffer-size) 0))
+      (progn
+        (obsidian-apply-template (s-concat obsidian-directory "/" obsidian-templates-directory "/" obsidian-daily-note-template))
+        (save-buffer)))
     (add-to-list 'obsidian-files-cache clean-filename)))
 
 ;;;###autoload
@@ -685,6 +699,24 @@ See `markdown-follow-link-at-point' and
   (let* ((dict (make-hash-table :test 'equal))
          (_ (-map (lambda (f) (puthash f (obsidian--expand-file-name f) dict)) coll)))
     dict))
+
+(defun obsidian-apply-template (template-filename)
+  "Apply the template for the current buffer. Template vars: {{title}}, {{date}}, and {{time}}"
+  (let* ((title (file-name-sans-extension (file-name-nondirectory buffer-file-name)))
+         (date (format-time-string "%Y-%m-%d"))
+         (time (format-time-string "%H:%M:%S"))
+         (m (point))
+         (template-content (with-temp-buffer
+                             (insert-file-contents template-filename)
+                             (buffer-string)))
+         (output-content (replace-regexp-in-string "{{title}}" title template-content))
+         (output-content (replace-regexp-in-string "{{date}}" date output-content))
+         (output-content (replace-regexp-in-string "{{time}}" time output-content))
+         (output-size (length output-content)))
+         (goto-char (point-min))
+         (insert output-content)
+         (message "Template variables replaced and inserted to the buffer")
+         (goto-char m)))
 
 ;;;###autoload
 (defun obsidian-backlink-jump ()
