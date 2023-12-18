@@ -5,7 +5,7 @@
 ;; Author: Mykhaylo Bilyanskyy
 ;; URL: https://github.com./licht1stein/obsidian.el
 ;; Keywords: obsidian, pkm, convenience
-;; Version: 1.4.3
+;; Version: 1.4.4
 ;; Package-Requires: ((emacs "27.2") (f "0.2.0") (s "1.12.0") (dash "2.13") (markdown-mode "2.5") (elgrep "1.0.0") (yaml "0.5.1"))
 
 ;; This file is NOT part of GNU Emacs.
@@ -89,12 +89,12 @@
 (defcustom obsidian-templates-directory nil
   "Subdir containing templates"
   :type 'directory
-)
+  )
 
 (defcustom obsidian-daily-note-template "Daily Note Template.md"
   "Daily notes' template filename in templates directory"
   :type 'file
-)
+  )
 
 (eval-when-compile (defvar local-minor-modes))
 
@@ -488,7 +488,7 @@ In the `obsidian-inbox-directory' if set otherwise in `obsidian-directory' root.
     (find-file (expand-file-name clean-filename) t)
     (save-buffer)
     (add-to-list 'obsidian-files-cache clean-filename)))
-  
+
 ;;;###autoload
 (defun obsidian-daily-note ()
   "Create new obsidian daily note.
@@ -503,9 +503,9 @@ in `obsidian-directory' root.
     (find-file (expand-file-name clean-filename) t)
     (save-buffer)
     (if (and obsidian-templates-directory obsidian-daily-note-template (eq (buffer-size) 0))
-      (progn
-        (obsidian-apply-template (s-concat obsidian-directory "/" obsidian-templates-directory "/" obsidian-daily-note-template))
-        (save-buffer)))
+        (progn
+          (obsidian-apply-template (s-concat obsidian-directory "/" obsidian-templates-directory "/" obsidian-daily-note-template))
+          (save-buffer)))
     (add-to-list 'obsidian-files-cache clean-filename)))
 
 ;;;###autoload
@@ -519,7 +519,10 @@ in `obsidian-directory' root.
          (choices (-sort #'string< (-distinct (-concat (obsidian--all-aliases) (hash-table-keys dict)))))
          (choice (completing-read "Jump to: " choices))
          (target (obsidian--get-alias choice (gethash choice dict))))
-    (find-file target)))
+    (if target
+        (find-file target)
+      (message "Note not found: %s" choice))
+    ))
 
 ;;;###autoload
 (defun obsidian-move-file ()
@@ -584,9 +587,9 @@ If ARG is set, the file will be opened in other window."
 (defun obsidian--maybe-in-same-dir (f)
   "If `f` contains '/', returns f, otherwise with buffer, relative to the buffer"
   (if (s-contains-p "/" f)
-    f
-    (if obsidian-wiki-link-create-file-in-inbox
       f
+    (if obsidian-wiki-link-create-file-in-inbox
+        f
       (concat (file-relative-name (file-name-directory (buffer-file-name)) obsidian-directory) "/" f))))
 
 (defun obsidian-wiki-link-p ()
@@ -611,7 +614,7 @@ link name must be available via `match-string'."
 (defsubst obsidian--remove-section (s)
   "Remove section from file path.
    From 'filename#section' keep only the 'filename'."
-   (replace-regexp-in-string "#.*$" "" s))
+  (replace-regexp-in-string "#.*$" "" s))
 
 (defun obsidian-follow-wiki-link-at-point (&optional arg)
   "Find Wiki Link at point. Opens wiki links in other window if ARG is non-nil."
@@ -713,10 +716,10 @@ See `markdown-follow-link-at-point' and
          (output-content (replace-regexp-in-string "{{date}}" date output-content))
          (output-content (replace-regexp-in-string "{{time}}" time output-content))
          (output-size (length output-content)))
-         (goto-char (point-min))
-         (insert output-content)
-         (message "Template variables replaced and inserted to the buffer")
-         (goto-char m)))
+    (goto-char (point-min))
+    (insert output-content)
+    (message "Template variables replaced and inserted to the buffer")
+    (goto-char m)))
 
 ;;;###autoload
 (defun obsidian-backlink-jump ()
