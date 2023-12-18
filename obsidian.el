@@ -521,7 +521,7 @@ in `obsidian-directory' root.
          (target (obsidian--get-alias choice (gethash choice dict))))
     (if target
         (find-file target)
-      (message "Note not found: %s" choice))
+      (user-error "Note not found: %s" choice))
     ))
 
 ;;;###autoload
