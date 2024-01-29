@@ -99,7 +99,7 @@ Put this in your ~init.el~:
     ;; Directory of note templates, unset (nil) by default
     ;(obsidian-templates-directory "Templates")
     ;; Daily Note template name - requires a template directory. Default: Daily Note Template.md
-    ;(setq obsidian-daily-note-template "Daily Note Template.md")
+    ;(obsidian-daily-note-template "Daily Note Template.md")
     :bind (:map obsidian-mode-map
     ;; Replace C-c C-o with Obsidian.el's implementation. It's ok to use another key binding.
     ("C-c C-o" . obsidian-follow-link-at-point)
