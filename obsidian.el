@@ -82,7 +82,7 @@
     If it is true, create in inbox, otherwise next to the current buffer."
   :type 'boolean)
 
-(defcustom obsidian-daily-notes-directory obsidian-inbox-directory 
+(defcustom obsidian-daily-notes-directory obsidian-inbox-directory
   "Subdir to create daily notes with `obsidian-daily-note'. Default: the inbox directory"
   :type 'directory)
 
@@ -489,6 +489,11 @@ In the `obsidian-inbox-directory' if set otherwise in `obsidian-directory' root.
     (save-buffer)
     (add-to-list 'obsidian-files-cache clean-filename)))
 
+
+(defun obsidian--template-path (filename)
+  "Returns the full path for the filename"
+  (s-concat obsidian-directory "/" obsidian-templates-directory "/"filename))
+
 ;;;###autoload
 (defun obsidian-daily-note ()
   "Create new obsidian daily note.
@@ -504,7 +509,7 @@ in `obsidian-directory' root.
     (save-buffer)
     (if (and obsidian-templates-directory obsidian-daily-note-template (eq (buffer-size) 0))
         (progn
-          (obsidian-apply-template (s-concat obsidian-directory "/" obsidian-templates-directory "/" obsidian-daily-note-template))
+          (obsidian--apply-template (obsidian--template-path obsidian-daily-note-template))
           (save-buffer)))
     (add-to-list 'obsidian-files-cache clean-filename)))
 
@@ -703,7 +708,7 @@ See `markdown-follow-link-at-point' and
          (_ (-map (lambda (f) (puthash f (obsidian--expand-file-name f) dict)) coll)))
     dict))
 
-(defun obsidian-apply-template (template-filename)
+(defun obsidian--apply-template (template-filename)
   "Apply the template for the current buffer. Template vars: {{title}}, {{date}}, and {{time}}"
   (let* ((title (file-name-sans-extension (file-name-nondirectory buffer-file-name)))
          (date (format-time-string "%Y-%m-%d"))
@@ -733,6 +738,29 @@ See `markdown-follow-link-at-point' and
                (target (obsidian--get-alias choice (gethash choice dict))))
           (find-file target))
       (message "No backlinks found."))))
+
+(defun obsidian--find-template-files ()
+  "Finds (returns) all .md files from the template directory"
+    (if obsidian-templates-directory
+(let* ((templates-directory  (s-concat obsidian-directory "/" obsidian-templates-directory))
+        (all-files (directory-files templates-directory))
+        (markdown-files (-filter '(lambda (filename) (not (s-match-strings-all filename ".*\.md"))) all-files)))
+        markdown-files)
+        nil))
+
+;;;###autoload
+(defun obsidian-apply-template ()
+  "Select a template and apply it for the current buffer"
+  (interactive)
+  (let* ((templates (obsidian--find-template-files))
+         (choices (-map 'file-name-sans-extension (-sort #'string< templates))))
+    (if choices
+        (let* ((choice (completing-read "Template: " choices))
+               (template (obsidian--template-path (s-concat choice ".md"))))
+          (if (f-exists-p template)
+            (obsidian--apply-template template)
+            (user-error "Template file not found")))
+    (message "No template found."))))
 
 ;;;###autoload
 (defun obsidian-search ()

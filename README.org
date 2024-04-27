@@ -59,6 +59,9 @@ Put this in your ~init.el~:
   (add-hook
    'obsidian-mode-hook
    (lambda ()
+     ;; apply a template from the directory specified by obsidian-tempaltes-directory
+     ;("C-c C-t" . obsidian-apply-template)
+
      ;; Replace standard command with Obsidian.el's in obsidian vault:
      (local-set-key (kbd "C-c C-o") 'obsidian-follow-link-at-point)
 
@@ -101,6 +104,8 @@ Put this in your ~init.el~:
     ;; Daily Note template name - requires a template directory. Default: Daily Note Template.md
     ;(obsidian-daily-note-template "Daily Note Template.md")
     :bind (:map obsidian-mode-map
+    ;; apply a template from the directory specified by obsidian-tempaltes-directory
+    ;("C-c C-t" . obsidian-apply-template)
     ;; Replace C-c C-o with Obsidian.el's implementation. It's ok to use another key binding.
     ("C-c C-o" . obsidian-follow-link-at-point)
     ;; Jump to backlinks
@@ -261,6 +266,9 @@ Use ~obsidian-move-file~ to move current note to another folder:
 
 Obsidian.el has a basic template support, where the Obsidian app's template placeholders can be used,
 without customization. {{title}}, {{date}}, and {{time}} can be used. {{title}} is the name of the file without the extension.
+
+While the daily notes can have an automatic template (see the config examples), for every other file
+templates must be applied manually, by calling `obsidian-apply-template`.
 
 *** Development tasks
 - [X] Specify Obsidian folder and save it in variables
