@@ -88,13 +88,11 @@
 
 (defcustom obsidian-templates-directory nil
   "Subdir containing templates"
-  :type 'directory
-  )
+  :type 'directory)
 
 (defcustom obsidian-daily-note-template "Daily Note Template.md"
   "Daily notes' template filename in templates directory"
-  :type 'file
-  )
+  :type 'file)
 
 (eval-when-compile (defvar local-minor-modes))
 
@@ -521,8 +519,7 @@ in `obsidian-directory' root.
          (target (obsidian--get-alias choice (gethash choice dict))))
     (if target
         (find-file target)
-      (user-error "Note not found: %s" choice))
-    ))
+      (user-error "Note not found: %s" choice))))
 
 ;;;###autoload
 (defun obsidian-move-file ()
