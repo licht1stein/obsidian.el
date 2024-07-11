@@ -154,9 +154,9 @@ key4:
 
   (let ((test-note "aliases")
         (orig-file-name
-         (expand-file-name (s-concat obsidian-test-dir "/subdir/" test-note ".md")))
+         (expand-file-name (s-concat obsidian--test-dir "/subdir/" test-note ".md")))
         (moved-file-name
-         (expand-file-name (s-concat obsidian-test-dir "/inbox/" test-note ".md"))))
+         (expand-file-name (s-concat obsidian--test-dir "/inbox/" test-note ".md"))))
 
     (let ((unread-command-events  (listify-key-sequence (s-concat test-note "\n"))))
       (call-interactively #'obsidian-jump))
