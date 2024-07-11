@@ -148,4 +148,35 @@ key4:
   (it "1.md"
     (expect (obsidian--find-links-to-file "1.md") :to-equal '("2.md"))))
 
+(describe "move file"
+  (before-all (obsidian-specify-path obsidian--test-dir))
+  (after-all (obsidian-specify-path obsidian--test--original-dir))
+
+  (let ((test-note "aliases")
+        (orig-file-name
+         (expand-file-name (s-concat obsidian-test-dir "/subdir/" test-note ".md")))
+        (moved-file-name
+         (expand-file-name (s-concat obsidian-test-dir "/inbox/" test-note ".md"))))
+
+    (let ((unread-command-events  (listify-key-sequence (s-concat test-note "\n"))))
+      (call-interactively #'obsidian-jump))
+
+    (it "Existing file is in files cache, but not in new location"
+        (expect (seq-contains-p obsidian-files-cache orig-file-name)  :to-equal t)
+        (expect (seq-contains-p obsidian-files-cache moved-file-name) :to-equal nil))
+
+    (let ((unread-command-events (listify-key-sequence "inbox\n") ))
+      (call-interactively #'obsidian-move-file))
+
+    (it "After moving file, new path is in obsidian cache and old path is not"
+        (expect (seq-contains-p obsidian-files-cache orig-file-name)  :to-equal nil)
+        (expect (seq-contains-p obsidian-files-cache moved-file-name) :to-equal t))
+
+    (let ((unread-command-events (listify-key-sequence "subdir\n") ))
+      (call-interactively #'obsidian-move-file))
+
+    (it "Move the file back and confirm that the cache was updated accordingly"
+        (expect (seq-contains-p obsidian-files-cache orig-file-name)  :to-equal t)
+        (expect (seq-contains-p obsidian-files-cache moved-file-name) :to-equal nil))))
+
 (provide 'test-obsidian)

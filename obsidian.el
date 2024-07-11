@@ -541,7 +541,7 @@ in `obsidian-directory' root.
     (write-file new-file-path)
     (setq obsidian-files-cache (remove old-file-path obsidian-files-cache))
     (add-to-list 'obsidian-files-cache new-file-path)
-    (message (concat "Moved to " new-file-path))))
+    (message (s-concat "Moved to " new-file-path))))
 
 (defun obsidian-prepare-file-path (s)
   "Replace %20 with spaces in file path.
