@@ -147,4 +147,36 @@ key4:
   (it "1.md"
     (expect (obsidian--find-links-to-file "1.md") :to-equal '("2.md"))))
 
+(describe "obsidian-move-file"
+  (before-all (obsidian-specify-path obsidian--test-dir))
+  (after-all (obsidian-specify-path obsidian--test--original-dir))
+
+  (let* ((make-backup-files nil)
+         (orig-file-name
+          (expand-file-name (s-concat obsidian--test-dir "/subdir/aliases.md")))
+         (moved-file-name
+          (expand-file-name (s-concat obsidian--test-dir "/inbox/aliases.md"))))
+
+    (it "obsidian-files-cache is updated when a file is moved"
+        ;; Open file and confirm that it is in the files cache
+        (let* ((executing-kbd-macro t)
+               (unread-command-events (listify-key-sequence "subdir/aliases.md\n")))
+          (call-interactively #'obsidian-jump))
+        (expect (seq-contains-p obsidian-files-cache orig-file-name)  :to-equal t)
+        (expect (seq-contains-p obsidian-files-cache moved-file-name) :to-equal nil)
+
+        ;; Move the file and confirm that new path is in cache and old path is not
+        (let* ((executing-kbd-macro t)
+               (unread-command-events (listify-key-sequence "inbox\n") ))
+          (call-interactively #'obsidian-move-file))
+        (expect (seq-contains-p obsidian-files-cache orig-file-name)  :to-equal nil)
+        (expect (seq-contains-p obsidian-files-cache moved-file-name) :to-equal t)
+
+        ;; Return file and confirm that the cache was again updated
+        (let* ((executing-kbd-macro t)
+               (unread-command-events (listify-key-sequence "subdir\n") ))
+          (call-interactively #'obsidian-move-file))
+        (expect (seq-contains-p obsidian-files-cache orig-file-name)  :to-equal t)
+        (expect (seq-contains-p obsidian-files-cache moved-file-name) :to-equal nil))))
+
 (provide 'test-obsidian)
