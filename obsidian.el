@@ -6,7 +6,7 @@
 ;; URL: https://github.com/licht1stein/obsidian.el
 ;; Keywords: obsidian, pkm, convenience
 ;; Version: 1.4.4
-;; Package-Requires: ((emacs "27.2") (f "0.2.0") (s "1.12.0") (dash "2.13") (markdown-mode "2.5") (elgrep "1.0.0") (yaml "0.5.1"))
+;; Package-Requires: ((emacs "27.2") (f "0.2.0") (s "1.12.0") (dash "20240510.1327") (markdown-mode "2.5") (elgrep "1.0.0") (yaml "0.5.1"))
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -151,9 +151,24 @@ When run interactively asks user to specify the path."
 ;; Copied from org-roam's org-roam-descendant-of-p
 (defun obsidian-descendant-of-p (a b)
   "Return t if A is descendant of B."
-  (unless (equal (file-truename a) (file-truename b))
-    (string-prefix-p (replace-regexp-in-string "^\\([A-Za-z]\\):" #'downcase (expand-file-name b) t t)
-                     (replace-regexp-in-string "^\\([A-Za-z]\\):" #'downcase (expand-file-name a) t t))))
+
+  ;; Original version that passes tests
+  ;; (unless (equal (file-truename a) (file-truename b))
+  ;;   (string-prefix-p (replace-regexp-in-string "^\\([A-Za-z]\\):" #'downcase (expand-file-name b) t t)
+  ;;                    (replace-regexp-in-string "^\\([A-Za-z]\\):" #'downcase (expand-file-name a) t t)))
+
+  ;; JMR take that fails
+  ;; expand-file-name >10x faster than file-truename
+  ;; doesn't seem necessary to specify alphabet via regex when calling downcase
+  (let ((aa (expand-file-name a))
+        (bb (expand-file-name b)))
+    (unless (equal aa bb)
+      (string-prefix-p (downcase bb) (downcase aa))))
+
+  ;; FSA take that also seems to fail
+  ;; (string-search ".." (file-relative-name a b))
+
+  )
 
 (defun obsidian-not-trash-p (file)
   "Return t if FILE is not in .trash of Obsidian."
@@ -183,15 +198,27 @@ FILE is an Org-roam file if:
 - Is not a dot file or, if `obsidian-include-hidden-files' is t, then:
   - It is not in .trash
   - It is not an Emacs temp file"
-  (-when-let* ((path (or file (-> (buffer-base-buffer) buffer-file-name)))
-               (relative-path (file-relative-name path obsidian-directory))
-               (ext (file-name-extension relative-path))
-               (md-p (string= ext "md"))
-               (obsidian-dir-p (obsidian-descendant-of-p path obsidian-directory))
-               (not-dot-file (or obsidian-include-hidden-files (not (obsidian-dot-file-p path))))
+
+  ;; (if (seq-contains-p obsidian-files-cache file)
+  ;;     (progn
+  ;;       (print (format "True for %s" file))
+  ;;       t))
+  (-when-let* (;; (_ (print (format "NOT True for %s" file)))
+               (path (or file (buffer-file-name (buffer-base-buffer))))
+               ;; TODO: This won't work if hidden files is true
+               (md-ext (s-ends-with-p ".md" path))
+               (not-dot-file (or obsidian-include-hidden-files
+                                 (not (obsidian-dot-file-p path))))
+               (_ (not (string-match-p (rx (or "node_modules" ".git")) path)))
                (not-trash-p (obsidian-not-trash-p path))
                (not-dot-obsidian (obsidian-not-dot-obsidian-p path))
-               (not-temp-p (not (s-contains-p "~" relative-path))))
+               ;; (relative-path (file-relative-name path obsidian-directory))
+               ;; (not-temp-p (not (s-contains-p "~" relative-path)))
+
+               ;; I think (untested) that s-ends-with-p is much faster than s-contians-p
+               ;; But this should also be unnecessary because of the md-ext line
+               ;; (not-temp-p (not (s-ends-with-p "~" path)))
+               )
     t))
 
 (defun obsidian--file-relative-name (f)
@@ -211,15 +238,28 @@ FILE is an Org-roam file if:
   :group 'obsidian)
 
 (defun obsidian-cache-needs-reset-p ()
-  "Check if `obsidian-file-cache' is empty or expired."
+  "Check if `obsidian-files-cache' is empty or expired."
   (or (not obsidian-files-cache)
       (> (- (float-time) obsidian-cache-timestamp) obsidian-cache-expiry)))
 
+;; TODO: I don't want to use projectile, but is there a benefit to Emacs recognizing
+;;       the Obsidian vault as a project (as in project.el) ?
 (defun obsidian-reset-cache ()
   "Clear and reset obsidian cache."
   (setq obsidian-files-cache
         (->> (directory-files-recursively obsidian-directory "\.*$")
              (-filter #'obsidian-file-p)))
+
+  ;; (setq obsidian-files-cache (directory-files-recursively
+  ;;                             ;; dir
+  ;;                             obsidian-directory
+  ;;                             ;; regexp
+  ;;                             "\.*\\.md$"
+  ;;                             ;; include-directories
+  ;;                             nil
+  ;;                             ;; predicate
+  ;;                             #'obsidian-file-p))
+
   (setq obsidian-cache-timestamp (float-time)))
 
 (defun obsidian-list-all-files ()
@@ -241,8 +281,10 @@ If you need to run this manually, please report this as an issue on Github."
 
 (defun obsidian-list-all-directories ()
   "Lists all Obsidian sub folders."
-  (->> (directory-files-recursively obsidian-directory "" t)
-       (-filter #'obsidian-user-directory-p)))
+  ;; (->> (directory-files-recursively obsidian-directory "" t)
+  ;;      (-filter #'obsidian-user-directory-p))
+  (directory-files-recursively obsidian-directory "" t #'obsidian-user-directory-p)
+  )
 
 (defun obsidian-read-file-or-buffer (&optional file)
   "Return string contents of a file or current buffer.
@@ -286,28 +328,46 @@ Return nil if the front matter does not exist, or incorrectly delineated by
 
 (defun obsidian--file-front-matter (file)
   "Check if FILE has front matter and returned parsed to hash-table if it does."
-  (let* ((starts-with-dashes-p (with-temp-buffer
-                                 (insert-file-contents file nil 0 3)
-                                 (string= (buffer-string) "---"))))
-    (if starts-with-dashes-p
-        (let* ((front-matter-s (with-temp-buffer
-                                 (insert-file-contents file)
-                                 (obsidian-get-yaml-front-matter))))
-          (if front-matter-s
-              (yaml-parse-string front-matter-s))))))
+  ;; (let* ((starts-with-dashes-p (with-temp-buffer
+  ;;                                (insert-file-contents file nil 0 3)
+  ;;                                (string= (buffer-string) "---"))))
+  ;;   (if starts-with-dashes-p
+  ;;       (let* ((front-matter-s (with-temp-buffer
+  ;;                                (insert-file-contents file)
+  ;;                                (obsidian-get-yaml-front-matter))))
+  ;;         (if front-matter-s
+  ;;             (yaml-parse-string front-matter-s)))))
+
+  (with-temp-buffer
+    (insert-file-contents file)
+    (when (string= "---" (buffer-substring-no-properties 1 (min (point-max) 3)))
+      (when-let ((front-matter-s (obsidian-get-yaml-front-matter)))
+        (yaml-parse-string front-matter-s))))
+  )
 
 (defun obsidian--update-from-front-matter (file)
   "Takes FILE, parse front matter then update anything that needs to be updated.
 
 At the moment updates only `obsidian--aliases-map' with found aliases."
-  (let* ((dict (obsidian--file-front-matter file)))
-    (if dict
-        (let* ((aliases (gethash 'aliases dict))
-               (alias (gethash 'alias dict))
-               (all-aliases (-filter #'identity (append aliases (list alias)))))
-          ;; Update aliases
-          (-map (lambda (al) (if al (progn
-                                      (obsidian--add-alias (format "%s" al) file)))) all-aliases)))))
+
+  ;; (let* ((dict (obsidian--file-front-matter file)))
+  ;;   (if dict
+  ;;       (let* ((aliases (gethash 'aliases dict))
+  ;;              (alias (gethash 'alias dict))
+  ;;              (all-aliases (-filter #'identity (append aliases (list alias)))))
+  ;;         ;; Update aliases
+  ;;         (-map (lambda (al) (if al (progn
+  ;;                                     (obsidian--add-alias (format "%s" al) file)))) all-aliases))))
+
+  (when-let* ((dict (obsidian--file-front-matter file)))
+    (let* ((aliases (gethash 'aliases dict))
+           (alias (gethash 'alias dict)))
+      ;; Update aliases
+      (when alias
+        (obsidian--add-alias (format "%s" al) file))
+      (map nil (lambda (al) (obsidian--add-alias (format "%s" al) file)) aliases)))
+
+  )
 
 (defun obsidian--update-all-from-front-matter ()
   "Take all files in obsidian vault, parse front matter and update."
@@ -327,21 +387,29 @@ At the moment updates only `obsidian--aliases-map' with found aliases."
   "Return all tags in file or current buffer.
 
 If FILE is not specified, use the current buffer"
-  (-> (obsidian-read-file-or-buffer file)
-      obsidian-find-tags
-      -distinct))
+  (obsidian-find-tags (obsidian-read-file-or-buffer file)))
 
 (defun obsidian-list-all-tags ()
   "Find all tags in all obsidian files."
   (->> (obsidian-list-all-files)
        (mapcar #'obsidian-find-tags-in-file)
        -flatten
-       -distinct))
+       -distinct)
+
+  ;; TODO: JMR - I didn't notice any performance gains with this code
+  ;; (let ((tags (make-hash-table :test 'equal)))
+  ;;   (mapcar (lambda (file)
+  ;;             (mapcar (lambda (tag)
+  ;;                       (puthash tag tag tags))
+  ;;                     (obsidian-find-tags (obsidian-read-file-or-buffer file))))
+  ;;           (obsidian-list-all-files))
+  ;;   (hash-table-keys tags))
+
+  )
 
 (defun obsidian-update-tags-list ()
   "Scans entire Obsidian vault and update all tags for completion."
-  (->> (obsidian-list-all-tags)
-       (setq obsidian--tags-list))
+  (setq obsidian--tags-list (obsidian-list-all-tags))
   (message "Obsidian tags updated"))
 
 (define-minor-mode obsidian-mode
@@ -403,6 +471,20 @@ Optional argument ARG word to complete."
   (obsidian-reset-cache)
   (obsidian-update-tags-list)
   (obsidian--update-all-from-front-matter))
+
+(defun obsidian-update-async ()
+  "Asyncrhonous version of obsidian-update."
+  (interactive)
+  (async-start
+   (lambda () (function obsidian-reset-cache))
+   (lambda (_) (message "Obsidian cache asynchronously reset")))
+  (async-start
+   (lambda () (function obsidian-update-tags-list))
+   (lambda (_) (message "Obsidian aliases asynchronously updated.")))
+  (async-start
+   (lambda () (function obsidian--update-all-from-front-matter))
+   (lambda (_) (message "Obsidian tags asynchronously updated"))))
+
 
 (defun obsidian--format-link (file-path &optional toggle)
   "Format link from FILE-PATH based on `obsidian-links-use-vault-path'.

@@ -14,6 +14,14 @@ lint:
 test:
 	eldev -C --unstable -T test
 
+.PHONY: debug
+debug:
+	eldev -C --debug --unstable -T test
+
+.PHONY: jmr
+jmr:
+	eldev -C --debug --unstable -T test -f test-jmr.el
+
 docs:
 	make -C doc all
 
