@@ -541,9 +541,9 @@ in `obsidian-directory' root.
     (when (equal new-file-path old-file-path)
       (user-error "File already exists at that location"))
     (rename-file old-file-path new-file-directory)
-    (write-file new-file-path)
     (setq obsidian-files-cache (remove old-file-path obsidian-files-cache))
     (add-to-list 'obsidian-files-cache new-file-path)
+    (write-file new-file-path)
     (message (format "Moved file to %s" new-file-path))))
 
 (defun obsidian-prepare-file-path (s)
