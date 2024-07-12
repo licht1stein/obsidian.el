@@ -9,6 +9,7 @@
 (defvar obsidian--test-number-of-visible-tags 6)
 (defvar obsidian--test-number-of-notes 11)
 (defvar obsidian--test-number-of-visible-notes 9)
+(defvar obsidian--test-number-of-visible-directories 2)
 (defvar obsidian--test-visibility-cfg obsidian-include-hidden-files)
 
 (describe "check path setting"
@@ -71,6 +72,19 @@
 
   (it "check file count"
     (expect (length (obsidian-list-all-files)) :to-equal obsidian--test-number-of-notes)))
+
+(describe "obsidian-list-all-directories"
+   (before-all (progn
+                 (obsidian-specify-path obsidian--test-dir)
+                 (setq obsidian-include-hidden-files nil)
+                 (obsidian-update)))
+   (after-all (progn
+                (obsidian-specify-path obsidian--test--original-dir)
+                (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)
+                (obsidian-update)))
+
+  (it "check file count"
+    (expect (length (obsidian-list-all-directories)) :to-equal obsidian--test-number-of-visible-directories)))
 
 (describe "obsidian-find-tags"
   (before-all (obsidian-specify-path obsidian--test-dir))

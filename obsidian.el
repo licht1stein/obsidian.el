@@ -181,8 +181,10 @@ When run interactively asks user to specify the path."
 (defun obsidian-user-directory-p (&optional file)
   "Return t if FILE is a user defined directory inside `obsidian-directory'."
   (and (file-directory-p file)
-       (not (s-contains-p "/.obsidian" file))
-       (not (s-contains-p "/.trash" file))))
+       ;; (not (s-contains-p "/.obsidian" file))
+       ;; (not (s-contains-p "/.trash" file))
+       (obsidian-not-dot-obsidian-p file)
+       (obsidian-not-trash-p file)))
 
 (defun obsidian-dot-file-p (p)
   "Return t if path P points to a dot file."
@@ -247,19 +249,9 @@ FILE is an Org-roam file if:
 (defun obsidian-reset-cache ()
   "Clear and reset obsidian cache."
   (setq obsidian-files-cache
-        (->> (directory-files-recursively obsidian-directory "\.*$")
-             (-filter #'obsidian-file-p)))
-
-  ;; (setq obsidian-files-cache (directory-files-recursively
-  ;;                             ;; dir
-  ;;                             obsidian-directory
-  ;;                             ;; regexp
-  ;;                             "\.*\\.md$"
-  ;;                             ;; include-directories
-  ;;                             nil
-  ;;                             ;; predicate
-  ;;                             #'obsidian-file-p))
-
+        (let ((files (directory-files-recursively obsidian-directory "\.*$")))
+          (-filter #'obsidian-file-p files)))
+  (message "Obsidian cache reset")
   (setq obsidian-cache-timestamp (float-time)))
 
 (defun obsidian-list-all-files ()
@@ -281,9 +273,9 @@ If you need to run this manually, please report this as an issue on Github."
 
 (defun obsidian-list-all-directories ()
   "Lists all Obsidian sub folders."
-  ;; (->> (directory-files-recursively obsidian-directory "" t)
-  ;;      (-filter #'obsidian-user-directory-p))
-  (directory-files-recursively obsidian-directory "" t #'obsidian-user-directory-p)
+  (->> (directory-files-recursively obsidian-directory "" t)
+       (-filter #'obsidian-user-directory-p))
+  ;; (directory-files-recursively obsidian-directory "" t #'obsidian-user-directory-p)
   )
 
 (defun obsidian-read-file-or-buffer (&optional file)
@@ -485,7 +477,6 @@ Optional argument ARG word to complete."
    (lambda () (function obsidian--update-all-from-front-matter))
    (lambda (_) (message "Obsidian tags asynchronously updated"))))
 
-
 (defun obsidian--format-link (file-path &optional toggle)
   "Format link from FILE-PATH based on `obsidian-links-use-vault-path'.
 
@@ -620,9 +611,10 @@ in `obsidian-directory' root.
     (when (equal new-file-path old-file-path)
       (user-error "File already exists at that location"))
     (rename-file old-file-path new-file-directory)
-    (write-file new-file-path)
+    ;; (write-file new-file-path)
     (setq obsidian-files-cache (remove old-file-path obsidian-files-cache))
     (add-to-list 'obsidian-files-cache new-file-path)
+    (write-file new-file-path)
     (message (s-concat "Moved to " new-file-path))))
 
 (defun obsidian-prepare-file-path (s)
