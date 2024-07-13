@@ -291,9 +291,62 @@ The project uses [[https://github.com/ptaoussanis/encore/blob/master/BREAK-VERSI
 * Contributing
 PRs and issues are very welcome. In order to develop locally you need to install [[https://github.com/doublep/eldev/][eldev]]. After that you can run ~make~ commands, in particular ~make test~ and ~make lint~ to make sure that your code will pass all MELPA checks.
 
+** Internal Workings
+
+*** Data Structures
+
+**** obsidian--files-hash-cache
+A nested hashtable (ie hashmap) where the keys are absolute file paths for the files tracked by obsidian in the vault.
+The values are also hashtables with the keys 'tags and 'aliases that contains lists of the tags and aliases assosiated that that file.
+
+#+begin_src
+{<filepath> : {'tags: (list of tags associated with file)
+               'aliases: (list of aliases associated with file)}}
+#+end_src
+
+**** obsidian--aliases-map
+A simple hashtable where each key is an alias, and the value is the absolute file path associated with that alias.
+
+#+begin_src
+{<alias> : <filepath>}
+#+end_src
+
+
+*** obsidian-update
+Rebuilds both `obsidian--files-hash-cache` and `obsidian--aliases-map`.  It's a very heavy operation so ideally only called at startup by after-init-hook.
+- obsidian-reset-cache
+- obsidian-update-tags-list
+- obsidian--update--all-from-front-matter
+
+*** obsidian--add-file
+One of the two main internal functions along with obsidian--remove-file.
+
+File will be added to the cache if it's not already there, the tags list and alias list for that file will be updated, and finally the aliases list will be synced with the obsidian--alises-map.
+
+1. file added to the cache
+2. update tags for file
+3. update aliases for file
+4. sync list of aliases with obsidian--aliases-map
+
+*** obsidian--remove-file
+One of the two main internal functions along with obsidian--remove-file.
+
+1. Remove aliases for file from obsidian--aliases-map
+2. Remove file record from obsidian--files-hash-cache
+
+*** obsidian--update-on-save
+Meant to be added as a hook to after-save-hook.
+Checks to see if the save file is an obsidian file and if it already exists in the file cache.
+
+#+begin_src emacs-lisp
+
+(-let* ((saved-file (buffer-file-name))
+          (obs? (obsidian-file-p saved-file))
+          (cached? (seq-contains-p obsidian-files-cache saved-file)))
+    )
+#+end_src
+
 * Gratitude
 - The work on Obsidian.el was made considerably easier and definitely more fun thanks to the great work of [[https://github.com/magnars][Magnar Sveen]] and his packages [[https://github.com/magnars/dash.el][dash.el]] and [[https://github.com/magnars/s.el][s.el]]. Thank you for making Elisp almost as convenient as Clojure!
 
 - During the development of Obsidian.el I have learned and copied from the code of the amazing [[https://github.com/org-roam/org-roam][org-roam]] package. Thank you!
-
-

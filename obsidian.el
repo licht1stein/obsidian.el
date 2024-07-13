@@ -6,8 +6,7 @@
 ;; URL: https://github.com/licht1stein/obsidian.el
 ;; Keywords: obsidian, pkm, convenience
 ;; Version: 1.4.4
-;; Package-Requires: ((emacs "27.2") (f "0.2.0") (s "1.12.0") (dash "20240510.1327") (markdown-mode "2.5") (elgrep "1.0.0") (yaml "0.5.1"))
-
+;; Package-Requires: ((emacs "27.2") (f "0.2.0") (s "1.12.0") (dash "2.13") (markdown-mode "2.5") (elgrep "1.0.0") (yaml "0.5.1"))
 ;; This file is NOT part of GNU Emacs.
 
 ;;; License:
@@ -96,7 +95,8 @@
 
 (eval-when-compile (defvar local-minor-modes))
 
-(defun obsidian--directory-files-pre28 (orig-func dir &optional full match nosort ignored)
+(defun obsidian--directory-files-pre28
+  (orig-func dir &optional full match nosort ignored)
   "Version of `directory-files' compatible with Emacs versions < 28.
 
 ORIG-FUNC is the original `directory-files' function that is going to be
@@ -130,14 +130,13 @@ When run interactively asks user to specify the path."
 
 (defvar obsidian--aliases-map (make-hash-table :test 'equal) "Alist of all Obsidian aliases.")
 
-(defun obsidian--clear-aliases-map ()
-  "Clears aliases map."
-  (interactive)
-  (setq obsidian--aliases-map (make-hash-table :test 'equal)))
-
 (defun obsidian--add-alias (alias file)
   "Add ALIAS as key to `obsidian--aliases-map' with FILE as value."
   (puthash alias file obsidian--aliases-map))
+
+(defun obsidian--remove-alias (alias)
+  "Remove ALIAS as key to `obsidian--aliases-map'."
+  (remhash alias obsidian--aliases-map))
 
 (defun obsidian--get-alias (alias &optional dflt)
   "Find ALIAS in `obsidian--aliases-map' with optional DFLT."
@@ -151,24 +150,10 @@ When run interactively asks user to specify the path."
 ;; Copied from org-roam's org-roam-descendant-of-p
 (defun obsidian-descendant-of-p (a b)
   "Return t if A is descendant of B."
-
-  ;; Original version that passes tests
-  ;; (unless (equal (file-truename a) (file-truename b))
-  ;;   (string-prefix-p (replace-regexp-in-string "^\\([A-Za-z]\\):" #'downcase (expand-file-name b) t t)
-  ;;                    (replace-regexp-in-string "^\\([A-Za-z]\\):" #'downcase (expand-file-name a) t t)))
-
-  ;; JMR take that fails
-  ;; expand-file-name >10x faster than file-truename
-  ;; doesn't seem necessary to specify alphabet via regex when calling downcase
   (let ((aa (expand-file-name a))
         (bb (expand-file-name b)))
     (unless (equal aa bb)
-      (string-prefix-p (downcase bb) (downcase aa))))
-
-  ;; FSA take that also seems to fail
-  ;; (string-search ".." (file-relative-name a b))
-
-  )
+      (string-prefix-p (downcase bb) (downcase aa)))))
 
 (defun obsidian-not-trash-p (file)
   "Return t if FILE is not in .trash of Obsidian."
@@ -181,8 +166,6 @@ When run interactively asks user to specify the path."
 (defun obsidian-user-directory-p (&optional file)
   "Return t if FILE is a user defined directory inside `obsidian-directory'."
   (and (file-directory-p file)
-       ;; (not (s-contains-p "/.obsidian" file))
-       ;; (not (s-contains-p "/.trash" file))
        (obsidian-not-dot-obsidian-p file)
        (obsidian-not-trash-p file)))
 
@@ -234,6 +217,14 @@ FILE is an Org-roam file if:
 (defvar obsidian-files-cache nil "Cache for Obsidian files.")
 (defvar obsidian-cache-timestamp nil "The time when the cache was last updated.")
 
+(defvar obsidian--files-hash-cache nil
+  "Cache for Obsidian files.
+{<filepath>: {'tags: <list-of-tags>
+              'aliases: <list-of-aliases>}}")
+(defvar obsidian-hash-cache-timestamp nil "The time when the cache was last updated.")
+
+;; TODO: run-with-timer -> run-with-idle-timer
+;;       - wait certain amount of time, and then wait for idle
 (defcustom obsidian-cache-expiry 3600
   "The number of seconds before the Obsidian cache expires."
   :type 'integer
@@ -244,13 +235,18 @@ FILE is an Org-roam file if:
   (or (not obsidian-files-cache)
       (> (- (float-time) obsidian-cache-timestamp) obsidian-cache-expiry)))
 
-;; TODO: I don't want to use projectile, but is there a benefit to Emacs recognizing
-;;       the Obsidian vault as a project (as in project.el) ?
 (defun obsidian-reset-cache ()
   "Clear and reset obsidian cache."
   (setq obsidian-files-cache
         (let ((files (directory-files-recursively obsidian-directory "\.*$")))
           (-filter #'obsidian-file-p files)))
+
+  (setq obsidian--files-hash-cache
+        (make-hash-table :test 'equal :size (-count #'identity obsidian-files-cache)))
+  (-map
+   (lambda (file) (puthash file (make-hash-table :size 2) obsidian--files-hash-cache))
+   obsidian-files-cache)
+
   (message "Obsidian cache reset")
   (setq obsidian-cache-timestamp (float-time)))
 
@@ -320,46 +316,30 @@ Return nil if the front matter does not exist, or incorrectly delineated by
 
 (defun obsidian--file-front-matter (file)
   "Check if FILE has front matter and returned parsed to hash-table if it does."
-  ;; (let* ((starts-with-dashes-p (with-temp-buffer
-  ;;                                (insert-file-contents file nil 0 3)
-  ;;                                (string= (buffer-string) "---"))))
-  ;;   (if starts-with-dashes-p
-  ;;       (let* ((front-matter-s (with-temp-buffer
-  ;;                                (insert-file-contents file)
-  ;;                                (obsidian-get-yaml-front-matter))))
-  ;;         (if front-matter-s
-  ;;             (yaml-parse-string front-matter-s)))))
-
-  (with-temp-buffer
-    (insert-file-contents file)
-    (when (string= "---" (buffer-substring-no-properties 1 (min (point-max) 3)))
-      (when-let ((front-matter-s (obsidian-get-yaml-front-matter)))
-        (yaml-parse-string front-matter-s))))
-  )
+  (let* ((starts-with-dashes-p (with-temp-buffer
+                                 (insert-file-contents file nil 0 3)
+                                 (string= (buffer-string) "---"))))
+    (if starts-with-dashes-p
+        (let* ((front-matter-s (with-temp-buffer
+                                 (insert-file-contents file)
+                                 (obsidian-get-yaml-front-matter))))
+          (if front-matter-s
+              (yaml-parse-string front-matter-s))))))
 
 (defun obsidian--update-from-front-matter (file)
   "Takes FILE, parse front matter then update anything that needs to be updated.
 
 At the moment updates only `obsidian--aliases-map' with found aliases."
-
-  ;; (let* ((dict (obsidian--file-front-matter file)))
-  ;;   (if dict
-  ;;       (let* ((aliases (gethash 'aliases dict))
-  ;;              (alias (gethash 'alias dict))
-  ;;              (all-aliases (-filter #'identity (append aliases (list alias)))))
-  ;;         ;; Update aliases
-  ;;         (-map (lambda (al) (if al (progn
-  ;;                                     (obsidian--add-alias (format "%s" al) file)))) all-aliases))))
-
-  (when-let* ((dict (obsidian--file-front-matter file)))
+  (-when-let* ((dict (obsidian--file-front-matter file)))
     (let* ((aliases (gethash 'aliases dict))
-           (alias (gethash 'alias dict)))
+           (alias (gethash 'alias dict))
+           (all-aliases (-filter #'identity (append aliases (list alias)))))
       ;; Update aliases
-      (when alias
-        (obsidian--add-alias (format "%s" al) file))
-      (map nil (lambda (al) (obsidian--add-alias (format "%s" al) file)) aliases)))
+      (-map (lambda (al) (when al
+                      (obsidian--add-alias (format "%s" al) file))) all-aliases)
 
-  )
+      (->> (gethash file obsidian--files-hash-cache)
+           (puthash 'aliases (-distinct all-aliases))))))
 
 (defun obsidian--update-all-from-front-matter ()
   "Take all files in obsidian vault, parse front matter and update."
@@ -383,24 +363,22 @@ If FILE is not specified, use the current buffer"
 
 (defun obsidian-list-all-tags ()
   "Find all tags in all obsidian files."
-  (->> (obsidian-list-all-files)
-       (mapcar #'obsidian-find-tags-in-file)
-       -flatten
-       -distinct)
-
-  ;; TODO: JMR - I didn't notice any performance gains with this code
-  ;; (let ((tags (make-hash-table :test 'equal)))
-  ;;   (mapcar (lambda (file)
-  ;;             (mapcar (lambda (tag)
-  ;;                       (puthash tag tag tags))
-  ;;                     (obsidian-find-tags (obsidian-read-file-or-buffer file))))
-  ;;           (obsidian-list-all-files))
-  ;;   (hash-table-keys tags))
-
-  )
+  (-distinct
+   (remove nil
+           (-mapcat (lambda (val-map)
+                      (gethash 'tags val-map))
+                    (hash-table-values obsidian--files-hash-cache)))))
 
 (defun obsidian-update-tags-list ()
   "Scans entire Obsidian vault and update all tags for completion."
+
+  (maphash
+   (lambda (phil phil-map)
+     (let ((tags (obsidian-find-tags-in-file phil)))
+       ;; (puthash 'tags tags (gethash phil obsidian--files-hash-cache))
+       (puthash 'tags tags phil-map)))
+   obsidian--files-hash-cache)
+
   (setq obsidian--tags-list (obsidian-list-all-tags))
   (message "Obsidian tags updated"))
 
@@ -414,16 +392,16 @@ the mode, `toggle' toggles the state."
   ;; The initial value.
   :init-value nil
   :lighter " obs"
-  :after-hook (obsidian-update)
+  ;; :after-hook (obsidian-update)
   :keymap (make-sparse-keymap))
 
 (defun obsidian-prepare-tags-list (tags)
   "Prepare a list of TAGS with both lower-case and capitalized versions.
 
-Obsidian Notes doesn't considers tags to be the same no matter their case.
-Sometimes it's convenient to capitalize a tag, for example when using it
-at the start of the sentence.  This function allows completion with both
-lower and upper case versions of the tags."
+Obsidian Notes tags are case-independent and are therefore considered to be
+the same no matter their case.  Sometimes it's convenient to capitalize a
+tag, for example when using it at the start of the sentence.  This function
+allows completion with both lower and upper case versions of the tags."
   (let* ((lower-case (->> tags
                           (-map (lambda (s) (s-replace "#" "" s)))
                           (-map #'s-downcase)))
@@ -558,6 +536,7 @@ In the `obsidian-inbox-directory' if set otherwise in `obsidian-directory' root.
          (clean-filename (s-replace "//" "/" filename)))
     (find-file (expand-file-name clean-filename) t)
     (save-buffer)
+    ;; TODO: Update tags and aliases for this file? Or will save hook handle it?
     (add-to-list 'obsidian-files-cache clean-filename)))
 
 ;;;###autoload
@@ -576,14 +555,17 @@ in `obsidian-directory' root.
     (if (and obsidian-templates-directory obsidian-daily-note-template (eq (buffer-size) 0))
         (progn
           (obsidian-apply-template (s-concat obsidian-directory "/" obsidian-templates-directory "/" obsidian-daily-note-template))
+          ;; TODO: Do we need to call save-buffer twice?
           (save-buffer)))
+    ;; TODO: Update tags and aliases for this file? Or will save hook handle it?
     (add-to-list 'obsidian-files-cache clean-filename)))
 
 ;;;###autoload
 (defun obsidian-jump ()
   "Jump to Obsidian note."
   (interactive)
-  (obsidian-update)
+  ;; (obsidian-update)
+  (obsidian-reset-cache)
   (let* ((files (obsidian-list-all-files))
          (dict (make-hash-table :test 'equal))
          (_ (-map (lambda (f) (puthash (file-relative-name f obsidian-directory) f dict)) files))
@@ -870,6 +852,46 @@ _s_earch by expr.   _u_pdate tags/alises etc.
 ;;         ("C-c C-o" . obsidian-follow-link-at-point)
 ;;         ;; If you prefer you can use `obsidian-insert-wikilink'
 ;;         ("C-c C-l" . obsidian-insert-link))))
+
+
+(defun obsidian--mapped-aliases (file)
+  "Return list of aliases mapped to FILE in obsidian--aliases-map"
+  (let ((aliases '()))
+    (maphash (lambda (k v)
+               (when (equal file v)
+                 (add-to-list 'aliases k)))
+             obsidian--aliases-map )
+    aliases))
+
+(defun obsidian--add-file (file)
+  "Add a file to the files cache and update tags and aliases for the file"
+  (-let* ((tags (obsidian-find-tags-in-file file))
+          (faliases (obsidian--update-from-front-matter))
+          (maliases (obsidian--mapped-aliases file))
+          (new-aliases (-difference faliases maliases))
+          (stale-aliases (-difference maliases faliases)))
+    (-map (lambda (alias) (obsidian--add-alias alias file)) new-aliases)
+    (-map #'obsidian--remove-alias stale-aliases)
+    (puthash file (make-hash-table :size 2) obsidian--files-hash-cache)
+    (puthash 'tags tags (gethash file obsidian--files-hash-cache))
+    (puthash 'aliases faliases (gethash file obsidian--files-hash-cache))))
+
+(defun obsidian--remove-file (file)
+  "Remove a file from the files cache and update tags and aliases appropriately"
+  (-map #'obsidian--remove-alias (obisidian--mapped-aliases file))
+  (remhash file obsidian--files-hash-cache))
+
+(defun obsidian--update-on-save ()
+  ;; (print (format "Inside obsidian--update-on-save"))
+  (-let* ((saved-file (buffer-file-name))
+          (obs? (obsidian-file-p saved-file))
+          (cached? (seq-contains-p obsidian-files-cache saved-file)))
+    (message (format "JMR: Saved file %s\n- is obsidian? %s\n- is cached? %s"
+                     saved-file obs? cached?))))
+
+(add-hook 'after-save-hook 'obsidian--update-on-save)
+
+(add-hook 'after-init-hook 'obsidian-update)
 
 (provide 'obsidian)
 ;;; obsidian.el ends here
