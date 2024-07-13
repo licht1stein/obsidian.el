@@ -1,3 +1,4 @@
+;;; test-obsidian.el --- Obsidian Tests -*- coding: utf-8; lexical-binding: t; -*-
 (require 'obsidian)
 (require 'buttercup)
 

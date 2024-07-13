@@ -3,7 +3,7 @@
 ;; Copyright (c) 2022 Mykhaylo Bilyanskyy <mb@blaster.ai>
 
 ;; Author: Mykhaylo Bilyanskyy
-;; URL: https://github.com./licht1stein/obsidian.el
+;; URL: https://github.com/licht1stein/obsidian.el
 ;; Keywords: obsidian, pkm, convenience
 ;; Version: 1.4.4
 ;; Package-Requires: ((emacs "27.2") (f "0.2.0") (s "1.12.0") (dash "2.13") (markdown-mode "2.5") (elgrep "1.0.0") (yaml "0.5.1"))
@@ -88,13 +88,11 @@
 
 (defcustom obsidian-templates-directory nil
   "Subdir containing templates"
-  :type 'directory
-  )
+  :type 'directory)
 
 (defcustom obsidian-daily-note-template "Daily Note Template.md"
   "Daily notes' template filename in templates directory"
-  :type 'file
-  )
+  :type 'file)
 
 (eval-when-compile (defvar local-minor-modes))
 
@@ -521,8 +519,7 @@ in `obsidian-directory' root.
          (target (obsidian--get-alias choice (gethash choice dict))))
     (if target
         (find-file target)
-      (user-error "Note not found: %s" choice))
-    ))
+      (user-error "Note not found: %s" choice))))
 
 ;;;###autoload
 (defun obsidian-move-file ()
@@ -605,16 +602,16 @@ link name must be available via `match-string'."
              (not (string-equal (buffer-file-name)
                                 (markdown-wiki-link-link)))))))
 
+(defsubst obsidian--remove-section (s)
+  "Remove section from file path.
+   From 'filename#section' keep only the 'filename'."
+  (replace-regexp-in-string "#.*$" "" s))
+
 (defun obsidian-wiki->normal (f)
   "Add extension to wiki link F if none."
   (if (file-name-extension f)
       f
     (s-concat (obsidian--remove-section f) ".md")))
-
-(defsubst obsidian--remove-section (s)
-  "Remove section from file path.
-   From 'filename#section' keep only the 'filename'."
-  (replace-regexp-in-string "#.*$" "" s))
 
 (defun obsidian-follow-wiki-link-at-point (&optional arg)
   "Find Wiki Link at point. Opens wiki links in other window if ARG is non-nil."
@@ -714,8 +711,7 @@ See `markdown-follow-link-at-point' and
                              (buffer-string)))
          (output-content (replace-regexp-in-string "{{title}}" title template-content))
          (output-content (replace-regexp-in-string "{{date}}" date output-content))
-         (output-content (replace-regexp-in-string "{{time}}" time output-content))
-         (output-size (length output-content)))
+         (output-content (replace-regexp-in-string "{{time}}" time output-content)))
     (goto-char (point-min))
     (insert output-content)
     (message "Template variables replaced and inserted to the buffer")
