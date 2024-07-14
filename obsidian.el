@@ -140,17 +140,27 @@ When run interactively asks user to specify the path."
 (defvar obsidian--basic-markdown-link-regex "\\[[[:graph:][:blank:]]+\\]\([[:graph:][:blank:]]*\)"
   "Regex pattern used to find markdown links.")
 
+(defvar obsidian--files-hash-cache nil
+  "Cache for Obsidian files.
+{<filepath>: {'tags: <list-of-tags>
+              'aliases: <list-of-aliases>}}")
+
 (defvar obsidian--aliases-map (make-hash-table :test 'equal) "Alist of all Obsidian aliases.")
+
+(defcustom obsidian-cache-expiry (* 60 5)
+  "The number of seconds before the Obsidian cache updates"
+  :type 'integer
+  :group 'obsidian)
+
+(defcustom obsidian-update-idle-wait 5
+  "The number of seconds after cache expiry to wait for Emacs to be idle before running update function."
+  :type 'integer
+  :group 'obsidian)
 
 (defvar obsidian--update-timer nil "Timer to periodically update the cache.")
 ;; TODO: We can use this to check to see if any files are newer than this
 ;;       and may therefore need to be updated
 (defvar obsidian--updated-time nil "Timer when the last update occurred.")
-
-(defvar obsidian--files-hash-cache nil
-  "Cache for Obsidian files.
-{<filepath>: {'tags: <list-of-tags>
-              'aliases: <list-of-aliases>}}")
 
 (defun obsidian--set-tags (file tag-list)
   "Set list TAG-LIST to FILE in files cache."
@@ -251,13 +261,6 @@ FILE is an Org-roam file if:
   "Take relative file name F and return expanded name."
   (expand-file-name f obsidian-directory))
 
-;; TODO: run-with-timer -> run-with-idle-timer
-;;       - wait certain amount of time, and then wait for idle
-(defcustom obsidian-cache-expiry 3600
-  "The number of seconds before the Obsidian cache expires."
-  :type 'integer
-  :group 'obsidian)
-
 (defun obsidian-reset-cache ()
   "Clear and reset obsidian cache."
   (-let* ((all-files (directory-files-recursively obsidian-directory "\.*$"))
@@ -324,13 +327,14 @@ Argument S string to find tags in."
   "Takes front matter DICT and retrieves aliases.
 
 At the moment updates only `obsidian--aliases-map' with found aliases."
-  (let* ((aliases (gethash 'aliases dict))
-         (alias (gethash 'alias dict))
-         (all-aliases (-filter #'identity (append aliases (list alias)))))
-    ;; Update aliases
-    ;; (-map (lambda (al) (when al
-    ;;                 (obsidian--add-alias (format "%s" al) file))) all-aliases)
-    (-distinct all-aliases)))
+  (when dict
+    (let* ((aliases (gethash 'aliases dict))
+           (alias (gethash 'alias dict))
+           (all-aliases (-filter #'identity (append aliases (list alias)))))
+      ;; Update aliases
+      ;; (-map (lambda (al) (when al
+      ;;                 (obsidian--add-alias (format "%s" al) file))) all-aliases)
+      (-distinct all-aliases))))
 
 (defun obsidian-get-yaml-front-matter ()
   "Return the text of the YAML front matter of the current buffer.
@@ -999,10 +1003,15 @@ _s_earch by expr.   _u_pdate tags/alises etc.
 (defun obsidian-idle-timer ()
   "Wait until Emacs is idle to call update."
   (message (format "Update timer buzz at %s" (format-time-string "%H:%M:%S")))
-  (run-with-idle-timer 5 nil 'obsidian-update))
+  (run-with-idle-timer obsidian-update-idle-wait nil 'obsidian-update))
 
-(setq obsidian--update-timer (run-with-timer 0 (* 5 60) 'obsidian-idle-timer))
-;; (cancel-timer update-timer)
+(setq obsidian--update-timer
+      (run-with-timer 0 obsidian-cache-expiry 'obsidian-idle-timer))
+
+(defun stop-update-timer ()
+  "Stop the background process that periodically updates the cache."
+  (interactive)
+  (cancel-timer update-timer))
 
 (provide 'obsidian)
 ;;; obsidian.el ends here
