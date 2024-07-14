@@ -40,14 +40,7 @@
   (it "exclude files in trash"
     (expect (obsidian-file-p "./tests/test_vault/.trash/trash.md") :to-be nil)))
 
-(describe "obsidian-list-all-files"
-  (before-all (obsidian-specify-path obsidian--test-dir))
-  (after-all (obsidian-specify-path obsidian--test--original-dir))
-
-  (it "check file count"
-    (expect (length (obsidian-list-all-files)) :to-equal obsidian--test-number-of-notes)))
-
-(describe "obsidian-list-all-visible-files"
+(describe "obsidian list all visible files"
    (before-all (progn
                  (obsidian-specify-path obsidian--test-dir)
                  (setq obsidian-include-hidden-files nil)
@@ -57,7 +50,7 @@
                 (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)
                 (obsidian-update)))
 
-  (it "check file count"
+  (it "check visible file count"
     (expect (length (obsidian-list-all-files)) :to-equal obsidian--test-number-of-visible-notes)))
 
 (describe "obsidian list all files including hidden files"
@@ -70,7 +63,7 @@
                 (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)
                 (obsidian-update)))
 
-  (it "check file count"
+  (it "check all files count"
     (expect (length (obsidian-list-all-files)) :to-equal obsidian--test-number-of-notes)))
 
 (describe "obsidian-list-all-directories"
@@ -83,7 +76,7 @@
                 (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)
                 (obsidian-update)))
 
-  (it "check file count"
+  (it "check directory count"
     (expect (length (obsidian-list-all-directories)) :to-equal obsidian--test-number-of-visible-directories)))
 
 (describe "obsidian-find-tags"
@@ -92,13 +85,6 @@
 
   (it "find tags in string"
     (expect (length (obsidian-find-tags "#foo bar #spam #bar-spam #spam_bar #foo+spam #foo=bar not tags")) :to-equal 6)))
-
-(describe "obsidian-list-all-tags"
-  (before-all (obsidian-specify-path obsidian--test-dir))
-  (after-all (obsidian-specify-path obsidian--test--original-dir))
-
-  (it "find all tags in the vault"
-    (expect (length (obsidian-list-all-tags)) :to-equal obsidian--test-number-of-tags)))
 
 (describe "obsidian-list-visible-tags"
   (before-all (progn
@@ -156,10 +142,13 @@ key4:
 (describe "obsidian-aliases"
   (before-all (progn
 		(obsidian-specify-path obsidian--test-dir)
-		(setq obsidian--tags-list nil)))
+                (obsidian-update)
+		(setq obsidian--tags-list nil)
+                ))
   (after-all (progn
 	       (obsidian-specify-path obsidian--test--original-dir)
-	       (setq obsidian--tags-list obsidian--test--original-tags-list)))
+	       (setq obsidian--tags-list obsidian--test--original-tags-list)
+               ))
 
   (it "check that front-matter is found"
     (expect (gethash 'aliases (obsidian-find-yaml-front-matter obsidian--test-correct-front-matter))
@@ -167,7 +156,17 @@ key4:
 
   (it "check that front-matter is ignored if not at the top of file"
     (expect (obsidian-find-yaml-front-matter obsidian--test-incorret-front-matter--not-start-of-file)
-	    :to-equal nil)))
+	    :to-equal nil))
+
+  (it "check that front-matter in vault is correct"
+    (let ((alias-list (obsidian--all-aliases)))
+      (expect (-count #'identity alias-list) :to-equal 6)
+      (expect (seq-contains-p alias-list "2") :to-equal t)
+      (expect (seq-contains-p alias-list "2-sub-alias") :to-equal t)
+      (expect (seq-contains-p alias-list "complex file name") :to-equal t)
+      (expect (seq-contains-p alias-list "alias-one-off") :to-equal t)
+      (expect (seq-contains-p alias-list "alias1") :to-equal t)
+      (expect (seq-contains-p alias-list "alias2") :to-equal t))))
 
 (describe "obsidian--link-p"
   (it "non link"
@@ -193,32 +192,33 @@ key4:
   (before-all (obsidian-specify-path obsidian--test-dir))
   (after-all (obsidian-specify-path obsidian--test--original-dir))
 
-  (let* ((make-backup-files nil)
-         (orig-file-name
+  (let* ((orig-file-name
           (expand-file-name (s-concat obsidian--test-dir "/subdir/aliases.md")))
          (moved-file-name
           (expand-file-name (s-concat obsidian--test-dir "/inbox/aliases.md"))))
 
-    (it "obsidian-files-cache is updated when a file is moved"
+    (it "obsidian--files-hash-cache is updated when a file is moved"
         ;; Open file and confirm that it is in the files cache
         (let* ((executing-kbd-macro t)
                (unread-command-events (listify-key-sequence "subdir/aliases.md\n")))
           (call-interactively #'obsidian-jump))
-        (expect (seq-contains-p obsidian-files-cache orig-file-name)  :to-equal t)
-        (expect (seq-contains-p obsidian-files-cache moved-file-name) :to-equal nil)
+        (expect (obsidian-cached-file-p orig-file-name)  :to-equal t)
+        (expect (obsidian-cached-file-p moved-file-name) :to-equal nil)
 
         ;; Move the file and confirm that new path is in cache and old path is not
-        (let* ((executing-kbd-macro t)
+        (let* ((make-backup-files nil)
+               (executing-kbd-macro t)
                (unread-command-events (listify-key-sequence "inbox\n") ))
           (call-interactively #'obsidian-move-file))
-        (expect (seq-contains-p obsidian-files-cache orig-file-name)  :to-equal nil)
-        (expect (seq-contains-p obsidian-files-cache moved-file-name) :to-equal t)
+        (expect (obsidian-cached-file-p orig-file-name)  :to-equal nil)
+        (expect (obsidian-cached-file-p moved-file-name) :to-equal t)
 
         ;; Return file and confirm that the cache was again updated
-        (let* ((executing-kbd-macro t)
+        (let* ((make-backup-files nil)
+               (executing-kbd-macro t)
                (unread-command-events (listify-key-sequence "subdir\n") ))
           (call-interactively #'obsidian-move-file))
-        (expect (seq-contains-p obsidian-files-cache orig-file-name)  :to-equal t)
-        (expect (seq-contains-p obsidian-files-cache moved-file-name) :to-equal nil))))
+        (expect (obsidian-cached-file-p orig-file-name)  :to-equal t)
+        (expect (obsidian-cached-file-p moved-file-name) :to-equal nil))))
 
 (provide 'test-obsidian)
