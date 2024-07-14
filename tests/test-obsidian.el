@@ -4,7 +4,6 @@
 
 (defvar obsidian--test-dir "./tests/test_vault")
 (defvar obsidian--test--original-dir (or obsidian-directory obsidian--test-dir))
-(defvar obsidian--test--original-tags-list obsidian--tags-list)
 (defvar obsidian--test-number-of-tags 9)
 (defvar obsidian--test-number-of-visible-tags 6)
 (defvar obsidian--test-number-of-notes 11)
@@ -19,15 +18,6 @@
   (it "set to current"
     (expect obsidian-directory :to-equal (expand-file-name obsidian--test-dir))
     (expect (obsidian-specify-path ".") :to-equal (expand-file-name "."))))
-
-(describe "obsidian-descendant-of-p"
-  (before-all (obsidian-specify-path obsidian--test-dir))
-  (after-all (obsidian-specify-path obsidian--test--original-dir))
-
-  (it "include files right in vault"
-    (expect (obsidian-descendant-of-p "./tests/test_vault/1.md" obsidian-directory) :to-be t))
-  (it "also include files in trash"
-    (expect (obsidian-descendant-of-p "./tests/test_vault/.trash/trash.md" obsidian-directory) :to-be t)))
 
 (describe "obsidian-file-p"
   (before-all (obsidian-specify-path obsidian--test-dir))
@@ -97,7 +87,7 @@
                (obsidian-update)))
 
   (it "find all tags in the vault"
-    (expect (length (obsidian-list-all-tags)) :to-equal obsidian--test-number-of-visible-tags)))
+    (expect (length (obsidian-tags)) :to-equal obsidian--test-number-of-visible-tags)))
 
 (describe "obsidian list all tags including hidden tags"
   (before-all (progn
@@ -110,22 +100,20 @@
                (obsidian-update)))
 
   (it "find all tags in the vault"
-    (expect (length (obsidian-list-all-tags)) :to-equal obsidian--test-number-of-tags)))
+    (expect (length (obsidian-tags)) :to-equal obsidian--test-number-of-tags)))
 
 (describe "obsidian-update"
   (before-all (progn
 		(obsidian-specify-path obsidian--test-dir)
-		(setq obsidian--tags-list nil)))
-  (after-all (progn
-	       (obsidian-specify-path obsidian--test--original-dir)
-	       (setq obsidian--tags-list obsidian--test--original-tags-list)))
+		(obsidian-clear-cache)))
+  (after-all (obsidian-specify-path obsidian--test--original-dir))
 
   (it "check that tags var is empty before update"
-    (expect obsidian--tags-list :to-be nil))
+    (expect (obsidian-tags) :to-be nil))
   (it "check tags are filled out after update"
     (expect (progn
 	      (obsidian-update)
-	      (length obsidian--tags-list)) :to-equal obsidian--test-number-of-tags)))
+	      (length (obsidian-tags))) :to-equal obsidian--test-number-of-tags)))
 
 
 (defvar-local obsidian--test-correct-front-matter "---
@@ -159,8 +147,8 @@ key4:
 	    :to-equal nil))
 
   (it "check that front-matter in vault is correct"
-    (let ((alias-list (obsidian--all-aliases)))
-      (expect (-count #'identity alias-list) :to-equal 6)
+    (let ((alias-list (obsidian-aliases)))
+      (expect (length alias-list) :to-equal 6)
       (expect (seq-contains-p alias-list "2") :to-equal t)
       (expect (seq-contains-p alias-list "2-sub-alias") :to-equal t)
       (expect (seq-contains-p alias-list "complex file name") :to-equal t)
