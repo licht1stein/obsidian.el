@@ -142,10 +142,10 @@ When run interactively asks user to specify the path."
 
 (defvar obsidian--aliases-map (make-hash-table :test 'equal) "Alist of all Obsidian aliases.")
 
-(defvar update-timer nil "Timer to periodically update the cache.")
+(defvar obsidian--update-timer nil "Timer to periodically update the cache.")
 ;; TODO: We can use this to check to see if any files are newer than this
 ;;       and may therefore need to be updated
-(defvar updated-time nil "Timer when the last update occurred.")
+(defvar obsidian--updated-time nil "Timer when the last update occurred.")
 
 (defun obsidian--add-alias (alias file)
   "Add ALIAS as key to `obsidian--aliases-map' with FILE as value."
@@ -911,12 +911,12 @@ _s_earch by expr.   _u_pdate tags/alises etc.
 ;; Shouldn't need this as the timer will update on start
 ;; (add-hook 'after-init-hook 'obsidian-update)
 
-(defun idle-timer ()
+(defun obsidian-idle-timer ()
   "Wait until Emacs is idle to call update."
   (message (format "Update timer buzz at %s" (format-time-string "%H:%M:%S")))
   (run-with-idle-timer 5 nil 'obsidian-update))
 
-(setq update-timer (run-with-timer 0 (* 5 60) 'idle-timer))
+(setq obsidian--update-timer (run-with-timer 0 (* 5 60) 'obsidian-idle-timer))
 ;; (cancel-timer update-timer)
 
 (provide 'obsidian)
