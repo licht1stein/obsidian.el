@@ -340,10 +340,6 @@ Checks to see if the save file is an obsidian file and if it already exists in t
 
 #+begin_src emacs-lisp
 
-(-let* ((saved-file (buffer-file-name))
-          (obs? (obsidian-file-p saved-file))
-          (cached? (seq-contains-p obsidian-files-cache saved-file)))
-    )
 #+end_src
 
 * Gratitude

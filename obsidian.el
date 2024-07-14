@@ -210,14 +210,10 @@ FILE is an Org-roam file if:
   "Take relative file name F and return expanded name."
   (expand-file-name f obsidian-directory))
 
-(defvar obsidian-files-cache nil "Cache for Obsidian files.")
-(defvar obsidian-cache-timestamp nil "The time when the cache was last updated.")
-
 (defvar obsidian--files-hash-cache nil
   "Cache for Obsidian files.
 {<filepath>: {'tags: <list-of-tags>
               'aliases: <list-of-aliases>}}")
-(defvar obsidian-hash-cache-timestamp nil "The time when the cache was last updated.")
 
 ;; TODO: run-with-timer -> run-with-idle-timer
 ;;       - wait certain amount of time, and then wait for idle
@@ -228,18 +224,16 @@ FILE is an Org-roam file if:
 
 (defun obsidian-reset-cache ()
   "Clear and reset obsidian cache."
-  (setq obsidian-files-cache
-        (let ((files (directory-files-recursively obsidian-directory "\.*$")))
-          (-filter #'obsidian-file-p files)))
-
-  (setq obsidian--files-hash-cache
-        (make-hash-table :test 'equal :size (-count #'identity obsidian-files-cache)))
-  (-map
-   (lambda (file) (puthash file (make-hash-table :size 2) obsidian--files-hash-cache))
-   obsidian-files-cache)
-
-  (message "Obsidian cache reset")
-  (setq obsidian-cache-timestamp (float-time)))
+  (-let* ((all-files (directory-files-recursively obsidian-directory "\.*$"))
+          (obs-files (-filter #'obsidian-file-p all-files))
+          (file-count (-count #'identity obs-files)))
+    (setq obsidian--files-hash-cache (make-hash-table :test 'equal :size file-count))
+    (-map
+     (lambda (file)
+       (puthash file (make-hash-table :size 2) obsidian--files-hash-cache))
+     obs-files)
+    (message "Obsidian cache reset")
+    file-count))
 
 (defun obsidian-list-all-files ()
   "Lists all Obsidian Notes files that are not in trash."
@@ -255,8 +249,7 @@ FILE is an Org-roam file if:
 
 If you need to run this manually, please report this as an issue on Github."
   (interactive)
-  (setq obsidian-files-cache nil)
-  (setq obsidian-cache-timestamp nil))
+  (setq obsidian--files-hash-cache nil))
 
 (defun obsidian-list-all-directories ()
   "Lists all Obsidian sub folders."
@@ -466,7 +459,7 @@ Obsidian link and is returned unmodified."
   (if (s-contains-p ":" f)
       f
     (let* ((obs-path (obsidian--expand-file-name f))
-           (exists (seq-contains-p obsidian-files-cache obs-path)))
+           (exists (obsidian-cached-file-p obs-path)))
       (if (not exists)
           (obsidian--file-relative-name (obsidian--prepare-new-file-from-rel-path f))
         f))))
@@ -529,9 +522,7 @@ In the `obsidian-inbox-directory' if set otherwise in `obsidian-directory' root.
          (filename (s-concat obsidian-directory "/" obsidian-inbox-directory "/" title ".md"))
          (clean-filename (s-replace "//" "/" filename)))
     (find-file (expand-file-name clean-filename) t)
-    (save-buffer)
-    ;; TODO: Update tags and aliases for this file? Or will save hook handle it?
-    (add-to-list 'obsidian-files-cache clean-filename)))
+    (save-buffer)))
 
 ;;;###autoload
 (defun obsidian-daily-note ()
@@ -546,20 +537,20 @@ in `obsidian-directory' root.
          (clean-filename (s-replace "//" "/" filename)))
     (find-file (expand-file-name clean-filename) t)
     (save-buffer)
-    (if (and obsidian-templates-directory obsidian-daily-note-template (eq (buffer-size) 0))
-        (progn
-          (obsidian-apply-template (s-concat obsidian-directory "/" obsidian-templates-directory "/" obsidian-daily-note-template))
-          ;; TODO: Do we need to call save-buffer twice?
-          (save-buffer)))
-    ;; TODO: Update tags and aliases for this file? Or will save hook handle it?
-    (add-to-list 'obsidian-files-cache clean-filename)))
+    (when (and obsidian-templates-directory
+               obsidian-daily-note-template
+               (eq (buffer-size) 0))
+      (obsidian-apply-template
+       (s-concat obsidian-directory "/"
+                 obsidian-templates-directory "/"
+                 obsidian-daily-note-template))
+      (save-buffer))))
 
 ;;;###autoload
 (defun obsidian-jump ()
   "Jump to Obsidian note."
   (interactive)
-  ;; (obsidian-update)
-  (obsidian-reset-cache)
+  (obsidian-update)
   (let* ((files (obsidian-list-all-files))
          (dict (make-hash-table :test 'equal))
          (_ (-map (lambda (f) (puthash (file-relative-name f obsidian-directory) f dict)) files))
@@ -603,12 +594,11 @@ in `obsidian-directory' root.
   (-map #'obsidian--remove-alias (obsidian--mapped-aliases file))
   (remhash file obsidian--files-hash-cache))
 
+;; TODO: Is there a hook for file remove?
 (defun obsidian--update-on-save ()
-  (print (format "Inside obsidian--update-on-save"))
   (when (obsidian-file-p (buffer-file-name))
     (message (format "Updating saved Obsidian file %s" (buffer-file-name)))
-    (obsidian--add-file (buffer-file-name)))
-  )
+    (obsidian--add-file (buffer-file-name))))
 
 ;;;###autoload
 (defun obsidian-move-file ()
@@ -627,8 +617,6 @@ in `obsidian-directory' root.
     (when (equal new-file-path old-file-path)
       (user-error "File already exists at that location"))
     (rename-file old-file-path new-file-directory)
-    ;; (setq obsidian-files-cache (remove old-file-path obsidian-files-cache))
-    ;; (add-to-list 'obsidian-files-cache new-file-path)
     (write-file new-file-path)
 
     ;; TODO: I don't think I should need this with the save file hook
@@ -659,11 +647,10 @@ If the file include directories in its path, we create the file relative to
                      (s-concat obsidian-directory "/"
                                obsidian-inbox-directory "/" f)))
          (cleaned (s-replace "//" "/" filename)))
-    (if (not (f-exists-p cleaned))
-        (progn
-          (f-mkdir-full-path (f-dirname cleaned))
-          (f-touch cleaned)
-          (add-to-list 'obsidian-files-cache cleaned)))
+    (when (not (f-exists-p cleaned))
+      (f-mkdir-full-path (f-dirname cleaned))
+      (f-touch cleaned)
+      (obsidian--add-file cleaned))
     cleaned))
 
 (defun obsidian-find-file (f &optional arg)
