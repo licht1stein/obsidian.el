@@ -35,6 +35,18 @@
 ;; app for syncing and doing more specialized stuff, like viewing notes graphs.
 
 ;;; Code:
+
+;; TODO:
+;; - add backlinks to files cache?
+;;   - update the cache after a call to add link/add markdown link
+;; - if adding a link to a file that doesn't exist, will the file be created?
+;;   - and will that file then be updated in the file cache?
+;; - allow links to subsections of a note
+;; - would like a function to remove a link, leaving behind the description text
+;; - when searching for backlinks, include the full filename and extension in the search
+;;   - love matched a number of files that weren't actually links to love.md
+;; - how does lsp track files?
+;; - what triggers treemacs to update?
 (require 'f)
 (require 'dash)
 (require 's)
@@ -129,6 +141,11 @@ When run interactively asks user to specify the path."
   "Regex pattern used to find markdown links.")
 
 (defvar obsidian--aliases-map (make-hash-table :test 'equal) "Alist of all Obsidian aliases.")
+
+(defvar update-timer nil "Timer to periodically update the cache.")
+;; TODO: We can use this to check to see if any files are newer than this
+;;       and may therefore need to be updated
+(defvar updated-time nil "Timer when the last update occurred.")
 
 (defun obsidian--add-alias (alias file)
   "Add ALIAS as key to `obsidian--aliases-map' with FILE as value."
@@ -550,7 +567,7 @@ in `obsidian-directory' root.
 (defun obsidian-jump ()
   "Jump to Obsidian note."
   (interactive)
-  (obsidian-update)
+  ;; (obsidian-update)
   (let* ((files (obsidian-list-all-files))
          (dict (make-hash-table :test 'equal))
          (_ (-map (lambda (f) (puthash (file-relative-name f obsidian-directory) f dict)) files))
@@ -774,12 +791,22 @@ See `markdown-follow-link-at-point' and
                          (cdr match))))
     (when (remove nil result) t)))
 
-(defun obsidian--find-links-to-file (filename)
-  "Find any mention of FILENAME in the vault."
-  (->> (file-name-sans-extension filename)
-       obsidian--grep
-       (-filter (lambda (x) (obsidian--mention-link-to-p (file-name-sans-extension filename) x)))
-       (-map #'car)))
+(defun obsidian--find-links-to-file (filepath)
+  "Find any mention of trimmed FILEPATH in the vault.
+
+filepath: the absolute filename including extension
+filename: the name of the file with extension without any directories
+file-word: the file name without any extension or directory informatoin"
+  ;; TODO: Also extract the line number so that we can jump to the proper location
+  (-let* ((filename (file-name-nondirectory filepath))
+          (file-word (file-name-sans-extension filename))
+          (matches (obsidian--grep file-word)))
+    ;; (-filter (lambda (m) (obsidian--mention-link-to-p file-word m)) matches)
+    (->> (-filter (lambda (m) (obsidian--mention-link-to-p file-word m)) matches)
+         (-map #'car)
+         ;; (-map #'file-name-sans-extension)
+         )
+    ))
 
 (defun obsidian--completing-read-for-matches (coll)
   "Take a COLL of matches produced by elgrep and make a list for completing read."
@@ -808,7 +835,7 @@ See `markdown-follow-link-at-point' and
 (defun obsidian-backlink-jump ()
   "Select a backlink to this file and follow it."
   (interactive)
-  (let* ((backlinks (obsidian--find-links-to-file (file-name-nondirectory (buffer-file-name))))
+  (let* ((backlinks (obsidian--find-links-to-file (buffer-file-name)))
          (dict (obsidian--completing-read-for-matches backlinks))
          (choices (-sort #'string< (-distinct (hash-table-keys dict)))))
     (if choices
@@ -881,7 +908,16 @@ _s_earch by expr.   _u_pdate tags/alises etc.
 
 (add-hook 'after-save-hook 'obsidian--update-on-save)
 
-(add-hook 'after-init-hook 'obsidian-update)
+;; Shouldn't need this as the timer will update on start
+;; (add-hook 'after-init-hook 'obsidian-update)
+
+(defun idle-timer ()
+  "Wait until Emacs is idle to call update."
+  (message (format "Update timer buzz at %s" (format-time-string "%H:%M:%S")))
+  (run-with-idle-timer 5 nil 'obsidian-update))
+
+(setq update-timer (run-with-timer 0 (* 5 60) 'idle-timer))
+;; (cancel-timer update-timer)
 
 (provide 'obsidian)
 ;;; obsidian.el ends here

@@ -297,11 +297,12 @@ PRs and issues are very welcome. In order to develop locally you need to install
 
 **** obsidian--files-hash-cache
 A nested hashtable (ie hashmap) where the keys are absolute file paths for the files tracked by obsidian in the vault.
-The values are also hashtables with the keys 'tags and 'aliases that contains lists of the tags and aliases assosiated that that file.
+The values are also hashtables with the keys 'tags and 'aliases that contains lists of the tags and aliases assosiated that that file.  I think it might be good to include 'backlinks here, as well, but this is not yet implemented.
 
 #+begin_src
 {<filepath> : {'tags: (list of tags associated with file)
-               'aliases: (list of aliases associated with file)}}
+               'aliases: (list of aliases associated with file)
+               'backlinks: (TBD: links of backlinks to file)'}}
 #+end_src
 
 **** obsidian--aliases-map
@@ -313,10 +314,25 @@ A simple hashtable where each key is an alias, and the value is the absolute fil
 
 
 *** obsidian-update
-Rebuilds both `obsidian--files-hash-cache` and `obsidian--aliases-map`.  It's a very heavy operation so ideally only called at startup by after-init-hook.
+Rebuilds both =obsidian--files-hash-cache= and =obsidian--aliases-map=.  It's a very heavy operation so ideally only called at startup by after-init-hook.
 - obsidian-reset-cache
 - obsidian-update-tags-list
 - obsidian--update--all-from-front-matter
+
+*** Update Timer
+All of the file and metadata updates should be handled by the functions and hooks of obsidian.el when a file is saved or moved.  However, if a file is add or deleted out of band of obsidian.el by some other process, we need a way to include the information in our caches.
+
+In order to do these, a timer is start that periodically calls ~obsidian-update~. The timer for waits for a specified amount of time, and then waits for Emacs to be idle before calling the update function. In this way it aims to be as unobtrusive to the user as possible while still recognizing files that have been maniupuled out of band.
+
+The code snippet below createsa timer called =update-timer= that runs every 5 minutes (5 * 60 seconds) and then waits for a 5 second period when Emacs is idle before calling =obsidian-update=.
+
+#+begin_src emacs-lisp
+(defun idle-timer ()
+  "Wait until Emacs is idle to call update."
+  (run-with-idle-timer 5 nil 'obsidian-update))
+
+(setq update-timer (run-with-timer 0 (* 5 60) 'idle-timer))
+#+end_src
 
 *** obsidian--add-file
 One of the two main internal functions along with obsidian--remove-file.
