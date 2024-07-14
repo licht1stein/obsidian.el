@@ -147,6 +147,30 @@ When run interactively asks user to specify the path."
 ;;       and may therefore need to be updated
 (defvar obsidian--updated-time nil "Timer when the last update occurred.")
 
+(defvar obsidian--files-hash-cache nil
+  "Cache for Obsidian files.
+{<filepath>: {'tags: <list-of-tags>
+              'aliases: <list-of-aliases>}}")
+
+(defun obsidian--set-tags (file tag-list)
+  "Set list TAG-LIST to FILE in files cache."
+  (-when-let ((attr-map (gethash file obsidian--files-hash-cache)))
+    (puthash 'tags tag-list attr-map)))
+
+(defun obsidian--set-aliases (file alias-list)
+  "Set list ALIAS-LIST to FILE in files cache."
+  ;; Update alias hashtable
+  (-if-let ((maliases (obsidian--mapped-aliases file)))
+      (-let ((new-aliases (-difference alias-list maliases))
+             (stale-aliases (-difference maliases alias-list)))
+        (when new-aliases
+          (-map (lambda (alias) (obsidian--add-alias alias file)) new-aliases))
+        (when stale-aliases
+          (-map (lambda (alias) (obsidian--remove-alias alias)) stale-aliases))))
+  ;; Update files hash cache
+  (-when-let ((attr-map (gethash file obsidian--files-hash-cache)))
+    (puthash 'aliases alias-list attr-map)))
+
 (defun obsidian--add-alias (alias file)
   "Add ALIAS as key to `obsidian--aliases-map' with FILE as value."
   (puthash alias file obsidian--aliases-map))
@@ -227,11 +251,6 @@ FILE is an Org-roam file if:
   "Take relative file name F and return expanded name."
   (expand-file-name f obsidian-directory))
 
-(defvar obsidian--files-hash-cache nil
-  "Cache for Obsidian files.
-{<filepath>: {'tags: <list-of-tags>
-              'aliases: <list-of-aliases>}}")
-
 ;; TODO: run-with-timer -> run-with-idle-timer
 ;;       - wait certain amount of time, and then wait for idle
 (defcustom obsidian-cache-expiry 3600
@@ -294,6 +313,25 @@ Argument S string to find tags in."
          (append (and front-matter (mapcar add-tag (gethash 'tags front-matter))))
          -flatten)))
 
+;; (defun obsidian--find-tags-new (front-matter)
+;;   "Find all #tags in FRONT-MATTER."
+;;   (let ((add-tag (lambda (tag) (concat "#" tag))))
+;;     (->> (s-match-strings-all obsidian--tag-regex front-matter)
+;;          (append (and front-matter (mapcar add-tag (gethash 'tags front-matter))))
+;;          -flatten)))
+
+(defun obsidian--find-aliases-new (dict)
+  "Takes front matter DICT and retrieves aliases.
+
+At the moment updates only `obsidian--aliases-map' with found aliases."
+  (let* ((aliases (gethash 'aliases dict))
+         (alias (gethash 'alias dict))
+         (all-aliases (-filter #'identity (append aliases (list alias)))))
+    ;; Update aliases
+    ;; (-map (lambda (al) (when al
+    ;;                 (obsidian--add-alias (format "%s" al) file))) all-aliases)
+    (-distinct all-aliases)))
+
 (defun obsidian-get-yaml-front-matter ()
   "Return the text of the YAML front matter of the current buffer.
 Return nil if the front matter does not exist, or incorrectly delineated by
@@ -306,7 +344,7 @@ Return nil if the front matter does not exist, or incorrectly delineated by
       (buffer-substring-no-properties startpoint (- endpoint 3)))))
 
 (defun obsidian-find-yaml-front-matter (s)
-  "Find YAML front matter in S."
+  "Find YAML front matter in string section S."
   (if (s-starts-with-p "---" s)
       (let* ((split (s-split-up-to "---" s 2))
              (looks-like-yaml-p (eq (length split) 3)))
@@ -317,13 +355,33 @@ Return nil if the front matter does not exist, or incorrectly delineated by
 
 (defun obsidian--file-front-matter (file)
   "Check if FILE has front matter and returned parsed to hash-table if it does."
-  (when-let ((starts-with-dashes-p (with-temp-buffer
-                                     (insert-file-contents file nil 0 3)
-                                     (string= (buffer-string) "---"))))
-    (when-let ((front-matter-s (with-temp-buffer
-                                 (insert-file-contents file)
-                                 (obsidian-get-yaml-front-matter))))
-      (yaml-parse-string front-matter-s))))
+
+  ;; (when-let ((starts-with-dashes-p (with-temp-buffer
+  ;;                                    (insert-file-contents file nil 0 3)
+  ;;                                    (string= (buffer-string) "---"))))
+  ;;   (when-let ((front-matter-s (with-temp-buffer
+  ;;                                (insert-file-contents file)
+  ;;                                (obsidian-get-yaml-front-matter))))
+  ;;     (yaml-parse-string front-matter-s)))
+
+
+  (with-temp-buffer
+    (insert-file-contents file nil 0 3)
+    (when (string= (buffer-string) "---")
+      ;; (insert-file-contents file nil 3)
+      (insert-file-contents file nil nil nil t)
+      (when-let ((front-matter-s (obsidian-get-yaml-front-matter)))
+        (yaml-parse-string front-matter-s))))
+
+
+  ;; (with-temp-buffer
+  ;;   (insert-file-contents file)
+  ;;   (when (string= (buffer-substring 0 3) "---")
+  ;;     (when-let ((front-matter-s (obsidian-get-yaml-front-matter)))
+  ;;       (yaml-parse-string front-matter-s))))
+
+
+  )
 
 (defun obsidian--update-from-front-matter (file)
   "Takes FILE, parse front matter then update anything that needs to be updated.
@@ -371,7 +429,27 @@ If FILE is not specified, use the current buffer"
                         (gethash 'tags val-map))
                       (hash-table-values obsidian--files-hash-cache))))))
 
-(defun obsidian-update-tags-list ()
+;; (defun obsidian--find-file-front-matter (&optional file)
+;;   "Return front matter for FILE or current buffer.
+
+;; If FILE is not specified, use the current buffer"
+;;   (obsidian-find-yaml-front-matter (obsidian-read-file-or-buffer file)))
+
+(defun obsidian--update-file-metadata (&optional file)
+  "Update the metadata for the file FILE.
+
+If file is not specified, the current buffer will be used."
+  (-let* ((bufstr (obsidian-read-file-or-buffer file))
+          (filename (or file (buffer-file-name)))
+          (mat-dict (obsidian-find-yaml-front-matter bufstr))
+          (tags (obsidian-find-tags bufstr))
+          (aliases (obsidian--find-aliases-new mat-dict))
+          ;; (backlinks ;; TODO: write function for this using markdown pkg)
+          )
+    (obsidian--set-tags file tags)
+    (obsidian--set-aliases file aliases)))
+
+(defun obsidian-update-all-metadata ()
   "Scans entire Obsidian vault and update all tags for completion."
 
   (maphash
@@ -440,8 +518,9 @@ Optional argument ARG word to complete."
 (defun obsidian-update ()
   "Command update everything there is to update in obsidian.el (tags, links etc.)."
   (interactive)
+  (message (format "Callling obsidian-update at %s" (format-time-string "%H:%M:%S")))
   (obsidian-reset-cache)
-  (obsidian-update-tags-list)
+  (obsidian-update-all-metadata)
   (obsidian--update-all-from-front-matter))
 
 (defun obsidian-update-async ()
@@ -451,7 +530,7 @@ Optional argument ARG word to complete."
    (lambda () (function obsidian-reset-cache))
    (lambda (_) (message "Obsidian cache asynchronously reset")))
   (async-start
-   (lambda () (function obsidian-update-tags-list))
+   (lambda () (function obsidian-update-all-metadata))
    (lambda (_) (message "Obsidian aliases asynchronously updated.")))
   (async-start
    (lambda () (function obsidian--update-all-from-front-matter))
@@ -577,7 +656,7 @@ in `obsidian-directory' root.
       (user-error "Note not found: %s" choice))))
 
 (defun obsidian--mapped-aliases (file)
-  "Return list of aliases mapped to FILE in obsidian--aliases-map"
+  "Return list of aliases mapped to FILE in obsidian--aliases-map."
   (let ((aliases '()))
     (maphash (lambda (k v)
                (when (equal file v)
@@ -587,25 +666,27 @@ in `obsidian-directory' root.
 
 ;; (defun obsidian--upsert-file (file)
 (defun obsidian--add-file (file)
-  "Add a file to the files cache and update tags and aliases for the file"
-  (-let* ((tags (obsidian-find-tags-in-file file))
-          (faliases (obsidian--update-from-front-matter file))
-          (maliases (obsidian--mapped-aliases file))
-          (new-aliases (-difference faliases maliases))
-          (stale-aliases (-difference maliases faliases)))
+  "Add a FILE to the files cache and update tags and aliases for the file."
+  ;; (-let* ((tags (obsidian-find-tags-in-file file))
+  ;;         (faliases (obsidian--update-from-front-matter file))
+  ;;         (maliases (obsidian--mapped-aliases file))
+  ;;         (new-aliases (-difference faliases maliases))
+  ;;         (stale-aliases (-difference maliases faliases)))
 
-    (when new-aliases
-      (-map (lambda (alias) (obsidian--add-alias alias file)) new-aliases))
-    ;; (-map #'obsidian--remove-alias stale-aliases)
-    (when stale-aliases
-      (-map (lambda (alias) (obsidian--remove-alias alias)) stale-aliases))
+  ;;   (when new-aliases
+  ;;     (-map (lambda (alias) (obsidian--add-alias alias file)) new-aliases))
+  ;;   (when stale-aliases
+  ;;     (-map (lambda (alias) (obsidian--remove-alias alias)) stale-aliases))
 
-    (puthash file (make-hash-table :size 2) obsidian--files-hash-cache)
-    (puthash 'tags tags (gethash file obsidian--files-hash-cache))
-    (puthash 'aliases faliases (gethash file obsidian--files-hash-cache))))
+  ;;   (puthash file (make-hash-table :size 3) obsidian--files-hash-cache)
+  ;;   (puthash 'tags tags (gethash file obsidian--files-hash-cache))
+  ;;   (puthash 'aliases faliases (gethash file obsidian--files-hash-cache)))
+  (when (not (gethash file obsidian--files-hash-cache))
+    (puthash file (make-hash-table :size 3) obsidian--files-hash-cache))
+  (obsidian--update-file-metadata file))
 
 (defun obsidian--remove-file (file)
-  "Remove a file from the files cache and update tags and aliases appropriately"
+  "Remove FILE from the files cache and update tags and aliases accordingly."
   (-map #'obsidian--remove-alias (obsidian--mapped-aliases file))
   (remhash file obsidian--files-hash-cache))
 
@@ -789,6 +870,12 @@ See `markdown-follow-link-at-point' and
                          (cdr match))))
     (when (remove nil result) t)))
 
+;; TODO: Could we use something like markdown-next-link ?
+;; TODO: after-change-functions hook(s)
+;; TODO: markdown-reference-find-links ?
+;; TODO: markdown-check-change-for-wiki-link ?
+;; TODO: markdown-reference-links-buffer
+;; TODO: markdown-make-regex-link-generic
 (defun obsidian--find-links-to-file (filepath)
   "Find any mention of trimmed FILEPATH in the vault.
 
@@ -856,7 +943,7 @@ file-word: the file name without any extension or directory informatoin"
 (defun obsidian-tag-find ()
   "Find all notes with a tag."
   (interactive)
-  (obsidian-update-tags-list)
+  (obsidian-update-all-metadata)
   (let* ((tag (completing-read "Select tag: "
                                (->> obsidian--tags-list (-map 's-downcase) -distinct (-sort 'string-lessp))))
          (results (obsidian--grep tag))
