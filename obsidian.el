@@ -184,10 +184,6 @@ FILE is an Org-roam file if:
   - It is not in .trash
   - It is not an Emacs temp file"
 
-  ;; (if (seq-contains-p obsidian-files-cache file)
-  ;;     (progn
-  ;;       (print (format "True for %s" file))
-  ;;       t))
   (-when-let* (;; (_ (print (format "NOT True for %s" file)))
                (path (or file (buffer-file-name (buffer-base-buffer))))
                ;; TODO: This won't work if hidden files is true
@@ -230,11 +226,6 @@ FILE is an Org-roam file if:
   :type 'integer
   :group 'obsidian)
 
-(defun obsidian-cache-needs-reset-p ()
-  "Check if `obsidian-files-cache' is empty or expired."
-  (or (not obsidian-files-cache)
-      (> (- (float-time) obsidian-cache-timestamp) obsidian-cache-expiry)))
-
 (defun obsidian-reset-cache ()
   "Clear and reset obsidian cache."
   (setq obsidian-files-cache
@@ -251,13 +242,13 @@ FILE is an Org-roam file if:
   (setq obsidian-cache-timestamp (float-time)))
 
 (defun obsidian-list-all-files ()
-  "Lists all Obsidian Notes files that are not in trash.
+  "Lists all Obsidian Notes files that are not in trash."
+  (when obsidian--files-hash-cache
+    (hash-table-keys obsidian--files-hash-cache)))
 
-Obsidian notes files:
-- Pass the `obsidian-file-p' check"
-  (when (obsidian-cache-needs-reset-p)
-    (obsidian-reset-cache))
-  obsidian-files-cache)
+(defun obsidian-cached-file-p (file)
+  "Retrun true if FILE exists in files cache."
+  (seq-contains-p (obsidian-list-all-files) file))
 
 (defun obsidian-clear-cache ()
   "Clears the obsidian.el cache.
@@ -336,10 +327,12 @@ At the moment updates only `obsidian--aliases-map' with found aliases."
            (all-aliases (-filter #'identity (append aliases (list alias)))))
       ;; Update aliases
       (-map (lambda (al) (when al
-                      (obsidian--add-alias (format "%s" al) file))) all-aliases)
+                      (obsidian--add-alias (format "%s" al) file))) all-aliases))
 
-      (->> (gethash file obsidian--files-hash-cache)
-           (puthash 'aliases (-distinct all-aliases))))))
+    (-when-let ((attr-map (gethash file obsidian--files-hash-cache)))
+      (puthash 'aliases (-distinct all-aliases) attr-map))
+
+    ))
 
 (defun obsidian--update-all-from-front-matter ()
   "Take all files in obsidian vault, parse front matter and update."
@@ -363,11 +356,12 @@ If FILE is not specified, use the current buffer"
 
 (defun obsidian-list-all-tags ()
   "Find all tags in all obsidian files."
-  (-distinct
-   (remove nil
-           (-mapcat (lambda (val-map)
-                      (gethash 'tags val-map))
-                    (hash-table-values obsidian--files-hash-cache)))))
+  (when obsidian--files-hash-cache
+    (-distinct
+     (remove nil
+             (-mapcat (lambda (val-map)
+                        (gethash 'tags val-map))
+                      (hash-table-values obsidian--files-hash-cache))))))
 
 (defun obsidian-update-tags-list ()
   "Scans entire Obsidian vault and update all tags for completion."
@@ -576,6 +570,46 @@ in `obsidian-directory' root.
         (find-file target)
       (user-error "Note not found: %s" choice))))
 
+(defun obsidian--mapped-aliases (file)
+  "Return list of aliases mapped to FILE in obsidian--aliases-map"
+  (let ((aliases '()))
+    (maphash (lambda (k v)
+               (when (equal file v)
+                 (add-to-list 'aliases k)))
+             obsidian--aliases-map )
+    aliases))
+
+;; (defun obsidian--upsert-file (file)
+(defun obsidian--add-file (file)
+  "Add a file to the files cache and update tags and aliases for the file"
+  (-let* ((tags (obsidian-find-tags-in-file file))
+          (faliases (obsidian--update-from-front-matter file))
+          (maliases (obsidian--mapped-aliases file))
+          (new-aliases (-difference faliases maliases))
+          (stale-aliases (-difference maliases faliases)))
+
+    (when new-aliases
+      (-map (lambda (alias) (obsidian--add-alias alias file)) new-aliases))
+    ;; (-map #'obsidian--remove-alias stale-aliases)
+    (when stale-aliases
+      (-map (lambda (alias) (obsidian--remove-alias alias)) stale-aliases))
+
+    (puthash file (make-hash-table :size 2) obsidian--files-hash-cache)
+    (puthash 'tags tags (gethash file obsidian--files-hash-cache))
+    (puthash 'aliases faliases (gethash file obsidian--files-hash-cache))))
+
+(defun obsidian--remove-file (file)
+  "Remove a file from the files cache and update tags and aliases appropriately"
+  (-map #'obsidian--remove-alias (obsidian--mapped-aliases file))
+  (remhash file obsidian--files-hash-cache))
+
+(defun obsidian--update-on-save ()
+  (print (format "Inside obsidian--update-on-save"))
+  (when (obsidian-file-p (buffer-file-name))
+    (message (format "Updating saved Obsidian file %s" (buffer-file-name)))
+    (obsidian--add-file (buffer-file-name)))
+  )
+
 ;;;###autoload
 (defun obsidian-move-file ()
   "Move current note to another directory."
@@ -593,11 +627,15 @@ in `obsidian-directory' root.
     (when (equal new-file-path old-file-path)
       (user-error "File already exists at that location"))
     (rename-file old-file-path new-file-directory)
-    ;; (write-file new-file-path)
-    (setq obsidian-files-cache (remove old-file-path obsidian-files-cache))
-    (add-to-list 'obsidian-files-cache new-file-path)
+    ;; (setq obsidian-files-cache (remove old-file-path obsidian-files-cache))
+    ;; (add-to-list 'obsidian-files-cache new-file-path)
     (write-file new-file-path)
-    (message (s-concat "Moved to " new-file-path))))
+
+    ;; TODO: I don't think I should need this with the save file hook
+    ;; (obsidian--add-file new-file-path)
+
+    (obsidian--remove-file old-file-path)
+    (message (format "Moved to %s" new-file-path))))
 
 (defun obsidian-prepare-file-path (s)
   "Replace %20 with spaces in file path.
@@ -853,41 +891,6 @@ _s_earch by expr.   _u_pdate tags/alises etc.
 ;;         ;; If you prefer you can use `obsidian-insert-wikilink'
 ;;         ("C-c C-l" . obsidian-insert-link))))
 
-
-(defun obsidian--mapped-aliases (file)
-  "Return list of aliases mapped to FILE in obsidian--aliases-map"
-  (let ((aliases '()))
-    (maphash (lambda (k v)
-               (when (equal file v)
-                 (add-to-list 'aliases k)))
-             obsidian--aliases-map )
-    aliases))
-
-(defun obsidian--add-file (file)
-  "Add a file to the files cache and update tags and aliases for the file"
-  (-let* ((tags (obsidian-find-tags-in-file file))
-          (faliases (obsidian--update-from-front-matter))
-          (maliases (obsidian--mapped-aliases file))
-          (new-aliases (-difference faliases maliases))
-          (stale-aliases (-difference maliases faliases)))
-    (-map (lambda (alias) (obsidian--add-alias alias file)) new-aliases)
-    (-map #'obsidian--remove-alias stale-aliases)
-    (puthash file (make-hash-table :size 2) obsidian--files-hash-cache)
-    (puthash 'tags tags (gethash file obsidian--files-hash-cache))
-    (puthash 'aliases faliases (gethash file obsidian--files-hash-cache))))
-
-(defun obsidian--remove-file (file)
-  "Remove a file from the files cache and update tags and aliases appropriately"
-  (-map #'obsidian--remove-alias (obisidian--mapped-aliases file))
-  (remhash file obsidian--files-hash-cache))
-
-(defun obsidian--update-on-save ()
-  ;; (print (format "Inside obsidian--update-on-save"))
-  (-let* ((saved-file (buffer-file-name))
-          (obs? (obsidian-file-p saved-file))
-          (cached? (seq-contains-p obsidian-files-cache saved-file)))
-    (message (format "JMR: Saved file %s\n- is obsidian? %s\n- is cached? %s"
-                     saved-file obs? cached?))))
 
 (add-hook 'after-save-hook 'obsidian--update-on-save)
 
