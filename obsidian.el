@@ -317,15 +317,13 @@ Return nil if the front matter does not exist, or incorrectly delineated by
 
 (defun obsidian--file-front-matter (file)
   "Check if FILE has front matter and returned parsed to hash-table if it does."
-  (let* ((starts-with-dashes-p (with-temp-buffer
-                                 (insert-file-contents file nil 0 3)
-                                 (string= (buffer-string) "---"))))
-    (if starts-with-dashes-p
-        (let* ((front-matter-s (with-temp-buffer
+  (when-let ((starts-with-dashes-p (with-temp-buffer
+                                     (insert-file-contents file nil 0 3)
+                                     (string= (buffer-string) "---"))))
+    (when-let ((front-matter-s (with-temp-buffer
                                  (insert-file-contents file)
                                  (obsidian-get-yaml-front-matter))))
-          (if front-matter-s
-              (yaml-parse-string front-matter-s))))))
+      (yaml-parse-string front-matter-s))))
 
 (defun obsidian--update-from-front-matter (file)
   "Takes FILE, parse front matter then update anything that needs to be updated.
