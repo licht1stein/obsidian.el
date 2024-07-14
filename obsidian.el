@@ -164,22 +164,29 @@ When run interactively asks user to specify the path."
 
 (defun obsidian--set-tags (file tag-list)
   "Set list TAG-LIST to FILE in files cache."
-  (-when-let ((attr-map (gethash file obsidian--files-hash-cache)))
-    (puthash 'tags tag-list attr-map)))
+  (when tag-list
+    ;; TODO: Why does if-let work but not -if-let?
+    ;; (-if-let ((attr-map (gethash file obsidian--files-hash-cache)))
+    (if-let ((attr-map (gethash file obsidian--files-hash-cache)))
+        (puthash 'tags tag-list attr-map)
+      (message "Unable to add tags for %s:\nAvailable keys:\n%s"
+               file (s-join "\n" (hash-table-keys obsidian--files-hash-cache))))))
 
 (defun obsidian--set-aliases (file alias-list)
   "Set list ALIAS-LIST to FILE in files cache."
   ;; Update alias hashtable
-  (-if-let ((maliases (obsidian--mapped-aliases file)))
-      (-let ((new-aliases (-difference alias-list maliases))
-             (stale-aliases (-difference maliases alias-list)))
-        (when new-aliases
-          (-map (lambda (alias) (obsidian--add-alias alias file)) new-aliases))
-        (when stale-aliases
-          (-map (lambda (alias) (obsidian--remove-alias alias)) stale-aliases))))
-  ;; Update files hash cache
-  (-when-let ((attr-map (gethash file obsidian--files-hash-cache)))
-    (puthash 'aliases alias-list attr-map)))
+  (when alias-list
+    ;; (-if-let ((maliases (obsidian--mapped-aliases file)))
+    (-if-let ((maliases (obsidian--mapped-aliases file)))
+        (-let ((new-aliases (-difference alias-list maliases))
+               (stale-aliases (-difference maliases alias-list)))
+          (when new-aliases
+            (-map (lambda (alias) (obsidian--add-alias alias file)) new-aliases))
+          (when stale-aliases
+            (-map (lambda (alias) (obsidian--remove-alias alias)) stale-aliases))))
+    ;; Update files hash cache
+    (-when-let ((attr-map (gethash file obsidian--files-hash-cache)))
+      (puthash 'aliases alias-list attr-map))))
 
 (defun obsidian--add-alias (alias file)
   "Add ALIAS as key to `obsidian--aliases-map' with FILE as value."
@@ -196,15 +203,6 @@ When run interactively asks user to specify the path."
 (defun obsidian--all-aliases ()
   "Return all existing aliases (without values)."
   (hash-table-keys obsidian--aliases-map))
-
-;;; File utilities
-;; Copied from org-roam's org-roam-descendant-of-p
-(defun obsidian-descendant-of-p (a b)
-  "Return t if A is descendant of B."
-  (let ((aa (expand-file-name a))
-        (bb (expand-file-name b)))
-    (unless (equal aa bb)
-      (string-prefix-p (downcase bb) (downcase aa)))))
 
 (defun obsidian-not-trash-p (file)
   "Return t if FILE is not in .trash of Obsidian."
@@ -267,11 +265,8 @@ FILE is an Org-roam file if:
           (obs-files (-filter #'obsidian-file-p all-files))
           (file-count (-count #'identity obs-files)))
     (setq obsidian--files-hash-cache (make-hash-table :test 'equal :size file-count))
-    (-map
-     (lambda (file)
-       (puthash file (make-hash-table :size 2) obsidian--files-hash-cache))
-     obs-files)
-    (message "Obsidian cache reset")
+    (-map #'obsidian--add-file obs-files)
+    (message (format "Obsidian cache reset with %s files" file-count))
     file-count))
 
 (defun obsidian-list-all-files ()
@@ -293,9 +288,7 @@ If you need to run this manually, please report this as an issue on Github."
 (defun obsidian-list-all-directories ()
   "Lists all Obsidian sub folders."
   (->> (directory-files-recursively obsidian-directory "" t)
-       (-filter #'obsidian-user-directory-p))
-  ;; (directory-files-recursively obsidian-directory "" t #'obsidian-user-directory-p)
-  )
+       (-filter #'obsidian-user-directory-p)))
 
 (defun obsidian-read-file-or-buffer (&optional file)
   "Return string contents of a file or current buffer.
@@ -328,13 +321,15 @@ Argument S string to find tags in."
 
 At the moment updates only `obsidian--aliases-map' with found aliases."
   (when dict
-    (let* ((aliases (gethash 'aliases dict))
+    (let* ((aliases-val (gethash 'aliases dict))
+           ;; yaml parser can return a value of :null
+           (aliases (when (not (equal :null aliases-val)) aliases-val))
            (alias (gethash 'alias dict))
-           (all-aliases (-filter #'identity (append aliases (list alias)))))
+           (all-aliases (append aliases (list alias))))
       ;; Update aliases
       ;; (-map (lambda (al) (when al
       ;;                 (obsidian--add-alias (format "%s" al) file))) all-aliases)
-      (-distinct all-aliases))))
+      (-distinct (-filter #'identity all-aliases)))))
 
 (defun obsidian-get-yaml-front-matter ()
   "Return the text of the YAML front matter of the current buffer.
@@ -356,6 +351,21 @@ Return nil if the front matter does not exist, or incorrectly delineated by
             (->> split
                  (nth 1)
                  yaml-parse-string)))))
+
+(defun obsidian--find-yaml-front-matter-new (s)
+  "Find YAML front matter in string section S."
+  (condition-case err
+      (if (s-starts-with-p "---" s)
+          (let* ((split (s-split-up-to "---" s 2))
+                 (looks-like-yaml-p (eq (length split) 3))
+                 (resp (if looks-like-yaml-p
+                           (->> split
+                                (nth 1)
+                                yaml-parse-string))))
+            ;; (message "Returning %s" resp)
+            resp))
+    (error (message "Error finding YAML front matter inr: %s"
+                    (error-message-string err)))))
 
 (defun obsidian--file-front-matter (file)
   "Check if FILE has front matter and returned parsed to hash-table if it does."
@@ -445,13 +455,15 @@ If FILE is not specified, use the current buffer"
 If file is not specified, the current buffer will be used."
   (-let* ((bufstr (obsidian-read-file-or-buffer file))
           (filename (or file (buffer-file-name)))
-          (mat-dict (obsidian-find-yaml-front-matter bufstr))
+          (mat-dict (obsidian--find-yaml-front-matter-new bufstr))
           (tags (obsidian-find-tags bufstr))
           (aliases (obsidian--find-aliases-new mat-dict))
           ;; (backlinks ;; TODO: write function for this using markdown pkg)
           )
     (obsidian--set-tags file tags)
-    (obsidian--set-aliases file aliases)))
+    (obsidian--set-aliases file aliases)
+    tags
+    ))
 
 (defun obsidian-update-all-metadata ()
   "Scans entire Obsidian vault and update all tags for completion."
@@ -1008,7 +1020,7 @@ _s_earch by expr.   _u_pdate tags/alises etc.
 (setq obsidian--update-timer
       (run-with-timer 0 obsidian-cache-expiry 'obsidian-idle-timer))
 
-(defun stop-update-timer ()
+(defun obsidian-stop-update-timer ()
   "Stop the background process that periodically updates the cache."
   (interactive)
   (cancel-timer update-timer))
