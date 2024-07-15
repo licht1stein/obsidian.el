@@ -135,11 +135,11 @@ key4:
 	       (obsidian-specify-path obsidian--test--original-dir)))
 
   (it "check that front-matter is found"
-    (expect (gethash 'aliases (obsidian-find-yaml-front-matter obsidian--test-correct-front-matter))
+    (expect (gethash 'aliases (obsidian--find-yaml-front-matter obsidian--test-correct-front-matter))
 	    :to-equal ["AI" "Artificial Intelligence"]))
 
   (it "check that front-matter is ignored if not at the top of file"
-    (expect (obsidian-find-yaml-front-matter obsidian--test-incorret-front-matter--not-start-of-file)
+    (expect (obsidian--find-yaml-front-matter obsidian--test-incorret-front-matter--not-start-of-file)
 	    :to-equal nil))
 
   (it "check that front-matter in vault is correct"

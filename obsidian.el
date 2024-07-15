@@ -325,7 +325,7 @@ If FILE is not specified, use the current buffer."
 (defun obsidian--find-tags (s)
   "Find all #tags in string.
 Argument S string to find tags in."
-  (let ((front-matter (obsidian-find-yaml-front-matter s))
+  (let ((front-matter (obsidian--find-yaml-front-matter s))
         (add-tag-fn (lambda (tag) (concat "#" tag))))
     (->> (s-match-strings-all obsidian--tag-regex s)
          (append (and front-matter (mapcar add-tag-fn (gethash 'tags front-matter))))
@@ -354,7 +354,7 @@ Return nil if the front matter does not exist, or incorrectly delineated by
          (endpoint (re-search-forward "\\(^---\\)" nil t 1)))
       (buffer-substring-no-properties startpoint (- endpoint 3)))))
 
-(defun obsidian-find-yaml-front-matter (s)
+(defun obsidian--find-yaml-front-matter (s)
   "Find YAML front matter in string section S."
   (if (s-starts-with-p "---" s)
       (let* ((split (s-split-up-to "---" s 2))
@@ -363,21 +363,6 @@ Return nil if the front matter does not exist, or incorrectly delineated by
             (->> split
                  (nth 1)
                  yaml-parse-string)))))
-
-(defun obsidian--find-yaml-front-matter-new (s)
-  "Find YAML front matter in string section S."
-  (condition-case err
-      (if (s-starts-with-p "---" s)
-          (let* ((split (s-split-up-to "---" s 2))
-                 (looks-like-yaml-p (eq (length split) 3))
-                 (resp (if looks-like-yaml-p
-                           (->> split
-                                (nth 1)
-                                yaml-parse-string))))
-            ;; (message "Returning %s" resp)
-            resp))
-    (error (message "Error finding YAML front matter inr: %s"
-                    (error-message-string err)))))
 
 (defun obsidian--file-front-matter (file)
   "Check if FILE has front matter and returned parsed to hash-table if it does."
@@ -434,7 +419,7 @@ If FILE is not specified, use the current buffer"
 (defun obsidian-file-metadata (&optional file)
   (-let* ((bufstr (obsidian--read-file-or-buffer file))
           (filename (or file (buffer-file-name)))
-          (mat-dict (obsidian--find-yaml-front-matter-new bufstr))
+          (mat-dict (obsidian--find-yaml-front-matter bufstr))
           (tags (obsidian--find-tags bufstr))
           (aliases (obsidian--find-aliases mat-dict))
           ;; TODO: write function for this (using markdown pkg?)
