@@ -322,20 +322,17 @@ If FILE is not specified, use the current buffer."
         (buffer-substring-no-properties (point-min) (point-max)))
     (buffer-substring-no-properties (point-min) (point-max))))
 
-(defun obsidian--find-tags (s)
-  "Find all #tags in string.
-Argument S string to find tags in."
+(defun obsidian--find-tags-in-string (s)
+  "Retrieve list of #tags from buffer section string S."
   (let ((front-matter (obsidian--find-yaml-front-matter s))
         (add-tag-fn (lambda (tag) (concat "#" tag))))
     (->> (s-match-strings-all obsidian--tag-regex s)
          (append (and front-matter (mapcar add-tag-fn (gethash 'tags front-matter))))
          -flatten)))
 
-(defun obsidian--find-aliases (dict)
-  "Takes front matter DICT and retrieves aliases.
-
-At the moment updates only `obsidian--aliases-map' with found aliases."
-  (when dict
+(defun obsidian--find-aliases-in-string (s)
+  "Retrieve list of aliases from buffer section string S."
+  (when-let ((dict (obsidian--find-yaml-front-matter s)))
     (let* ((aliases-val (gethash 'aliases dict))
            ;; yaml parser can return a value of :null
            (aliases (when (not (equal :null aliases-val)) aliases-val))
@@ -413,9 +410,8 @@ At the moment updates only `obsidian--aliases-map' with found aliases."
 (defun obsidian-file-metadata (&optional file)
   (-let* ((bufstr (obsidian--read-file-or-buffer file))
           (filename (or file (buffer-file-name)))
-          (mat-dict (obsidian--find-yaml-front-matter bufstr))
-          (tags (obsidian--find-tags bufstr))
-          (aliases (obsidian--find-aliases mat-dict))
+          (tags (obsidian--find-tags-in-string bufstr))
+          (aliases (obsidian--find-aliases-in-string bufstr))
           ;; TODO: write function for this (using markdown pkg?)
           (links '())
           (meta (make-hash-table :size 3)))

@@ -69,12 +69,12 @@
   (it "check directory count"
     (expect (length (obsidian-list-all-directories)) :to-equal obsidian--test-number-of-visible-directories)))
 
-(describe "obsidian--find-tags"
+(describe "obsidian--find-tags-in-string"
   (before-all (obsidian-specify-path obsidian--test-dir))
   (after-all (obsidian-specify-path obsidian--test--original-dir))
 
   (it "find tags in string"
-    (expect (length (obsidian--find-tags "#foo bar #spam #bar-spam #spam_bar #foo+spam #foo=bar not tags")) :to-equal 6)))
+    (expect (length (obsidian--find-tags-in-string "#foo bar #spam #bar-spam #spam_bar #foo+spam #foo=bar not tags")) :to-equal 6)))
 
 (describe "obsidian-list-visible-tags"
   (before-all (progn
