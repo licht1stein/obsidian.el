@@ -438,11 +438,11 @@ If FILE is not specified, use the current buffer"
           (tags (obsidian--find-tags bufstr))
           (aliases (obsidian--find-aliases mat-dict))
           ;; TODO: write function for this (using markdown pkg?)
-          (backlinks '())
+          (links '())
           (meta (make-hash-table :size 3)))
     (puthash 'tags tags meta)
     (puthash 'aliases aliases meta)
-    (puthash 'backlinks backlinks meta)
+    (puthash 'links links meta)
     meta))
 
 (defun obsidian--update-file-metadata (&optional file)
