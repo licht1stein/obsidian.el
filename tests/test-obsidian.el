@@ -69,12 +69,12 @@
   (it "check directory count"
     (expect (length (obsidian-list-all-directories)) :to-equal obsidian--test-number-of-visible-directories)))
 
-(describe "obsidian-find-tags"
+(describe "obsidian--find-tags"
   (before-all (obsidian-specify-path obsidian--test-dir))
   (after-all (obsidian-specify-path obsidian--test--original-dir))
 
   (it "find tags in string"
-    (expect (length (obsidian-find-tags "#foo bar #spam #bar-spam #spam_bar #foo+spam #foo=bar not tags")) :to-equal 6)))
+    (expect (length (obsidian--find-tags "#foo bar #spam #bar-spam #spam_bar #foo+spam #foo=bar not tags")) :to-equal 6)))
 
 (describe "obsidian-list-visible-tags"
   (before-all (progn
@@ -130,13 +130,9 @@ key4:
 (describe "obsidian-aliases"
   (before-all (progn
 		(obsidian-specify-path obsidian--test-dir)
-                (obsidian-update)
-		(setq obsidian--tags-list nil)
-                ))
+                (obsidian-update)))
   (after-all (progn
-	       (obsidian-specify-path obsidian--test--original-dir)
-	       (setq obsidian--tags-list obsidian--test--original-tags-list)
-               ))
+	       (obsidian-specify-path obsidian--test--original-dir)))
 
   (it "check that front-matter is found"
     (expect (gethash 'aliases (obsidian-find-yaml-front-matter obsidian--test-correct-front-matter))
