@@ -302,7 +302,7 @@ The values are also hashtables with the keys 'tags and 'aliases that contains li
 #+begin_src
 {<filepath> : {'tags: (list of tags associated with file)
                'aliases: (list of aliases associated with file)
-               'backlinks: (TBD: links of backlinks to file)'}}
+               'links: {<linked-file-name: (response from markdown-link-at-pos)}}}
 #+end_src
 
 **** obsidian--aliases-map
