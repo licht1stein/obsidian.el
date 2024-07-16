@@ -36,14 +36,6 @@
 
 ;;; Code:
 
-;; TODO:
-;; - update the links in cache after a call to add link/add markdown link
-;; - allow links to subsections of a note
-;; - would like a function to remove a link, leaving behind the description text
-;; - alternatives to polling:
-;;   - how does lsp track files?
-;;   - what triggers treemacs to update?
-;;     - search treemacs code for "add-hook-"
 (require 'f)
 (require 'dash)
 (require 's)
@@ -285,7 +277,6 @@ FILE is an Org-roam file if:
   "Retrun true if FILE exists in files cache."
   (seq-contains-p (obsidian-files) file))
 
-;; TODO: Can/should we add a confirmation prompt to this?
 (defun obsidian-clear-cache ()
   "Clears the obsidian.el cache.
 
@@ -326,6 +317,7 @@ If FILE is not specified, use the current buffer."
            (all-aliases (append aliases (list alias))))
       (seq-map #'obsidian--stringify (-distinct (-filter #'identity all-aliases))))))
 
+;; TODO: Could we use something like markdown-next-link ?
 (defun obsidian--find-links-in-string (s)
   "Retrieve hashtable of links from buffer section string S.
 
@@ -585,6 +577,7 @@ in `obsidian-directory' root.
                  obsidian-daily-note-template))
       (save-buffer))))
 
+;; TODO: allow links to subsections of a note
 ;;;###autoload
 (defun obsidian-jump ()
   "Jump to Obsidian note."
@@ -624,6 +617,7 @@ in `obsidian-directory' root.
   (remhash file obsidian--files-hash-cache))
 
 ;; TODO: Is there a hook for file remove?
+;; TODO: after-change-functions hook(s) ?
 (defun obsidian--update-on-save ()
   (when (obsidian--file-p (buffer-file-name))
     (obsidian--add-file (buffer-file-name))))
@@ -798,19 +792,13 @@ See `markdown-follow-link-at-point' and
                          (cdr match))))
     (when (remove nil result) t)))
 
-;; TODO: Could we use something like markdown-next-link ?
-;; TODO: after-change-functions hook(s)
-;; TODO: markdown-reference-find-links ?
-;; TODO: markdown-check-change-for-wiki-link ?
-;; TODO: markdown-reference-links-buffer
-;; TODO: markdown-make-regex-link-generic
+;; TODO: This function can be replaced once the links are in the cache
 (defun obsidian--find-links-to-file (filepath)
   "Find any mention of trimmed FILEPATH in the vault.
 
 filepath: the absolute filename including extension
 filename: the name of the file with extension without any directories
 file-word: the file name without any extension or directory informatoin"
-  ;; TODO: Also extract the line number so that we can jump to the proper location
   (-let* ((filename (file-name-nondirectory filepath))
           (file-word (file-name-sans-extension filename))
           (matches (obsidian--grep file-word)))
@@ -903,6 +891,10 @@ _s_earch by expr.   _u_pdate tags/alises etc.
 
 (add-hook 'after-save-hook 'obsidian--update-on-save)
 
+;; TODO: alternatives to polling:
+;;       - how does lsp track files?
+;;       - what triggers treemacs to update?
+;;         - search treemacs code for "add-hook-"
 (defun obsidian-idle-timer ()
   "Wait until Emacs is idle to call update."
   (message "Update timer buzz at %s" (format-time-string "%H:%M:%S"))
