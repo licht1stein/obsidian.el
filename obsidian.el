@@ -318,6 +318,7 @@ If FILE is not specified, use the current buffer."
       (seq-map #'obsidian--stringify (-distinct (-filter #'identity all-aliases))))))
 
 ;; TODO: Could we use something like markdown-next-link ?
+;; TODO: Can I do this without an additional call to with-temp-buffer ?
 (defun obsidian--find-links-in-string (s)
   "Retrieve hashtable of links from buffer section string S.
 
@@ -330,13 +331,15 @@ markdown-link-at-pos:
   4. reference label
   5. title text
   6. bang (nil or \"!\")"
-  (save-excursion
+  ;; (save-excursion
+  (with-temp-buffer
+    (insert s)
     (let ((dict (make-hash-table)))
       (goto-char (point-min))
       (while (markdown-match-generic-links (point-max) nil)
         (let ((link-info (markdown-link-at-pos (point))))
           (puthash (nth 3 link-info) link-info dict)))
-      (message (format "Found %d links" (length (hash-table-keys dict))))
+      ;; (message (format "Found %d links" (length (hash-table-keys dict))))
       dict)))
 
 (defun obsidian-get-yaml-front-matter ()
@@ -394,15 +397,16 @@ At the moment updates only `obsidian--aliases-map' with found aliases."
 
 (defun obsidian-file-metadata (&optional file)
   "Find the tags, aliases, and links in FILE and return as hashtable."
+  ;; (message "Processing file %s" file)
   (-let* ((bufstr (obsidian--read-file-or-buffer file))
           (filename (or file (buffer-file-name)))
           (tags (obsidian--find-tags-in-string bufstr))
           (aliases (obsidian--find-aliases-in-string bufstr))
-          ;; (links (obsidian--find-links-in-string bufstr))
+          (links (obsidian--find-links-in-string bufstr))
           (meta (make-hash-table :size 3)))
     (puthash 'tags tags meta)
     (puthash 'aliases aliases meta)
-    ;; (puthash 'links links meta)
+    (puthash 'links links meta)
     meta))
 
 (defun obsidian--update-file-metadata (&optional file)
