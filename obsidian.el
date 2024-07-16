@@ -197,6 +197,14 @@ the mode, `toggle' toggles the state."
     (when-let ((attr-map (gethash file obsidian--files-hash-cache)))
       (puthash 'aliases alias-list attr-map))))
 
+(defun obsidian--set-links (file links-map)
+  "Set table LINKS-MAP to FILE in files cache."
+  (when links-map
+    (if-let ((attr-map (gethash file obsidian--files-hash-cache)))
+        (puthash 'links links-map attr-map)
+      (message "Unable to add links for %s:\nAvailable keys:\n%s"
+               file (s-join "\n" (hash-table-keys obsidian--files-hash-cache))))))
+
 (defun obsidian--add-alias (alias file)
   "Add ALIAS as key to `obsidian--aliases-map' with FILE as value."
   (puthash alias file obsidian--aliases-map))
@@ -382,7 +390,8 @@ If file is not specified, the current buffer will be used."
   (-let* ((filename (or file (buffer-file-name)))
           (meta (obsidian-file-metadata filename)))
     (obsidian--set-tags filename (gethash 'tags meta))
-    (obsidian--set-aliases filename (gethash 'aliases meta))))
+    (obsidian--set-aliases filename (gethash 'aliases meta))
+    (obsidian--set-links filename (gethash 'links meta))))
 
 (defun obsidian-prepare-tags-list (tags)
   "Prepare a list of TAGS with both lower-case and capitalized versions.
