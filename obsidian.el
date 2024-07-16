@@ -346,6 +346,8 @@ markdown-link-at-pos:
       (goto-char (point-min))
       (while (markdown-match-generic-links (point-max) nil)
         (let ((link-info (markdown-link-at-pos (point))))
+          ;; TODO: Using a hashmap means we can only have a single link to
+          ;;       a file within a different file. Is that okay?
           (puthash (nth 3 link-info) link-info dict)))
       ;; (message (format "Found %d links" (length (hash-table-keys dict))))
       dict)))
@@ -770,6 +772,33 @@ See `markdown-follow-link-at-point' and
                                                 (format "%s" (obsidian--elgrep-get-context element))))))
                          (cdr match))))
     (when (remove nil result) t)))
+
+(defun obsidian--file-links (filename)
+  "FILENAME is the name and extension without directories
+
+host - host file; the one that includes the link.  full path filename
+targ - target file; file being pointed to by the host link.  name and extension only
+meta - metadata hashtable
+lmap - hashmap of links from meta
+link - link target from links hashmap
+info - info list for target link from links hashmap
+
+The files cache has the following structure:
+  {filepath: {'tags:    (tag list)
+              'aliases: (alias list)
+              'links:   {linkname: (link info list)}}}"
+  (let ((targ filename)
+        (resp (make-hash-table)))
+    (maphash
+     (lambda (host meta)
+       (when-let ((links-map (gethash 'links meta)))
+         (maphash
+          (lambda (link info)
+            (when (equal link targ)
+              (puthash host info resp)))
+          links-map)))
+     (obsidian--files-hash-cache))
+    resp))
 
 ;; TODO: This function can be replaced once the links are in the cache
 (defun obsidian--find-links-to-file (filepath)
