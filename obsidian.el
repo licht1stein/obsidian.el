@@ -37,17 +37,13 @@
 ;;; Code:
 
 ;; TODO:
-;; - add backlinks to files cache?
-;;   - update the cache after a call to add link/add markdown link
-;; - if adding a link to a file that doesn't exist, will the file be created?
-;;   - and will that file then be updated in the file cache?
+;; - update the links in cache after a call to add link/add markdown link
 ;; - allow links to subsections of a note
 ;; - would like a function to remove a link, leaving behind the description text
-;; - when searching for backlinks, include the full filename and extension in the search
-;;   - love matched a number of files that weren't actually links to love.md
-;; - how does lsp track files?
-;; - what triggers treemacs to update?
-;;   - search treemacs code for "add-hook-"
+;; - alternatives to polling:
+;;   - how does lsp track files?
+;;   - what triggers treemacs to update?
+;;     - search treemacs code for "add-hook-"
 (require 'f)
 (require 'dash)
 (require 's)
@@ -189,7 +185,6 @@ the mode, `toggle' toggles the state."
 (defun obsidian--set-tags (file tag-list)
   "Set list TAG-LIST to FILE in files cache."
   (when tag-list
-    ;; TODO: Why does if-let work but not -if-let?
     (if-let ((attr-map (gethash file obsidian--files-hash-cache)))
         (puthash 'tags tag-list attr-map)
       (message "Unable to add tags for %s:\nAvailable keys:\n%s"
@@ -280,16 +275,6 @@ FILE is an Org-roam file if:
 (defun obsidian--expand-file-name (f)
   "Take relative file name F and return expanded name."
   (expand-file-name f obsidian-directory))
-
-(defun obsidian-reset-cache ()
-  "Clear and reset obsidian cache."
-  (-let* ((all-files (directory-files-recursively obsidian-directory "\.*$"))
-          (obs-files (-filter #'obsidian--file-p all-files))
-          (file-count (length obs-files)))
-    (setq obsidian--files-hash-cache (make-hash-table :test 'equal :size file-count))
-    (-map #'obsidian--add-file obs-files)
-    (message "Obsidian cache reset with %s files" file-count)
-    file-count))
 
 (defun obsidian-files ()
   "Lists all Obsidian Notes files that are not in trash."
@@ -416,6 +401,7 @@ At the moment updates only `obsidian--aliases-map' with found aliases."
                       (hash-table-values obsidian--files-hash-cache))))))
 
 (defun obsidian-file-metadata (&optional file)
+  "Find the tags, aliases, and links in FILE and return as hashtable."
   (-let* ((bufstr (obsidian--read-file-or-buffer file))
           (filename (or file (buffer-file-name)))
           (tags (obsidian--find-tags-in-string bufstr))
@@ -461,13 +447,11 @@ Optional argument ARG word to complete."
                    (company-begin-backend 'obsidian-tags-backend)
                  (error "Company not installed")))
   (cl-case command
-
     (prefix (when (and
                    (-contains-p local-minor-modes 'obsidian-mode)
                    (looking-back obsidian--tag-regex nil))
               (match-string 0)))
-    (candidates (->> (obsidian-tags)
-                     obsidian-prepare-tags-list
+    (candidates (->> (obsidian-prepare-tags-list (obsidian-tags))
                      (-filter (lambda (s) (s-starts-with-p (car arg) s)))))))
 
 (defun obsidian-enable-minor-mode ()
@@ -481,14 +465,20 @@ Optional argument ARG word to complete."
   (interactive)
   ;; TODO: Once the cache is initially populated, we'd like a better way to update
   ;;       than a full recreation
-  (obsidian-reset-cache)
-  (message "obsidian-update at %s" (format-time-string "%H:%M:%S")))
+  (-let* ((all-files (directory-files-recursively obsidian-directory "\.*$"))
+          (obs-files (-filter #'obsidian--file-p all-files))
+          (file-count (length obs-files)))
+    (setq obsidian--files-hash-cache (make-hash-table :test 'equal :size file-count))
+    (-map #'obsidian--add-file obs-files)
+    (message "Obsidian cache updated at %s (%d files)"
+             (format-time-string "%H:%M:%S") file-count)
+    file-count))
 
 (defun obsidian-update-async ()
   "Asyncrhonous version of obsidian-update."
   (interactive)
   (async-start
-   (lambda () (function obsidian-reset-cache))
+   (lambda () (function obsidian-update))
    (lambda (_) (message "Obsidian cache asynchronously reset"))))
 
 (defun obsidian--format-link (file-path &optional toggle)
