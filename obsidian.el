@@ -797,7 +797,7 @@ The files cache has the following structure:
             (when (equal link targ)
               (puthash host info resp)))
           links-map)))
-     (obsidian--files-hash-cache))
+     obsidian--files-hash-cache)
     resp))
 
 ;; TODO: This function can be replaced once the links are in the cache
