@@ -37,11 +37,10 @@
                  (obsidian-update)))
    (after-all (progn
                 (obsidian-specify-path obsidian--test--original-dir)
-                (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)
-                (obsidian-update)))
+                (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)))
 
   (it "check visible file count"
-    (expect (length (obsidian-list-all-files)) :to-equal obsidian--test-number-of-visible-notes)))
+    (expect (length (obsidian-files)) :to-equal obsidian--test-number-of-visible-notes)))
 
 (describe "obsidian list all files including hidden files"
    (before-all (progn
@@ -50,24 +49,22 @@
                  (obsidian-update)))
    (after-all (progn
                 (obsidian-specify-path obsidian--test--original-dir)
-                (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)
-                (obsidian-update)))
+                (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)))
 
   (it "check all files count"
-    (expect (length (obsidian-list-all-files)) :to-equal obsidian--test-number-of-notes)))
+    (expect (length (obsidian-files)) :to-equal obsidian--test-number-of-notes)))
 
-(describe "obsidian-list-all-directories"
+(describe "obsidian-directories"
    (before-all (progn
                  (obsidian-specify-path obsidian--test-dir)
                  (setq obsidian-include-hidden-files nil)
                  (obsidian-update)))
    (after-all (progn
                 (obsidian-specify-path obsidian--test--original-dir)
-                (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)
-                (obsidian-update)))
+                (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)))
 
   (it "check directory count"
-    (expect (length (obsidian-list-all-directories)) :to-equal obsidian--test-number-of-visible-directories)))
+    (expect (length (obsidian-directories)) :to-equal obsidian--test-number-of-visible-directories)))
 
 (describe "obsidian--find-tags-in-string"
   (before-all (obsidian-specify-path obsidian--test-dir))
@@ -83,8 +80,7 @@
                 (obsidian-update)))
   (after-all (progn
                (obsidian-specify-path obsidian--test--original-dir)
-               (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)
-               (obsidian-update)))
+               (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)))
 
   (it "find all tags in the vault"
     (expect (length (obsidian-tags)) :to-equal obsidian--test-number-of-visible-tags)))
@@ -96,8 +92,7 @@
                 (obsidian-update)))
   (after-all (progn
                (obsidian-specify-path obsidian--test--original-dir)
-               (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)
-               (obsidian-update)))
+               (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)))
 
   (it "find all tags in the vault"
     (expect (length (obsidian-tags)) :to-equal obsidian--test-number-of-tags)))

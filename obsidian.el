@@ -47,6 +47,7 @@
 ;;   - love matched a number of files that weren't actually links to love.md
 ;; - how does lsp track files?
 ;; - what triggers treemacs to update?
+;;   - search treemacs code for "add-hook-"
 (require 'f)
 (require 'dash)
 (require 's)
@@ -290,14 +291,14 @@ FILE is an Org-roam file if:
     (message "Obsidian cache reset with %s files" file-count)
     file-count))
 
-(defun obsidian-list-all-files ()
+(defun obsidian-files ()
   "Lists all Obsidian Notes files that are not in trash."
   (when obsidian--files-hash-cache
     (hash-table-keys obsidian--files-hash-cache)))
 
 (defun obsidian-cached-file-p (file)
   "Retrun true if FILE exists in files cache."
-  (seq-contains-p (obsidian-list-all-files) file))
+  (seq-contains-p (obsidian-files) file))
 
 ;; TODO: Can/should we add a confirmation prompt to this?
 (defun obsidian-clear-cache ()
@@ -307,7 +308,7 @@ If you need to run this manually, please report this as an issue on Github."
   (interactive)
   (setq obsidian--files-hash-cache nil))
 
-(defun obsidian-list-all-directories ()
+(defun obsidian-directories ()
   "Lists all Obsidian sub folders."
   (->> (directory-files-recursively obsidian-directory "" t)
        (-filter #'obsidian--user-directory-p)))
@@ -419,11 +420,11 @@ At the moment updates only `obsidian--aliases-map' with found aliases."
           (filename (or file (buffer-file-name)))
           (tags (obsidian--find-tags-in-string bufstr))
           (aliases (obsidian--find-aliases-in-string bufstr))
-          (links (obsidian--find-links-in-string bufstr))
+          ;; (links (obsidian--find-links-in-string bufstr))
           (meta (make-hash-table :size 3)))
     (puthash 'tags tags meta)
     (puthash 'aliases aliases meta)
-    (puthash 'links links meta)
+    ;; (puthash 'links links meta)
     meta))
 
 (defun obsidian--update-file-metadata (&optional file)
@@ -517,7 +518,7 @@ Obsidian link and is returned unmodified."
 
 TOGGLE-PATH is a boolean that will toggle the behavior of
 `obsidian-links-use-vault-path' for this single link insertion."
-  (let* ((all-files (->> (obsidian-list-all-files) (-map (lambda (f) (file-relative-name f obsidian-directory)))))
+  (let* ((all-files (->> (obsidian-files) (-map (lambda (f) (file-relative-name f obsidian-directory)))))
          (region (when (use-region-p)
                    (buffer-substring-no-properties (region-beginning) (region-end))))
          (chosen-file (completing-read "Link: " all-files))
@@ -599,7 +600,7 @@ in `obsidian-directory' root.
   "Jump to Obsidian note."
   (interactive)
   ;; (obsidian-update)
-  (let* ((files (obsidian-list-all-files))
+  (let* ((files (obsidian-files))
          (dict (make-hash-table :test 'equal))
          (_ (-map (lambda (f)
                     (puthash (file-relative-name f obsidian-directory) f dict))
@@ -647,7 +648,7 @@ in `obsidian-directory' root.
          (dict (make-hash-table :test 'equal))
          (_ (-map (lambda (d)
                     (puthash (file-relative-name d obsidian-directory) d dict))
-                  (obsidian-list-all-directories)))
+                  (obsidian-directories)))
          (choice (completing-read "Move to: " (hash-table-keys dict)))
          (new-file-directory (file-name-as-directory (gethash choice dict)))
          (new-file-path (expand-file-name (file-name-nondirectory old-file-path) new-file-directory)))
@@ -690,7 +691,7 @@ If the file include directories in its path, we create the file relative to
   "Take file F and either opens directly or offer choice if multiple match.
 
 If ARG is set, the file will be opened in other window."
-  (let* ((all-files (->> (obsidian-list-all-files) (-map #'obsidian--file-relative-name)))
+  (let* ((all-files (->> (obsidian-files) (-map #'obsidian--file-relative-name)))
          (matches (obsidian--match-files f all-files))
          (file (cl-case (length matches)
                  (0 (obsidian--prepare-new-file-from-rel-path (obsidian--maybe-in-same-dir f)))
