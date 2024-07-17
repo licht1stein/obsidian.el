@@ -291,27 +291,17 @@ FILE is an Org-roam file if:
   (->> (directory-files-recursively obsidian-directory "" t)
        (-filter #'obsidian--user-directory-p)))
 
-(defun obsidian--read-file-or-buffer (&optional file)
-  "Return string contents of a file or current buffer.
-
-If FILE is not specified, use the current buffer."
-  (if (and file (file-exists-p file))
-      (with-temp-buffer
-        (insert-file-contents file)
-        (buffer-substring-no-properties (point-min) (point-max)))
-    (buffer-substring-no-properties (point-min) (point-max))))
-
 (defun obsidian--find-tags-in-string (s)
-  "Retrieve list of #tags from buffer section string S."
-  (let ((front-matter (obsidian--find-yaml-front-matter s))
-        (add-tag-fn (lambda (tag) (concat "#" tag))))
+  "Retrieve list of #tags from string S."
+  (let* ((front-matter (obsidian--find-yaml-front-matter-in-string s))
+         (add-tag-fn (lambda (tag) (concat "#" tag))))
     (->> (s-match-strings-all obsidian--tag-regex s)
          (append (and front-matter (mapcar add-tag-fn (gethash 'tags front-matter))))
          -flatten)))
 
 (defun obsidian--find-aliases-in-string (s)
-  "Retrieve list of aliases from buffer section string S."
-  (when-let ((dict (obsidian--find-yaml-front-matter s)))
+  "Retrieve list of aliases from string S."
+  (when-let ((dict (obsidian--find-yaml-front-matter-in-string s)))
     (let* ((aliases-val (gethash 'aliases dict))
            ;; yaml parser can return a value of :null
            (aliases (when (not (equal :null aliases-val)) aliases-val))
@@ -320,8 +310,7 @@ If FILE is not specified, use the current buffer."
       (seq-map #'obsidian--stringify (-distinct (-filter #'identity all-aliases))))))
 
 ;; TODO: Could we use something like markdown-next-link ?
-;; TODO: Can I do this without an additional call to with-temp-buffer ?
-(defun obsidian--find-links-in-string (s)
+(defun obsidian--find-links ()
   "Retrieve hashtable of links from buffer section string S.
 
 Values of hashtabale are lists with values that matche those returned by
@@ -333,20 +322,17 @@ markdown-link-at-pos:
   4. reference label
   5. title text
   6. bang (nil or \"!\")"
-  ;; (save-excursion
-  (with-temp-buffer
-    (insert s)
-    (let ((dict (make-hash-table :test 'equal)))
-      (goto-char (point-min))
-      (while (markdown-match-generic-links (point-max) nil)
-        (let ((link-info (markdown-link-at-pos (point))))
-          ;; TODO: Using a hashmap means we can only have a single link to
-          ;;       a file within a different file. Is that okay?
-          (puthash (nth 3 link-info) link-info dict)))
-      ;; (message (format "Found %d links" (length (hash-table-keys dict))))
-      dict)))
+  (let ((dict (make-hash-table :test 'equal)))
+    (goto-char (point-min))
+    (while (markdown-match-generic-links (point-max) nil)
+      (let ((link-info (markdown-link-at-pos (point))))
+        ;; TODO: Using a hashmap means we can only have a single link to
+        ;;       a file within a different file. Is that okay?
+        (puthash (nth 3 link-info) link-info dict)))
+    ;; (message (format "Found %d links" (length (hash-table-keys dict))))
+    dict))
 
-(defun obsidian--find-yaml-front-matter (s)
+(defun obsidian--find-yaml-front-matter-in-string (s)
   "Find YAML front matter in string section S."
   (if (s-starts-with-p "---" s)
       (let* ((split (s-split-up-to "---" s 2))
@@ -365,19 +351,29 @@ markdown-link-at-pos:
                         (gethash 'tags val-map))
                       (hash-table-values obsidian--files-hash-cache))))))
 
+(defun obsidian--buffer-metadata ()
+  "Find the tags, aliases, and links in the current buffer and return as hashtable."
+  (save-excursion
+    (let* ((buf (buffer-substring-no-properties (point-min) (point-max)))
+           (tags (obsidian--find-tags-in-string buf))
+           (aliases (obsidian--find-aliases-in-string buf))
+           (links (obsidian--find-links))
+           (meta (make-hash-table :test 'equal :size 3)))
+      (puthash 'tags tags meta)
+      (puthash 'aliases aliases meta)
+      (puthash 'links links meta)
+      meta)))
+
 (defun obsidian-file-metadata (&optional file)
-  "Find the tags, aliases, and links in FILE and return as hashtable."
+  "Find the tags, aliases, and links in FILE and return as hashtable.
+
+Uses current buffer if file is not specified"
   ;; (message "Processing file %s" file)
-  (-let* ((bufstr (obsidian--read-file-or-buffer file))
-          (filename (or file (buffer-file-name)))
-          (tags (obsidian--find-tags-in-string bufstr))
-          (aliases (obsidian--find-aliases-in-string bufstr))
-          (links (obsidian--find-links-in-string bufstr))
-          (meta (make-hash-table :test 'equal :size 3)))
-    (puthash 'tags tags meta)
-    (puthash 'aliases aliases meta)
-    (puthash 'links links meta)
-    meta))
+  (if (and file (file-exists-p file))
+      (with-temp-buffer
+        (insert-file-contents file)
+        (obsidian--buffer-metadata))
+    (obsidian--buffer-metadata)))
 
 (defun obsidian--update-file-metadata (&optional file)
   "Update the metadata for the file FILE.
