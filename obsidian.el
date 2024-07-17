@@ -336,7 +336,7 @@ markdown-link-at-pos:
   ;; (save-excursion
   (with-temp-buffer
     (insert s)
-    (let ((dict (make-hash-table)))
+    (let ((dict (make-hash-table :test 'equal)))
       (goto-char (point-min))
       (while (markdown-match-generic-links (point-max) nil)
         (let ((link-info (markdown-link-at-pos (point))))
@@ -373,7 +373,7 @@ markdown-link-at-pos:
           (tags (obsidian--find-tags-in-string bufstr))
           (aliases (obsidian--find-aliases-in-string bufstr))
           (links (obsidian--find-links-in-string bufstr))
-          (meta (make-hash-table :size 3)))
+          (meta (make-hash-table :test 'equal :size 3)))
     (puthash 'tags tags meta)
     (puthash 'aliases aliases meta)
     (puthash 'links links meta)
@@ -413,6 +413,7 @@ Optional argument ARG word to complete."
                         (fboundp 'company-begin-backend))
                    (company-begin-backend 'obsidian-tags-backend)
                  (error "Company not installed")))
+  ;; TODO: Could we use the built-in 'cond' for this?
   (cl-case command
     (prefix (when (and
                    (-contains-p local-minor-modes 'obsidian-mode)
@@ -607,7 +608,7 @@ in `obsidian-directory' root.
 (defun obsidian--add-file (file)
   "Add a FILE to the files cache and update tags and aliases for the file."
   (when (not (gethash file obsidian--files-hash-cache))
-    (puthash file (make-hash-table :size 3) obsidian--files-hash-cache))
+    (puthash file (make-hash-table :test 'equal :size 3) obsidian--files-hash-cache))
   (obsidian--update-file-metadata file))
 
 (defun obsidian--remove-file (file)
@@ -676,6 +677,7 @@ If the file include directories in its path, we create the file relative to
 If ARG is set, the file will be opened in other window."
   (let* ((all-files (->> (obsidian-files) (-map #'obsidian--file-relative-name)))
          (matches (obsidian--match-files f all-files))
+         ;; TODO: Could we use the built-in 'cond' for this?
          (file (cl-case (length matches)
                  (0 (obsidian--prepare-new-file-from-rel-path (obsidian--maybe-in-same-dir f)))
                  (1 (car matches))
@@ -816,7 +818,7 @@ The files cache has the following structure:
               'aliases: (alias list)
               'links:   {linkname: (link info list)}}}"
   (let ((targ filename)
-        (resp (make-hash-table)))
+        (resp (make-hash-table :test 'equal)))
     (maphash
      (lambda (host meta)
        (when-let ((links-map (gethash 'links meta)))
