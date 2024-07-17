@@ -129,7 +129,7 @@ of `dirctory-files'."
 
 ;;;###autoload
 (defun obsidian-specify-path (&optional path)
-  "Specifies obsidian folder PATH to obsidian-folder variable.
+  "Sets 'obsidian-directory' to PATH or user-selected directory.
 
 When run interactively asks user to specify the path."
   (interactive)
@@ -664,8 +664,15 @@ If ARG is set, the file will be opened in other window."
                  (t
                   (let* ((choice (completing-read "Jump to: " matches)))
                     choice))))
-         (find-fn (if arg #'find-file-other-window #'find-file)))
-    (funcall find-fn (obsidian--expand-file-name file))))
+         (path (obsidian--expand-file-name file)))
+    (if arg (find-file-other-window path) (find-file path))))
+
+(defun obsidian-find-point-in-file (f p &optional arg)
+  "Open file F at point P, offering a choice if multiple files match F.
+
+If ARG is set, the file will be opened in other window."
+  (obsidian-find-file f arg)
+  (goto-char p))
 
 (defun obsidian--maybe-in-same-dir (f)
   "If `f` contains '/', returns f, otherwise with buffer, relative to the buffer"
@@ -712,7 +719,7 @@ link name must be available via `match-string'."
           obsidian-prepare-file-path
           obsidian-wiki->normal
           (obsidian-tap #'message)
-          (obsidian-find-file arg)))))
+          (obsidian-find-point-in-file 0 arg)))))
 
 (defun obsidian-follow-markdown-link-at-point (&optional arg)
   "Find and follow markdown link at point.
@@ -723,7 +730,7 @@ Opens markdown links in other window if ARG is non-nil.."
         (browse-url normalized)
       (-> normalized
           obsidian-prepare-file-path
-          (obsidian-find-file arg)))))
+          (obsidian-find-point-in-file 0 arg)))))
 
 ;;;###autoload
 (defun obsidian-follow-link-at-point (&optional arg)
@@ -851,6 +858,7 @@ Template vars: {{title}}, {{date}}, and {{time}}"
           (find-file target))
       (message "No backlinks found."))))
 
+;; TODO: Could maybe jump right to search?
 ;;;###autoload
 (defun obsidian-search ()
   "Search Obsidian vault for input."
@@ -859,8 +867,9 @@ Template vars: {{title}}, {{date}}, and {{time}}"
          (results (obsidian--grep query)))
     (message (s-concat "Found " (pp-to-string (length results)) " matches"))
     (let* ((choice (completing-read "Select file: " results)))
-      (obsidian-find-file choice))))
+      (obsidian-find-point-infile choice))))
 
+;; TODO: Could jump right to tag if we track the points
 ;;;###autoload
 (defun obsidian-tag-find ()
   "Find all notes with a tag."
@@ -869,7 +878,7 @@ Template vars: {{title}}, {{date}}, and {{time}}"
                                (->> (obsidian-tags) (-map 's-downcase) -distinct (-sort 'string-lessp))))
          (results (obsidian--grep tag))
          (choice (completing-read "Select file: " results)))
-    (obsidian-find-file choice)))
+    (obsidian-find-point-in-file choice 0)))
 
 (when (eval-when-compile (require 'hydra nil t))
   (defhydra obsidian-hydra (:hint nil)
