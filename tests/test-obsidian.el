@@ -34,7 +34,7 @@
    (before-all (progn
                  (obsidian-specify-path obsidian--test-dir)
                  (setq obsidian-include-hidden-files nil)
-                 (obsidian-update)))
+                 (obsidian-populate-cache)))
    (after-all (progn
                 (obsidian-specify-path obsidian--test--original-dir)
                 (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)))
@@ -46,7 +46,7 @@
    (before-all (progn
                  (obsidian-specify-path obsidian--test-dir)
                  (setq obsidian-include-hidden-files t)
-                 (obsidian-update)))
+                 (obsidian-populate-cache)))
    (after-all (progn
                 (obsidian-specify-path obsidian--test--original-dir)
                 (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)))
@@ -58,7 +58,7 @@
    (before-all (progn
                  (obsidian-specify-path obsidian--test-dir)
                  (setq obsidian-include-hidden-files nil)
-                 (obsidian-update)))
+                 (obsidian-populate-cache)))
    (after-all (progn
                 (obsidian-specify-path obsidian--test--original-dir)
                 (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)))
@@ -77,7 +77,7 @@
   (before-all (progn
                 (obsidian-specify-path obsidian--test-dir)
                 (setq obsidian-include-hidden-files nil)
-                (obsidian-update)))
+                (obsidian-populate-cache)))
   (after-all (progn
                (obsidian-specify-path obsidian--test--original-dir)
                (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)))
@@ -89,7 +89,7 @@
   (before-all (progn
                 (obsidian-specify-path obsidian--test-dir)
                 (setq obsidian-include-hidden-files t)
-                (obsidian-update)))
+                (obsidian-populate-cache)))
   (after-all (progn
                (obsidian-specify-path obsidian--test--original-dir)
                (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)))
@@ -97,17 +97,17 @@
   (it "find all tags in the vault"
     (expect (length (obsidian-tags)) :to-equal obsidian--test-number-of-tags)))
 
-(describe "obsidian-update"
+(describe "obsidian-populate-cache"
   (before-all (progn
 		(obsidian-specify-path obsidian--test-dir)
 		(obsidian-clear-cache)))
   (after-all (obsidian-specify-path obsidian--test--original-dir))
 
-  (it "check that tags var is empty before update"
+  (it "check that tags var is empty before populate-cache"
     (expect (obsidian-tags) :to-be nil))
-  (it "check tags are filled out after update"
+  (it "check tags are filled out after populate-cache"
     (expect (progn
-	      (obsidian-update)
+	      (obsidian-populate-cache)
 	      (length (obsidian-tags))) :to-equal obsidian--test-number-of-tags)))
 
 
@@ -125,7 +125,7 @@ key4:
 (describe "obsidian-aliases"
   (before-all (progn
 		(obsidian-specify-path obsidian--test-dir)
-                (obsidian-update)))
+                (obsidian-populate-cache)))
   (after-all (progn
 	       (obsidian-specify-path obsidian--test--original-dir)))
 

@@ -44,6 +44,7 @@
 
 (require 'markdown-mode)
 
+;; TODO: Do we need elgrep after my changes are complete?
 (require 'elgrep)
 (require 'yaml)
 
@@ -285,13 +286,6 @@ FILE is an Org-roam file if:
   "Retrun true if FILE exists in files cache."
   (seq-contains-p (obsidian-files) file))
 
-(defun obsidian-clear-cache ()
-  "Clears the obsidian.el cache.
-
-If you need to run this manually, please report this as an issue on Github."
-  (interactive)
-  (setq obsidian--files-hash-cache nil))
-
 (defun obsidian-directories ()
   "Lists all Obsidian sub folders."
   (->> (directory-files-recursively obsidian-directory "" t)
@@ -433,17 +427,41 @@ Optional argument ARG word to complete."
        (obsidian--file-p)
        (obsidian-mode t)))
 
+(defun obsidian--find-all-files()
+  "Return a list of all obsidian files in the vault."
+  (let ((all-files (directory-files-recursively obsidian-directory "\.*$")))
+    (-filter #'obsidian--file-p all-files)))
+
+(defun obsidian-clear-cache ()
+  "Clears the obsidian.el cache.
+
+If you need to run this manually, please report this as an issue on Github."
+  (interactive)
+  (setq obsidian--files-hash-cache nil))
+
 (defun obsidian-update ()
-  "Command update everything there is to update in obsidian.el (tags, links etc.)."
+  "Check the cache against files on disk and update cache as necessary."
+  (interactive)
+  (if (not obsidian--files-cache)
+      (obsidian-populate-cache)
+    (-let* ((cached (obsidian-files))
+            (ondisk (obsidian--find-all-files))
+            (new-files (-difference ondisk cached))
+            (old-files (-difference cached ondisk)))
+      (seq-map #'obsidian--add-file new-files)
+      (seq-map #'obsidian--remove-file old-files)
+      (message "Obsidian cache updated at %s" (format-time-string "%H:%M:%S")))))
+
+(defun obsidian-populate-cache ()
+  "Create an empty cache and populate cache with files, tags, aliases, and links."
   (interactive)
   ;; TODO: Once the cache is initially populated, we'd like a better way to update
   ;;       than a full recreation
-  (-let* ((all-files (directory-files-recursively obsidian-directory "\.*$"))
-          (obs-files (-filter #'obsidian--file-p all-files))
+  (-let* ((obs-files (obsidian--find-all-files))
           (file-count (length obs-files)))
     (setq obsidian--files-hash-cache (make-hash-table :test 'equal :size file-count))
     (-map #'obsidian--add-file obs-files)
-    (message "Obsidian cache updated at %s (%d files)"
+    (message "Obsidian cache populated at %s with %d files"
              (format-time-string "%H:%M:%S") file-count)
     file-count))
 
@@ -653,7 +671,7 @@ If the file include directories in its path, we create the file relative to
     cleaned))
 
 (defun obsidian-find-file (f &optional arg)
-  "Take file F and either opens directly or offer choice if multiple match.
+  "Open file F, offering a choice if multiple files match F.
 
 If ARG is set, the file will be opened in other window."
   (let* ((all-files (->> (obsidian-files) (-map #'obsidian--file-relative-name)))
@@ -780,8 +798,11 @@ See `markdown-follow-link-at-point' and
                          (cdr match))))
     (when (remove nil result) t)))
 
-(defun obsidian--file-links (filename)
-  "FILENAME is the name and extension without directories
+;; TODO: Search for filename only as well as filename with relative subdir(s)
+(defun obsidian-file-links (filename)
+  "FILENAME is the base and extension without directories...
+
+or relative to the Obsidian vault directory...?
 
 host - host file; the one that includes the link.  full path filename
 targ - target file; file being pointed to by the host link.  name and extension only
