@@ -311,7 +311,7 @@ FILE is an Org-roam file if:
 
 ;; TODO: Could we use something like markdown-next-link ?
 (defun obsidian--find-links ()
-  "Retrieve hashtable of links from buffer section string S.
+  "Retrieve hashtable of links in current buffer.
 
 Values of hashtabale are lists with values that matche those returned by
 markdown-link-at-pos:
@@ -324,7 +324,9 @@ markdown-link-at-pos:
   6. bang (nil or \"!\")"
   (let ((dict (make-hash-table :test 'equal)))
     (goto-char (point-min))
-    (while (markdown-match-generic-links (point-max) nil)
+    ;; If you search to point-max, you'll get into an infinit loop if there's
+    ;; a link a the end of the file, hence (- (point-max 4))
+    (while (markdown-match-generic-links (- (point-max) 4) nil)
       (let ((link-info (markdown-link-at-pos (point))))
         ;; TODO: Using a hashmap means we can only have a single link to
         ;;       a file within a different file. Is that okay?
@@ -368,7 +370,7 @@ markdown-link-at-pos:
   "Find the tags, aliases, and links in FILE and return as hashtable.
 
 Uses current buffer if file is not specified"
-  ;; (message "Processing file %s" file)
+  ;; (message "Processing metadata for file %s" file)
   (if (and file (file-exists-p file))
       (with-temp-buffer
         (insert-file-contents file)
@@ -457,7 +459,11 @@ If you need to run this manually, please report this as an issue on Github."
   (-let* ((obs-files (obsidian--find-all-files))
           (file-count (length obs-files)))
     (setq obsidian--files-hash-cache (make-hash-table :test 'equal :size file-count))
-    (-map #'obsidian--add-file obs-files)
+    (message "Populating cache with %d files" file-count)
+    (dolist-with-progress-reporter
+        (i obs-files)
+        (format "Adding Obsidian %d files to cache... " file-count)
+      (obsidian--add-file i))
     (message "Obsidian cache populated at %s with %d files"
              (format-time-string "%H:%M:%S") file-count)
     file-count))
