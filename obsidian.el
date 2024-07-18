@@ -441,7 +441,7 @@ If you need to run this manually, please report this as an issue on Github."
 (defun obsidian-update ()
   "Check the cache against files on disk and update cache as necessary."
   (interactive)
-  (if (not obsidian--files-cache)
+  (if (not obsidian--files-hash-cache)
       (obsidian-populate-cache)
     (-let* ((cached (obsidian-files))
             (ondisk (obsidian--find-all-files))
