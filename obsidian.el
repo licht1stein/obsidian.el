@@ -6,7 +6,7 @@
 ;; URL: https://github.com/licht1stein/obsidian.el
 ;; Keywords: obsidian, pkm, convenience
 ;; Version: 1.4.4
-;; Package-Requires: ((emacs "27.2") (f "0.2.0") (s "1.12.0") (dash "2.13") (markdown-mode "2.5") (elgrep "1.0.0") (yaml "0.5.1"))
+;; Package-Requires: ((emacs "27.2") (f "0.2.0") (s "1.12.0") (dash "2.13") (markdown-mode "2.5") (elgrep "1.0.0") (yaml "0.5.1") (ht "2.3"))
 ;; This file is NOT part of GNU Emacs.
 
 ;;; License:
@@ -39,14 +39,14 @@
 (require 'f)
 (require 'dash)
 (require 's)
+(require 'ht)
 
 (require 'cl-lib)
 
 (require 'markdown-mode)
-
+(require 'yaml)
 ;; TODO: Do we need elgrep after my changes are complete?
 (require 'elgrep)
-(require 'yaml)
 
 ;; Inspired by RamdaJS's tap function
 (defun obsidian-tap (a f)
@@ -309,6 +309,11 @@ FILE is an Org-roam file if:
            (all-aliases (append aliases (list alias))))
       (seq-map #'obsidian--stringify (-distinct (-filter #'identity all-aliases))))))
 
+(defun obsidian--strip-props (s)
+  "Remove all text properties from string S."
+  (set-text-properties 0 (length s) nil s)
+  s)
+
 ;; TODO: Could we use something like markdown-next-link ?
 (defun obsidian--find-links ()
   "Retrieve hashtable of links in current buffer.
@@ -328,6 +333,8 @@ markdown-link-at-pos:
     ;; a link a the end of the file, hence (- (point-max 4))
     (while (markdown-match-generic-links (- (point-max) 4) nil)
       (let ((link-info (markdown-link-at-pos (point))))
+        (obsidian--strip-props (nth 2 link-info))
+        (obsidian--strip-props (nth 3 link-info))
         ;; TODO: Using a hashmap means we can only have a single link to
         ;;       a file within a different file. Is that okay?
         (puthash (nth 3 link-info) link-info dict)))
@@ -441,7 +448,7 @@ If you need to run this manually, please report this as an issue on Github."
 (defun obsidian-update ()
   "Check the cache against files on disk and update cache as necessary."
   (interactive)
-  (if (not obsidian--files-hash-cache)
+  (if (or (not (boundp 'obsidian--files-hash-cache)) (not obsidian--files-hash-cache))
       (obsidian-populate-cache)
     (-let* ((cached (obsidian-files))
             (ondisk (obsidian--find-all-files))
@@ -832,26 +839,6 @@ The files cache has the following structure:
      obsidian--files-hash-cache)
     resp))
 
-;; TODO: This function can be replaced once the links are in the cache
-(defun obsidian--find-links-to-file (filepath)
-  "Find any mention of trimmed FILEPATH in the vault.
-
-filepath: the absolute filename including extension
-filename: the name of the file with extension without any directories
-file-word: the file name without any extension or directory informatoin"
-  (-let* ((filename (file-name-nondirectory filepath))
-          (file-word (file-name-sans-extension filename))
-          (matches (obsidian--grep file-word)))
-    ;; (-filter (lambda (m) (obsidian--mention-link-to-p file-word m)) matches)
-    (->> (-filter (lambda (m) (obsidian--mention-link-to-p file-word m)) matches)
-         (-map #'car))))
-
-(defun obsidian--completing-read-for-matches (coll)
-  "Take a COLL of matches produced by elgrep and make a list for completing read."
-  (let* ((dict (make-hash-table :test 'equal))
-         (_ (-map (lambda (f) (puthash f (obsidian--expand-file-name f) dict)) coll)))
-    dict))
-
 (defun obsidian-apply-template (template-filename)
   "Apply the template for the current buffer.
 Template vars: {{title}}, {{date}}, and {{time}}"
@@ -870,19 +857,38 @@ Template vars: {{title}}, {{date}}, and {{time}}"
     (message "Template variables replaced and inserted to the buffer")
     (goto-char m)))
 
+(defun obsidian--backlinks-completion-fn (hmap)
+  "Completion function to show file path and link text from HMAP."
+  (let* ((meta-alist (ht-map (lambda (k v)
+                               (cons (obsidian--file-relative-name k) (nth 2 v)))
+                             hmap)))
+    (message "meta-alist: %s" meta-alist)
+    (completing-read
+     "Backlinks: "
+     (lambda (str pred flag)
+       (if (eq flag 'metadata)
+           '(metadata (annotation-function
+                       lambda (str) (concat "\tlink text: "
+                                       (cdr (assoc str meta-alist)))))
+         (all-completions str (mapcar 'car meta-alist) pred))))))
+
 ;;;###autoload
-(defun obsidian-backlink-jump ()
+(defun obsidian-backlink-jump (&optional file)
   "Select a backlink to this file and follow it."
   (interactive)
-  (let* ((backlinks (obsidian--find-links-to-file (buffer-file-name)))
-         (dict (obsidian--completing-read-for-matches backlinks))
-         (choices (-sort #'string< (-distinct (hash-table-keys dict)))))
-    (if choices
-        (let* ((choice (completing-read "Jump to: " choices))
-               (target (obsidian--get-alias choice (gethash choice dict))))
-          (find-file target))
+  (let* ((filepath (or file (buffer-file-name)))
+         (filename (file-name-nondirectory filepath))
+         (linkmap (obsidian-file-links filename)))
+    (if (> (length (hash-table-keys linkmap)) 0)
+        (let* (
+               (choice (obsidian--backlinks-completion-fn linkmap))
+               (target (obsidian--expand-file-name choice))
+               (link-info (gethash target linkmap)))
+          (find-file target)
+          (goto-char (car link-info)))
       (message "No backlinks found."))))
 
+;; TODO: Could we provide a preview of the surrounding matched string?
 ;; TODO: Could maybe jump right to search?
 ;;;###autoload
 (defun obsidian-search ()
