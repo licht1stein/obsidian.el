@@ -148,7 +148,7 @@ the mode, `toggle' toggles the state."
   ;; The initial value.
   :init-value nil
   :lighter " obs"
-  ;; :after-hook (obsidian-update)
+  :after-hook (obsidian-update)
   :keymap (make-sparse-keymap))
 
 (defvar obsidian--tag-regex "#[[:alnum:]-_/+]+" "Regex pattern used to find tags in Obsidian files.")
