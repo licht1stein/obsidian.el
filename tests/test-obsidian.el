@@ -166,7 +166,10 @@ key4:
   (after-all (obsidian-specify-path obsidian--test--original-dir))
 
   (it "1.md"
-    (expect (obsidian--find-links-to-file "1.md") :to-equal '("2.md"))))
+    (let* ((linkmap (obsidian-file-links "1.md"))
+           (file1 (car (hash-table-keys linkmap))))
+      (expect (length (hash-table-keys linkmap)) :to-equal 1)
+      (expect (file-name-nondirectory file1) :to-equal "2.md"))))
 
 (describe "obsidian-move-file"
   (before-all (obsidian-specify-path obsidian--test-dir))
