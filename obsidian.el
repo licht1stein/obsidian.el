@@ -28,7 +28,7 @@
 
 ;;; Commentary:
 ;; Obsidian.el lets you interact with more convenience with markdown files
-;; that are contained in Obsidian Notes vault.  It adds autocompletion for
+;; that are contained in an Obsidian Notes vault.  It adds autocompletion for
 ;; tags and links, jumping between notes, capturing new notes into inbox etc.
 ;;
 ;; This allows you to use Emacs for editing your notes, leaving the Obsidian
@@ -40,12 +40,11 @@
 (require 'dash)
 (require 's)
 (require 'ht)
-
+;; TODO: What are we using this package for?
 (require 'cl-lib)
 
 (require 'markdown-mode)
 (require 'yaml)
-;; TODO: Do we need elgrep after my changes are complete?
 (require 'elgrep)
 
 ;; Inspired by RamdaJS's tap function
@@ -151,6 +150,7 @@ the mode, `toggle' toggles the state."
   :after-hook (obsidian-update)
   :keymap (make-sparse-keymap))
 
+;; TOOD: This doesn't produce the same tag rules as Obsidian Notes
 (defvar obsidian--tag-regex "#[[:alnum:]-_/+]+" "Regex pattern used to find tags in Obsidian files.")
 
 (defvar obsidian--basic-wikilink-regex "\\[\\[[[:graph:][:blank:]]*\\]\\]"
@@ -174,6 +174,11 @@ the mode, `toggle' toggles the state."
 (defun obsidian--stringify (obj)
   "Return OBJ as a string regardless of input type."
   (format "%s" obj))
+
+(defun obsidian--strip-props (s)
+  "Remove all text properties from string S."
+  (set-text-properties 0 (length s) nil s)
+  s)
 
 (defun obsidian--set-tags (file tag-list)
   "Set list TAG-LIST to FILE in files cache."
@@ -309,12 +314,6 @@ FILE is an Org-roam file if:
            (all-aliases (append aliases (list alias))))
       (seq-map #'obsidian--stringify (-distinct (-filter #'identity all-aliases))))))
 
-(defun obsidian--strip-props (s)
-  "Remove all text properties from string S."
-  (set-text-properties 0 (length s) nil s)
-  s)
-
-;; TODO: Could we use something like markdown-next-link ?
 (defun obsidian--find-links ()
   "Retrieve hashtable of links in current buffer.
 
@@ -445,19 +444,6 @@ If you need to run this manually, please report this as an issue on Github."
   (interactive)
   (setq obsidian--files-hash-cache nil))
 
-(defun obsidian-update ()
-  "Check the cache against files on disk and update cache as necessary."
-  (interactive)
-  (if (or (not (boundp 'obsidian--files-hash-cache)) (not obsidian--files-hash-cache))
-      (obsidian-populate-cache)
-    (-let* ((cached (obsidian-files))
-            (ondisk (obsidian--find-all-files))
-            (new-files (-difference ondisk cached))
-            (old-files (-difference cached ondisk)))
-      (seq-map #'obsidian--add-file new-files)
-      (seq-map #'obsidian--remove-file old-files)
-      (message "Obsidian cache updated at %s" (format-time-string "%H:%M:%S")))))
-
 (defun obsidian-populate-cache ()
   "Create an empty cache and populate cache with files, tags, aliases, and links."
   (interactive)
@@ -474,6 +460,20 @@ If you need to run this manually, please report this as an issue on Github."
     (message "Obsidian cache populated at %s with %d files"
              (format-time-string "%H:%M:%S") file-count)
     file-count))
+
+;;;###autoload
+(defun obsidian-update ()
+  "Check the cache against files on disk and update cache as necessary."
+  (interactive)
+  (if (or (not (boundp 'obsidian--files-hash-cache)) (not obsidian--files-hash-cache))
+      (obsidian-populate-cache)
+    (-let* ((cached (obsidian-files))
+            (ondisk (obsidian--find-all-files))
+            (new-files (-difference ondisk cached))
+            (old-files (-difference cached ondisk)))
+      (seq-map #'obsidian--add-file new-files)
+      (seq-map #'obsidian--remove-file old-files)
+      (message "Obsidian cache updated at %s" (format-time-string "%H:%M:%S")))))
 
 (defun obsidian-update-async ()
   "Asyncrhonous version of obsidian-update."
@@ -696,6 +696,7 @@ If ARG is set, the file will be opened in other window."
          (path (obsidian--expand-file-name file)))
     (if arg (find-file-other-window path) (find-file path))))
 
+;; TODO: Update users of this function to use point P
 (defun obsidian-find-point-in-file (f p &optional arg)
   "Open file F at point P, offering a choice if multiple files match F.
 
@@ -911,6 +912,7 @@ Template vars: {{title}}, {{date}}, and {{time}}"
          (choice (completing-read "Select file: " results)))
     (obsidian-find-point-in-file choice 0)))
 
+;; TODO: Make sure that all of these hydra commands work well
 (when (eval-when-compile (require 'hydra nil t))
   (defhydra obsidian-hydra (:hint nil)
     "
