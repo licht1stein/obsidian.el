@@ -296,8 +296,8 @@ PRs and issues are very welcome. In order to develop locally you need to install
 *** Data Structures
 
 **** obsidian--files-hash-cache
-A nested hashtable (ie hashmap) where the keys are absolute file paths for the files tracked by obsidian in the vault.
-The values are also hashtables with the keys 'tags and 'aliases that contains lists of the tags and aliases assosiated that that file.  I think it might be good to include 'backlinks here, as well, but this is not yet implemented.
+A nested hash table where the keys are absolute file paths for the files tracked by obsidian in the vault.
+The values are also hash tables with the keys tags, aliases, and links.  The tags and aliases are lists of the tags and aliases associated with that file specified by the key.  The links are all of the links within that file, and the values are the respons lists from the call to ~markdown-link-at-pos~ that includes the link, the link text, and the position of the link within the file.
 
 #+begin_src
 {<filepath> : {'tags: (list of tags associated with file)
@@ -306,57 +306,55 @@ The values are also hashtables with the keys 'tags and 'aliases that contains li
 #+end_src
 
 **** obsidian--aliases-map
-A simple hashtable where each key is an alias, and the value is the absolute file path associated with that alias.
+A simple hash table where each key is an alias, and the value is the absolute file path associated with that alias.
 
 #+begin_src
 {<alias> : <filepath>}
 #+end_src
 
+*** obsidian-populate-cache
+Rebuilds both ~obsidian--files-hash-cache~ and ~obsidian--aliases-map~.  It's a very heavy operation so ideally only called at startup by after-init-hook.  It does aim to extract all information with a single reading of the file from disk with an associated single call to ~with-temp-buffer~.
+- ~directory-files-recursively~
+  - ~obsidian--add-file~
+    - ~obsidian--update-file-metadata~
+      - ~obsidian--find-tags-in-string~
+      - ~obsidian--find-aliases-in-string~
+      - ~obsidian--find-links~
 
 *** obsidian-update
-Rebuilds both =obsidian--files-hash-cache= and =obsidian--aliases-map=.  It's a very heavy operation so ideally only called at startup by after-init-hook.
-- obsidian-reset-cache
-- obsidian-update-tags-list
-- obsidian--update--all-from-front-matter
+Compares the list of currently cached files against the files on disk, removing any files from cache that no longer exist and adding files that exist on disk but not in the cache.
+
+Will call ~obsidian-populate-cache~ if that function has not yet been run, but it should be run on startup.
 
 *** Update Timer
-All of the file and metadata updates should be handled by the functions and hooks of obsidian.el when a file is saved or moved.  However, if a file is add or deleted out of band of obsidian.el by some other process, we need a way to include the information in our caches.
+All of the file and metadata updates should be handled by the functions and hooks of =obsidian.el= when a file is saved or moved.  However, if a file is add or deleted out of band of =obsidian.el= by some other process, we need a way to include the information in our caches.
 
-In order to do these, a timer is start that periodically calls ~obsidian-update~. The timer for waits for a specified amount of time, and then waits for Emacs to be idle before calling the update function. In this way it aims to be as unobtrusive to the user as possible while still recognizing files that have been maniupuled out of band.
+In order to do these, a timer is start that periodically calls ~obsidian-update~. The timer waits for a specified amount of time, and then waits for Emacs to be idle before calling the update function. In this way it aims to be as unobtrusive to the user as possible while still recognizing files that have been maniupuled out of band.
 
 The code snippet below createsa timer called =update-timer= that runs every 5 minutes (5 * 60 seconds) and then waits for a 5 second period when Emacs is idle before calling =obsidian-update=.
 
-#+begin_src emacs-lisp
-(defun idle-timer ()
-  "Wait until Emacs is idle to call update."
-  (run-with-idle-timer 5 nil 'obsidian-update))
-
-(setq update-timer (run-with-timer 0 (* 5 60) 'idle-timer))
-#+end_src
+Setting the value of ~obsidian--use-update-timer~ to nil will disable this timer.  If it's already running, call to ~obsidian-stop-update-timer~ will stop it.
 
 *** obsidian--add-file
-One of the two main internal functions along with obsidian--remove-file.
+One of the two main internal functions along with ~obsidian--remove-file~.
 
 File will be added to the cache if it's not already there, the tags list and alias list for that file will be updated, and finally the aliases list will be synced with the obsidian--alises-map.
 
 1. file added to the cache
 2. update tags for file
 3. update aliases for file
-4. sync list of aliases with obsidian--aliases-map
+4. sync list of aliases with ~obsidian--aliases-map~
 
 *** obsidian--remove-file
-One of the two main internal functions along with obsidian--remove-file.
+One of the two main internal functions along with ~obsidian--remove-file~.
 
-1. Remove aliases for file from obsidian--aliases-map
-2. Remove file record from obsidian--files-hash-cache
+1. Remove aliases for file from ~obsidian--aliases-map~
+2. Remove file record from ~obsidian--files-hash-cache~
 
 *** obsidian--update-on-save
-Meant to be added as a hook to after-save-hook.
-Checks to see if the save file is an obsidian file and if it already exists in the file cache.
+Meant to be added as a hook to ~after-save-hook~.
 
-#+begin_src emacs-lisp
-
-#+end_src
+Checks to see if the saved file is an obsidian file and if it already exists in the file cache.
 
 * Gratitude
 - The work on Obsidian.el was made considerably easier and definitely more fun thanks to the great work of [[https://github.com/magnars][Magnar Sveen]] and his packages [[https://github.com/magnars/dash.el][dash.el]] and [[https://github.com/magnars/s.el][s.el]]. Thank you for making Elisp almost as convenient as Clojure!

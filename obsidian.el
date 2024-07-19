@@ -97,7 +97,7 @@ Default is the inbox directory"
   "Daily notes' template filename in templates directory"
   :type 'file)
 
-(defcustom obsidian--use-update-timer nil
+(defcustom obsidian--use-update-timer t
   "Determines whether a polling cache update will be used.
 If it is true, a timer will be created using the values of
 `obsidian-cache-expiry' and `obsidian-update-idle-wait'."
