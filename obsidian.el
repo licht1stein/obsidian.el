@@ -69,7 +69,7 @@
   :type 'directory)
 
 (defcustom obsidian-links-use-vault-path nil
-  "If true, the full vault path for a link will be used instead of just the filename."
+  "If true, use the full vault path for a link instead of just the filename."
   :type 'boolean)
 
 (defcustom obsidian-include-hidden-files t
@@ -83,7 +83,9 @@
   :type 'boolean)
 
 (defcustom obsidian-daily-notes-directory obsidian-inbox-directory
-  "Subdir to create daily notes with `obsidian-daily-note'. Default: the inbox directory"
+  "Subdir to create daily notes with `obsidian-daily-note'.
+
+Default is the inbox directory"
   :type 'directory)
 
 (defcustom obsidian-templates-directory nil
@@ -97,7 +99,7 @@
 (defcustom obsidian--use-update-timer nil
   "Determines whether a polling cache update will be used.
 If it is true, a timer will be created using the values of
-'obsidian-cache-expiry' and 'obsidian-update-idle-wait'."
+`obsidian-cache-expiry' and `obsidian-update-idle-wait'."
   :type 'boolean)
 
 (defcustom obsidian-cache-expiry (* 60 5)
@@ -106,7 +108,8 @@ If it is true, a timer will be created using the values of
   :group 'obsidian)
 
 (defcustom obsidian-update-idle-wait 5
-  "The number of seconds after cache expiry to wait for Emacs to be idle before running update function."
+  "The number of seconds to wait for Emacs to be idle after cache expiry
+before running update function."
   :type 'integer
   :group 'obsidian)
 
@@ -129,7 +132,7 @@ of `dirctory-files'."
 
 ;;;###autoload
 (defun obsidian-specify-path (&optional path)
-  "Sets 'obsidian-directory' to PATH or user-selected directory.
+  "Sets `obsidian-directory' to PATH or user-selected directory.
 
 When run interactively asks user to specify the path."
   (interactive)
@@ -161,10 +164,12 @@ the mode, `toggle' toggles the state."
 
 (defvar obsidian--files-hash-cache nil
   "Cache for Obsidian files.
-{<filepath>: {'tags: <list-of-tags>
-              'aliases: <list-of-aliases>}}")
+{<filepath>: {tags: <list-of-tags>
+              aliases: <list-of-aliases>}}")
 
 (defvar obsidian--aliases-map (make-hash-table :test 'equal) "Alist of all Obsidian aliases.")
+
+(defvar obsidian--backlinks-alist (make-hash-table :test 'equal) "Alist of backlinks.")
 
 (defvar obsidian--update-timer nil "Timer to periodically update the cache.")
 ;; TODO: We can use this to check to see if any files are newer than this
@@ -495,7 +500,7 @@ Obsidian link and is returned unmodified."
       (if toggle file-path (file-name-nondirectory file-path)))))
 
 (defun obsidian--verify-relative-path (f)
-  "Check that file F exists, and create it if it does not. F will be a relative path."
+  "Check that relative file path F exists, and create it if it does not."
   (if (s-contains-p ":" f)
       f
     (let* ((obs-path (obsidian--expand-file-name f))
@@ -568,9 +573,8 @@ In the `obsidian-inbox-directory' if set otherwise in `obsidian-directory' root.
 (defun obsidian-daily-note ()
   "Create new obsidian daily note.
 
-In the `obsidian-daily-notes-directory' if set otherwise in `obsidian-inbox-directory' - if that's also unset,
-in `obsidian-directory' root.
-."
+Note is created in the `obsidian-daily-notes-directory' if set, or in
+`obsidian-inbox-directory' if set, or finally n `obsidian-directory' root."
   (interactive)
   (let* ((title (format-time-string "%Y-%m-%d"))
          (filename (s-concat obsidian-directory "/" obsidian-daily-notes-directory "/" title ".md"))
@@ -726,7 +730,7 @@ link name must be available via `match-string'."
                                 (markdown-wiki-link-link)))))))
 
 (defsubst obsidian--remove-section (s)
-  "Remove section from file path.
+  "Remove section S from file path.
    From 'filename#section' keep only the 'filename'."
   (replace-regexp-in-string "#.*$" "" s))
 
@@ -812,8 +816,9 @@ See `markdown-follow-link-at-point' and
 
 ;; TODO: Search for filename only as well as filename with relative subdir(s)
 (defun obsidian-file-links (filename)
-  "FILENAME is the base and extension without directories...
+  "FILENAME is the base and extension without directories.
 
+TODO: Fix this docstring
 or relative to the Obsidian vault directory...?
 
 host - host file; the one that includes the link.  full path filename
@@ -860,18 +865,18 @@ Template vars: {{title}}, {{date}}, and {{time}}"
 
 (defun obsidian--backlinks-completion-fn (hmap)
   "Completion function to show file path and link text from HMAP."
-  (let* ((meta-alist (ht-map (lambda (k v)
+  (let* ((obsidian--backlinks-alist (ht-map (lambda (k v)
                                (cons (obsidian--file-relative-name k) (nth 2 v)))
                              hmap)))
-    (message "meta-alist: %s" meta-alist)
+    (message "obsidian--backlinks-alist: %s" obsidian--backlinks-alist)
     (completing-read
      "Backlinks: "
      (lambda (str pred flag)
        (if (eq flag 'metadata)
            '(metadata (annotation-function
                        lambda (str) (concat "\tlink text: "
-                                       (cdr (assoc str meta-alist)))))
-         (all-completions str (mapcar 'car meta-alist) pred))))))
+                                       (cdr (assoc str obsidian--backlinks-alist)))))
+         (all-completions str (mapcar 'car obsidian--backlinks-alist) pred))))))
 
 ;;;###autoload
 (defun obsidian-backlink-jump (&optional file)
@@ -899,7 +904,7 @@ Template vars: {{title}}, {{date}}, and {{time}}"
          (results (obsidian--grep query)))
     (message (s-concat "Found " (pp-to-string (length results)) " matches"))
     (let* ((choice (completing-read "Select file: " results)))
-      (obsidian-find-point-infile choice))))
+      (obsidian-find-point-in-file choice 0))))
 
 ;; TODO: Could jump right to tag if we track the points
 ;;;###autoload
@@ -957,7 +962,7 @@ _s_earch by expr.   _u_pdate tags/alises etc.
 (defun obsidian-stop-update-timer ()
   "Stop the background process that periodically updates the cache."
   (interactive)
-  (cancel-timer update-timer))
+  (cancel-timer obsidian--update-timer))
 
 (provide 'obsidian)
 ;;; obsidian.el ends here
