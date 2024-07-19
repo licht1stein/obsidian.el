@@ -368,9 +368,11 @@ markdown-link-at-pos:
       ;; loop through files cache to get file/tag list for each file
       (maphash (lambda (file meta)
                  (let ((obsidian--file-metadata meta))
-                   ;; loop through the tags list and for each tag
+                   ;; loop through the tags list
                    (seq-map (lambda (rawtag)
                               (let ((tag (s-downcase rawtag)))
+                                ;; Add the current file to the response list
+                                ;; for the current tag in the response hash table
                                 (if-let ((file-list (gethash tag obsidian--tags-map)))
                                     (progn
                                       (add-to-list 'file-list file)
@@ -381,7 +383,6 @@ markdown-link-at-pos:
       (maphash (lambda (k v)
                  (puthash k (-sort 'string-lessp (-distinct v)) obsidian--tags-map))
                obsidian--tags-map)
-      ;; (message "Tags ht:\n%s" obsidian--tags-map)
       obsidian--tags-map)))
 
 (defun obsidian-tags ()
@@ -442,23 +443,6 @@ allows completion with both lower and upper case versions of the tags."
     (->> merged
          (-map (lambda (s) (s-concat "#" s)))
          -distinct)))
-
-(defun obsidian-tags-backend (command &rest arg)
-  "Completion backend for company used by obsidian.el.
-Argument COMMAND company command.
-Optional argument ARG word to complete."
-  (interactive (if (and (featurep 'company)
-                        (fboundp 'company-begin-backend))
-                   (company-begin-backend 'obsidian-tags-backend)
-                 (error "Company not installed")))
-  ;; TODO: Could we use the built-in 'cond' for this?
-  (cl-case command
-    (prefix (when (and
-                   (-contains-p local-minor-modes 'obsidian-mode)
-                   (looking-back obsidian--tag-regex nil))
-              (match-string 0)))
-    (candidates (->> (obsidian-prepare-tags-list (obsidian-tags))
-                     (-filter (lambda (s) (s-starts-with-p (car arg) s)))))))
 
 (defun obsidian-enable-minor-mode ()
   "Check if current buffer is an `obsidian--file-p' and toggle `obsidian-mode'."
@@ -824,26 +808,6 @@ See `markdown-follow-link-at-point' and
     (or (s-matches-p obsidian--basic-wikilink-regex s)
         (s-matches-p obsidian--basic-markdown-link-regex s))))
 
-(defun obsidian--elgrep-get-context (match)
-  "Get :context out of MATCH produced by elgrep."
-  (when match
-    (let* ((result (->> match
-                        -flatten))
-           (context (plist-get result :context)))
-      context)))
-
-(defun obsidian--mention-link-to-p (filename match)
-  "Check if `MATCH' produced by `obsidian--grep' contain a link to `FILENAME'."
-  (let* ((result (mapcar (lambda (element)
-                           ;; (message "ELEMENT ---> %s" (obsidian--elgrep-get-context element))
-                           (if (listp element)
-                               (and
-                                (obsidian--link-p (obsidian--elgrep-get-context element))
-                                (string-match-p (format "\\b%s\\b" filename)
-                                                (format "%s" (obsidian--elgrep-get-context element))))))
-                         (cdr match))))
-    (when (remove nil result) t)))
-
 ;; TODO: Search for filename only as well as filename with relative subdir(s)
 (defun obsidian-file-links (filename)
   "FILENAME is the base and extension without directories.
@@ -895,9 +859,11 @@ Template vars: {{title}}, {{date}}, and {{time}}"
 
 (defun obsidian--backlinks-completion-fn (hmap)
   "Completion function to show file path and link text from HMAP."
-  (let* ((obsidian--backlinks-alist (ht-map (lambda (k v)
-                               (cons (obsidian--file-relative-name k) (nth 2 v)))
-                             hmap)))
+  ;; TODO: Replace this ht-map call as it's the only use of the ht package
+  (let* ((obsidian--backlinks-alist
+          (ht-map (lambda (k v)
+                    (cons (obsidian--file-relative-name k) (nth 2 v)))
+                  hmap)))
     (message "obsidian--backlinks-alist: %s" obsidian--backlinks-alist)
     (completing-read
      "Backlinks: "
@@ -938,7 +904,7 @@ Template vars: {{title}}, {{date}}, and {{time}}"
 
 ;; TODO: Could jump right to tag if we track the points
 ;;;###autoload
-(defun obsidian-tag-find ()
+(defun obsidian-find-tag ()
   "Find all notes with a tag."
   (interactive)
   (let* ((taghash (obsidian-tags-ht))
@@ -965,15 +931,12 @@ _s_earch by expr.   _u_pdate tags/alises etc.
     ("l" obsidian-insert-link :color blue)
     ("q" nil :color blue)
     ("s" obsidian-search)
-    ("t" obsidian-tag-find)
+    ("t" obsidian-find-tag)
     ("u" obsidian-update)
     ("w" obsidian-insert-wikilink :color blue)))
 
 ;;;###autoload
 (define-globalized-minor-mode global-obsidian-mode obsidian-mode obsidian-enable-minor-mode)
-
-(when (boundp 'company-backends)
-  (add-to-list 'company-backends 'obsidian-tags-backend))
 
 (add-hook 'after-save-hook 'obsidian--update-on-save)
 
