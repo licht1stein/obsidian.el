@@ -82,7 +82,7 @@
     If it is true, create in inbox, otherwise next to the current buffer."
   :type 'boolean)
 
-(defcustom obsidian-daily-notes-directory obsidian-inbox-directory 
+(defcustom obsidian-daily-notes-directory obsidian-inbox-directory
   "Subdir to create daily notes with `obsidian-daily-note'. Default: the inbox directory"
   :type 'directory)
 
@@ -173,24 +173,28 @@ When run interactively asks user to specify the path."
   "Return t if path P points to a dot file."
   (s-starts-with-p "." (file-name-base p)))
 
-(defun obsidian-file-p (&optional file)
-  "Return t if FILE is an obsidian.el file, nil otherwise.
+(defun obsidian-file-p (&optional file skip-obsidian-dir-check-p)
+  "Return t if FILE is an Obsidian Vault Markdown file, nil otherwise.
 
 If FILE is not specified, use the current buffer's file-path.
 FILE is an Org-roam file if:
-- It's located somewhere under `obsidian-directory
-- It is a markdown .md file
+- It is a Markdown .md file
+- It's located somewhere under `obsidian-directory'
 - Is not a dot file or, if `obsidian-include-hidden-files' is t, then:
   - It is not in .trash
-  - It is not an Emacs temp file"
+  - It is not an Emacs temp file
+
+Set SKIP-OBSIDIAN-DIR-CHECK-P to t, to skip the slow
+`obsidian-descendant-of-p' call. This can be safely skipped when FILE
+is inside the `obsidian-directory'."
   (-when-let* ((path (or file (-> (buffer-base-buffer) buffer-file-name)))
-               (relative-path (file-relative-name path obsidian-directory))
-               (ext (file-name-extension relative-path))
-               (md-p (string= ext "md"))
-               (obsidian-dir-p (obsidian-descendant-of-p path obsidian-directory))
+               (md-p (s-ends-with-p ".md" path))
+               (obsidian-dir-p (or skip-obsidian-dir-check-p
+                                   (obsidian-descendant-of-p path obsidian-directory)))
                (not-dot-file (or obsidian-include-hidden-files (not (obsidian-dot-file-p path))))
                (not-trash-p (obsidian-not-trash-p path))
                (not-dot-obsidian (obsidian-not-dot-obsidian-p path))
+               (relative-path (file-relative-name path obsidian-directory))
                (not-temp-p (not (s-contains-p "~" relative-path))))
     t))
 
@@ -218,8 +222,9 @@ FILE is an Org-roam file if:
 (defun obsidian-reset-cache ()
   "Clear and reset obsidian cache."
   (setq obsidian-files-cache
-        (->> (directory-files-recursively obsidian-directory "\.*$")
-             (-filter #'obsidian-file-p)))
+        (--filter
+         (obsidian-file-p it t)
+         (directory-files-recursively obsidian-directory ".*$")))
   (setq obsidian-cache-timestamp (float-time)))
 
 (defun obsidian-list-all-files ()
