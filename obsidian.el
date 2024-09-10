@@ -648,6 +648,14 @@ Note is created in the `obsidian-daily-notes-directory' if set, or in
   (when (obsidian--file-p (buffer-file-name))
     (obsidian--add-file (buffer-file-name))))
 
+(defun obsidian--vault-directories ()
+  "Provide a list of the directories in the Obsidian vault."
+  (let* ((dict (make-hash-table :test 'equal))
+         (_ (-map (lambda (d)
+                    (puthash (file-relative-name d obsidian-directory) d dict))
+                  (obsidian-directories))))
+    dict))
+
 ;;;###autoload
 (defun obsidian-move-file ()
   "Move current note to another directory."
@@ -655,10 +663,7 @@ Note is created in the `obsidian-daily-notes-directory' if set, or in
   (when (not (obsidian--file-p (buffer-file-name)))
     (user-error "Current file is not an obsidian-file"))
   (let* ((old-file-path (buffer-file-name))
-         (dict (make-hash-table :test 'equal))
-         (_ (-map (lambda (d)
-                    (puthash (file-relative-name d obsidian-directory) d dict))
-                  (obsidian-directories)))
+         (dict (obsidian--vault-directories))
          (choice (completing-read "Move to: " (hash-table-keys dict)))
          (new-file-directory (file-name-as-directory (gethash choice dict)))
          (new-file-path (expand-file-name (file-name-nondirectory old-file-path) new-file-directory)))
