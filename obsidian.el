@@ -255,6 +255,7 @@ the mode, `toggle' toggles the state."
   "Return t if FILE is not in .obsidian dir of Obsidian."
   (not (s-contains-p "/.obsidian" file)))
 
+;; Previously: obsidian-file-p
 (defun obsidian--file-p (&optional file)
   "Return t if FILE is an obsidian.el file, nil otherwise.
 
@@ -875,15 +876,21 @@ Template vars: {{title}}, {{date}}, and {{time}}"
          (all-completions str (mapcar 'car obsidian--backlinks-alist) pred))))))
 
 ;;;###autoload
-(defun obsidian-backlink-jump (&optional file)
+(defun obsidian--backlinks (&optional file)
   "Select a backlink to this file and follow it."
   (interactive)
   (let* ((filepath (or file (buffer-file-name)))
          (filename (file-name-nondirectory filepath))
          (linkmap (obsidian-file-links filename)))
+    linkmap))
+
+;;;###autoload
+(defun obsidian-backlink-jump (&optional file)
+  "Select a backlink to this file and follow it."
+  (interactive)
+  (let ((linkmap (obsidian--backlinks)))
     (if (> (length (hash-table-keys linkmap)) 0)
-        (let* (
-               (choice (obsidian--backlinks-completion-fn linkmap))
+        (let* ((choice (obsidian--backlinks-completion-fn linkmap))
                (target (obsidian--expand-file-name choice))
                (link-info (gethash target linkmap)))
           (find-file target)
