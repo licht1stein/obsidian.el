@@ -165,8 +165,20 @@ the mode, `toggle' toggles the state."
 
 (defvar obsidian--vault-cache nil
   "Cache for Obsidian files.
+
+The cache is a hashmap with the following structure
 {<filepath>: {tags: <list-of-tags>
-              aliases: <list-of-aliases>}}")
+              aliases: <list-of-aliases>}}
+              links: <list-of-link-lists>}}
+
+Each link list contains the following as returned by markdown-link-at-pos:
+  0. beginning position
+  1. end position
+  2. link text
+  3. URL
+  4. reference label
+  5. title text
+  6. bang (nil or \"!\")")
 
 (defvar obsidian--tags-map "Hash table with tags as keys and list of files as values.")
 
