@@ -1,5 +1,41 @@
 ;;; obsidian-ext.el --- Extention to obsidian.el -*- coding: utf-8; lexical-binding: t; -*-
 
+;; Copyright (c) 2024 Joe Reinhart <joseph.reinhart@gmail.com>
+
+;; Author: Joe Reinhart
+;; URL: https://github.com/licht1stein/obsidian.el
+;; Keywords: obsidian, pkm, convenience
+;; Version: 1.4.4
+;; Package-Requires: ((emacs "27.2") (f "0.2.0") (s "1.12.0") (dash "2.13") (markdown-mode "2.5") (elgrep "1.0.0") (yaml "0.5.1") (ht "2.3"))
+;; This file is NOT part of GNU Emacs.
+
+;;; License:
+;; This program is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation; either version 3, or (at your option)
+;; any later version.
+;;
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with GNU Emacs; see the file COPYING.  If not, write to the
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
+
+
+;;; Commentary:
+;; Obsidian.el lets you interact with more convenience with markdown files
+;; that are contained in an Obsidian Notes vault.  It adds autocompletion for
+;; tags and links, jumping between notes, capturing new notes into inbox etc.
+;;
+;; This allows you to use Emacs for editing your notes, leaving the Obsidian
+;; app for syncing and doing more specialized stuff, like viewing notes graphs.
+
+;;; Code:
+
 (setq backlink-format "%-33s%-33s\n")
 
 (defun link-with-props (k v)
@@ -17,14 +53,16 @@
 (defun obsidian-backlinks-other-window ()
   (interactive)
   (if (and obsidian-mode (obsidian--file-p))
-      (let* ((backlinks (obsidian--backlinks))
+      (let* ((obs-name (file-name-sans-extension (buffer-name)))
+             (backlinks (obsidian--backlinks))
              (base (file-name-base (buffer-file-name)))
-             (buffer "*backlinks-buffer*"))
+             (buffer "*backlinks*"))
         (when backlinks
           (with-current-buffer-window buffer
               nil
               nil
             (progn
+              (insert (propertize (format "# %s\n\n" obs-name) 'face 'markdown-header-face))
               (insert (propertize (format backlink-format "File Name" "Link Text") 'face 'markdown-header-face))
               (insert (propertize "-----------------------------------------------------\n" 'face 'markdown-hr-face))
               (maphash 'link-with-props backlinks)
