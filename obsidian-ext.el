@@ -2,50 +2,16 @@
 
 (setq backlink-format "%-33s%-33s\n")
 
-
-;; (switch-to-buffer "*scratch*")
-
-;; (princ (obsidian--backlinks) (get-buffer "*scratch*"))
-
-;; (print "jabroni" (get-buffer "*scratch*"))
-
-;; (setq thing "\njabroni\n")
-;; (princ "thing\n" (get-buffer "*scratch*"))
-;; ;; (add-text-properties 1 3 '(comment t jabroni face) thing)
-;; (princ (propertize "thing" 'face 'highlight) (get-buffer "*scratch*"))
-
-;; (text-properties-at (point))
-
-
-(defun mes ()
-  "message me"
-  (interactive)
-  (message "%-20s%-20s"
-           (propertize "link" 'face 'font-lock-string-face 'obsidian--link '(:a 1 :b 2))
-           (propertize "explanation text" 'face 'font-lock-comment-face 'obsidian--link '(:a 3 :b 4))))
-
-;; (with-current-buffer-window "*backlinks-buffer*"
-;;     nil
-;;     nil
-;;   (progn
-;;     (insert "In the time of chimpanzees there was a ")
-;;     ;; (insert (propertize "jabroni" 'face 'markdown-link-face 'obsidian--links 'jabronski))
-;;     (insert (propertize "jabroni" 'face 'font-lock-string-face 'obsidian--links 'jabronski))
-;;     (insert ". Butane in my veins...")
-;;     ;; (markdown-mode)
-;;     (obsidian-mode t)))
-
-;; (with-temp-buffer-window "*backlinks-buffer*"
-;;     nil
-;;     nil
-;;   (progn
-;;     (obsidian-mode)
-;;     (print "jabroni")))
-
-
 (defun link-with-props (k v)
-  (let* ((txt (format backlink-format (obsidian--file-relative-name k) (nth 2 v)))
-         (ptxt (propertize txt 'face 'font-lock-string-face 'obsidian--link-map v)))
+  (let* ((rel-file (obsidian--file-relative-name k))
+         (link-txt (nth 2 v))
+         (ptxt (format backlink-format
+                       (propertize rel-file
+                                   'face 'markdown-metadata-key-face
+                                   'obsidian--file k
+                                   'obsidian--position (nth 0 v))
+                       (propertize link-txt 'face 'markdown-metadata-value-face))))
+    ;; (message "%s: %s" k v)
     (insert ptxt)))
 
 (defun obsidian-backlinks-other-window ()
@@ -55,13 +21,12 @@
              (base (file-name-base (buffer-file-name)))
              (buffer "*backlinks-buffer*"))
         (when backlinks
-          ;; (with-output-to-temp-buffer buffer
           (with-current-buffer-window buffer
               nil
               nil
             (progn
-              (insert (format backlink-format "File Name" "Link Text"))
-              (insert "-----------------------------------------------------\n")
+              (insert (propertize (format backlink-format "File Name" "Link Text") 'face 'markdown-header-face))
+              (insert (propertize "-----------------------------------------------------\n" 'face 'markdown-hr-face))
               (maphash 'link-with-props backlinks)
               (obsidian-mode t)))))))
 

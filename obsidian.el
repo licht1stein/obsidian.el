@@ -810,7 +810,14 @@ See `markdown-follow-link-at-point' and
   (cond ((markdown-link-p)
          (obsidian-follow-markdown-link-at-point arg))
         ((obsidian--wiki-link-p)
-         (obsidian-follow-wiki-link-at-point arg))))
+         (obsidian-follow-wiki-link-at-point arg))
+        ((and (get-text-property (point) 'obsidian--file)
+              (get-text-property (point) 'obsidian--position))
+         (let* ((fil (get-text-property (point) 'obsidian-file))
+                (pos (get-text-property (point) 'obsidian-position)))
+           (message "Visiting file %s at position %s" fil pos)
+           (find-file fil)
+           (goto-char pos)))))
 
 (defun obsidian--grep (re)
   "Find RE in the Obsidian vault."
@@ -882,7 +889,6 @@ Template vars: {{title}}, {{date}}, and {{time}}"
           (ht-map (lambda (k v)
                     (cons (obsidian--file-relative-name k) (nth 2 v)))
                   hmap)))
-    (message "obsidian--backlinks-alist: %s" obsidian--backlinks-alist)
     (completing-read
      "Backlinks: "
      (lambda (str pred flag)
