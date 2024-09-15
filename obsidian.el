@@ -816,7 +816,7 @@ See `markdown-follow-link-at-point' and
          (let* ((fil (get-text-property (point) 'obsidian--file))
                 (pos (get-text-property (point) 'obsidian--position)))
            (message "Visiting file %s at position %s" fil pos)
-           (find-file fil)
+           (find-file-other-window fil)
            (goto-char pos)))))
 
 (defun obsidian--grep (re)
