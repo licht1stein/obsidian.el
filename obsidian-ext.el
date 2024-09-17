@@ -6,7 +6,6 @@
 ;; URL: https://github.com/licht1stein/obsidian.el
 ;; Keywords: obsidian, pkm, convenience
 ;; Version: 1.4.4
-;; Package-Requires: ((emacs "27.2") (f "0.2.0") (s "1.12.0") (dash "2.13") (markdown-mode "2.5") (elgrep "1.0.0") (yaml "0.5.1") (ht "2.3"))
 ;; This file is NOT part of GNU Emacs.
 
 ;;; License:
@@ -132,10 +131,9 @@ in the linked file."
 
 
 (global-set-key (kbd "<f5>") (lambda () (interactive (message (format "%s" (buffer-list))))))
+(global-set-key (kbd "<f6>") 'obsidian-backlinks-window)
 (global-set-key (kbd "<f7>") (lambda () (interactive) (message "%s" (text-properties-at (point)))))
 (global-set-key (kbd "<f8>") 'obsidian-backlinks-mode)
-(global-set-key (kbd "<f6>") 'obsidian-backlinks-window)
-(global-set-key (kbd "<f6>") 'obsidian-backlinks-window)
 ;; (define-key obsidian-mode-map (kbd "<f6>") 'obsidian-backlinks-window)
 
 
