@@ -82,7 +82,7 @@
 ;;;###autoload
 (defcustom obsidian-wiki-link-create-file-in-inbox t
   "Controls where to create a new file from a wiki link if its target is missing.
-    If it is true, create in inbox, otherwise next to the current buffer."
+If it is true, create in inbox, otherwise next to the current buffer."
   :type 'boolean)
 
 (defcustom obsidian-daily-notes-directory obsidian-inbox-directory
@@ -92,27 +92,26 @@ Default is the inbox directory"
   :type 'directory)
 
 (defcustom obsidian-templates-directory nil
-  "Subdir containing templates"
+  "Subdirectory containing templates."
   :type 'directory)
 
 (defcustom obsidian-daily-note-template "Daily Note Template.md"
-  "Daily notes' template filename in templates directory"
+  "Daily notes' template filename in templates directory."
   :type 'file)
 
-(defcustom obsidian--use-update-timer t
+(defcustom obsidian-use-update-timer t
   "Determines whether a polling cache update will be used.
 If it is true, a timer will be created using the values of
 `obsidian-cache-expiry' and `obsidian-update-idle-wait'."
   :type 'boolean)
 
 (defcustom obsidian-cache-expiry (* 60 5)
-  "The number of seconds before the Obsidian cache updates"
+  "The number of seconds before the Obsidian cache will update."
   :type 'integer
   :group 'obsidian)
 
 (defcustom obsidian-update-idle-wait 5
-  "The number of seconds to wait for Emacs to be idle after cache expiry
-before running update function."
+  "The number of seconds to wait for Emacs to be idle after cache expiry before running update function."
   :type 'integer
   :group 'obsidian)
 
@@ -663,6 +662,7 @@ Note is created in the `obsidian-daily-notes-directory' if set, or in
 ;; TODO: Is there a hook for file remove?
 ;; TODO: after-change-functions hook(s) ?
 (defun obsidian--update-on-save ()
+  "Used as a hook to update the vault cache when a file is saved."
   (when (obsidian--file-p (buffer-file-name))
     (obsidian--add-file (buffer-file-name))))
 
@@ -745,7 +745,7 @@ If ARG is set, the file will be opened in other window."
   (goto-char p))
 
 (defun obsidian--maybe-in-same-dir (f)
-  "If `f` contains '/', returns f, otherwise with buffer, relative to the buffer"
+  "If `f` contains '/', returns f, otherwise with buffer, relative to the buffer."
   (if (s-contains-p "/" f)
       f
     (if obsidian-wiki-link-create-file-in-inbox
@@ -768,7 +768,7 @@ link name must be available via `match-string'."
 
 (defsubst obsidian--remove-section (s)
   "Remove section S from file path.
-   From 'filename#section' keep only the 'filename'."
+From 'filename#section' keep only the 'filename'."
   (replace-regexp-in-string "#.*$" "" s))
 
 (defun obsidian-wiki->normal (f)
@@ -870,7 +870,7 @@ The files cache has the following structure:
     resp))
 
 (defun obsidian-apply-template (template-filename)
-  "Apply the template for the current buffer.
+  "Apply the template from TEMPLATE-FILENAME for the current buffer.
 Template vars: {{title}}, {{date}}, and {{time}}"
   (let* ((title (file-name-sans-extension (file-name-nondirectory buffer-file-name)))
          (date (format-time-string "%Y-%m-%d"))
@@ -901,11 +901,11 @@ Template vars: {{title}}, {{date}}, and {{time}}"
            '(metadata (annotation-function
                        lambda (str) (concat "\tlink text: "
                                        (cdr (assoc str obsidian--backlinks-alist)))))
-         (all-completions str (mapcar 'car obsidian--backlinks-alist) pred))))))
+         (all-completions str (mapcar #'car obsidian--backlinks-alist) pred))))))
 
 ;;;###autoload
 (defun obsidian--backlinks (&optional file)
-  "Select a backlink to this file and follow it."
+  "Return a backlinks hashmap for FILE."
   (interactive)
   (let* ((filepath (or file (buffer-file-name)))
          (filename (file-name-nondirectory filepath))
@@ -914,7 +914,7 @@ Template vars: {{title}}, {{date}}, and {{time}}"
 
 ;;;###autoload
 (defun obsidian-backlink-jump (&optional file)
-  "Select a backlink to this file and follow it."
+  "Select a backlink to this FILE and follow it."
   (interactive)
   (let ((linkmap (obsidian--backlinks)))
     (if (> (length (hash-table-keys linkmap)) 0)
@@ -973,7 +973,7 @@ _s_earch by expr.   _u_pdate tags/alises etc.
 ;;;###autoload
 (define-globalized-minor-mode global-obsidian-mode obsidian-mode obsidian-enable-minor-mode)
 
-(add-hook 'after-save-hook 'obsidian--update-on-save)
+(add-hook 'after-save-hook #'obsidian--update-on-save)
 
 ;; TODO: alternatives to polling:
 ;;       - how does lsp track files?
@@ -983,9 +983,9 @@ _s_earch by expr.   _u_pdate tags/alises etc.
   "Wait until Emacs is idle to call update."
   (if obsidian--debug-messages
       (message "Update timer buzz at %s" (format-time-string "%H:%M:%S")))
-  (run-with-idle-timer obsidian-update-idle-wait nil 'obsidian-update))
+  (run-with-idle-timer obsidian-update-idle-wait nil #'obsidian-update))
 
-(when obsidian--use-update-timer
+(when obsidian-use-update-timer
     (setq obsidian--update-timer
           (run-with-timer 0 obsidian-cache-expiry 'obsidian-idle-timer)))
 

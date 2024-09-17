@@ -36,7 +36,7 @@
 ;;; Code:
 
 ;; TODO: Implement this functionality
-(defcustom backlinks-position 'right
+(defcustom obsidian-backlinks-panel-position 'right
   "Position of treemacs buffer.
 
 Valid values are
@@ -46,7 +46,7 @@ Valid values are
                  (const right))
   :group 'backlinks-window)
 
-(defcustom backlinks-width 75
+(defcustom obsidian-backlinks-panel-width 75
   "Width of the backlinks window."
   :type 'integer
   :group 'backlinks-window)
@@ -57,16 +57,16 @@ Valid values are
   :group 'backlinks-window)
 
 ;; "%-33s%-33s\n"
-;; TODO: Does this update if backlinks-width is updated?
-(defcustom backlink-format
+;; TODO: Does this update if obsidian-backlinks-panel-width is updated?
+(defcustom obsidian-backlink-format
   (format "%%-%ds%%-%ds\n"
-          (ceiling backlinks-width 2)
-          (floor backlinks-width 2))
+          (ceiling obsidian-backlinks-panel-width 2)
+          (floor obsidian-backlinks-panel-width 2))
   "String format to use for displaying backlinks and link text."
   :type 'string
   :group 'backlinks-window)
 
-(defun link-with-props (k v)
+(defun obsidian--link-with-props (k v)
   "Create a propertized link and link text string from a link list v.
 
 k is the file name that contains the link.
@@ -74,7 +74,7 @@ v is the list object associated with the link as returned
 by markdown-link-at-pos."
   (let* ((rel-file (obsidian--file-relative-name k))
          (link-txt (nth 2 v))
-         (ptxt (format backlink-format
+         (ptxt (format obsidian-backlink-format
                        (propertize rel-file
                                    'face 'markdown-metadata-key-face
                                    'obsidian--file k
@@ -96,9 +96,9 @@ by markdown-link-at-pos."
             nil
           (progn
             (insert (propertize (format "# %s\n\n" file-path) 'face 'markdown-header-face))
-            (insert (propertize (format backlink-format "File Name" "Link Text") 'face 'markdown-header-face))
+            (insert (propertize (format obsidian-backlink-format "File Name" "Link Text") 'face 'markdown-header-face))
             (insert (propertize "-----------------------------------------------------\n" 'face 'markdown-hr-face))
-            (maphash 'link-with-props backlinks)
+            (maphash 'obsidian--link-with-props backlinks)
             (obsidian-mode t)
             (goto-line 5)))))))
 
@@ -106,7 +106,7 @@ by markdown-link-at-pos."
 ;; (add-hook 'buffer-list-update-hook #'obsidian-backlinks-other-window)
 ;; (remove-hook 'buffer-list-update-hook #'obsidian-backlinks-other-window)
 
-;;;###AUTOLOAD
+;;;###autoload
 (define-minor-mode obsidian-backlinks-mode
   "When active, open a buffer showing the backlinks for the current file.
 
@@ -154,7 +154,7 @@ in the linked file."
 
 ;; TODO: This docstring is taken right from org-indent-mode
 ;;;###autoload
-(define-minor-mode markdown-indent-mode
+(define-minor-mode obsidian-indent-mode
   "When active, indent text according to outline structure.
 
 Internally this works by adding `line-prefix' and `wrap-prefix'
@@ -164,7 +164,7 @@ The process is synchronous.  Though, initial indentation of
 buffer, which can take a few seconds on large buffers, is done
 during idle time."
   :global t
-  :lighter " MInd")
+  :lighter " OInd")
 
 
 (provide 'obsidian-ext)
