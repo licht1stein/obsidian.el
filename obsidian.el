@@ -47,6 +47,8 @@
 (require 'yaml)
 (require 'elgrep)
 
+(require 'obsidian-ext)
+
 ;; Inspired by RamdaJS's tap function
 (defun obsidian-tap (a f)
   "Evaluate (F A) for its side-effects but return A."
@@ -153,6 +155,8 @@ the mode, `toggle' toggles the state."
   :lighter " obs"
   :after-hook (obsidian-update)
   :keymap (make-sparse-keymap))
+
+(defvar obsidian--debug-messages nil)
 
 ;; TOOD: This doesn't produce the same tag rules as Obsidian Notes
 (defvar obsidian--tag-regex "#[[:alnum:]-_/+]+" "Regex pattern used to find tags in Obsidian files.")
@@ -504,7 +508,8 @@ If you need to run this manually, please report this as an issue on Github."
             (old-files (-difference cached ondisk)))
       (seq-map #'obsidian--add-file new-files)
       (seq-map #'obsidian--remove-file old-files)
-      (message "Obsidian cache updated at %s" (format-time-string "%H:%M:%S")))))
+      (if obsidian--debug-messages
+          (message "Obsidian cache updated at %s" (format-time-string "%H:%M:%S"))))))
 
 (defun obsidian-update-async ()
   "Asyncrhonous version of obsidian-update."
@@ -976,7 +981,8 @@ _s_earch by expr.   _u_pdate tags/alises etc.
 ;;         - search treemacs code for "add-hook-"
 (defun obsidian-idle-timer ()
   "Wait until Emacs is idle to call update."
-  (message "Update timer buzz at %s" (format-time-string "%H:%M:%S"))
+  (if obsidian--debug-messages
+      (message "Update timer buzz at %s" (format-time-string "%H:%M:%S")))
   (run-with-idle-timer obsidian-update-idle-wait nil 'obsidian-update))
 
 (when obsidian--use-update-timer

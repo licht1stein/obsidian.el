@@ -36,9 +36,43 @@
 
 ;;; Code:
 
-(setq backlink-format "%-33s%-33s\n")
+;; TODO: Implement this functionality
+(defcustom backlinks-position 'right
+  "Position of treemacs buffer.
+
+Valid values are
+ * `left',
+ * `right'"
+  :type '(choice (const left)
+                 (const right))
+  :group 'backlinks-window)
+
+(defcustom backlinks-width 75
+  "Width of the backlinks window."
+  :type 'integer
+  :group 'backlinks-window)
+
+(defcustom obsidian-backlinks-buffer-name "*backlinks*"
+  "Name to use for the obsidian backlinks buffer."
+  :type 'string
+  :group 'backlinks-window)
+
+;; "%-33s%-33s\n"
+;; TODO: Does this update if backlinks-width is updated?
+(defcustom backlink-format
+  (format "%%-%ds%%-%ds\n"
+          (ceiling backlinks-width 2)
+          (floor backlinks-width 2))
+  "String format to use for displaying backlinks and link text."
+  :type 'string
+  :group 'backlinks-window)
 
 (defun link-with-props (k v)
+  "Create a propertized link and link text string from a link list v.
+
+k is the file name that contains the link.
+v is the list object associated with the link as returned
+by markdown-link-at-pos."
   (let* ((rel-file (obsidian--file-relative-name k))
          (link-txt (nth 2 v))
          (ptxt (format backlink-format
@@ -47,26 +81,27 @@
                                    'obsidian--file k
                                    'obsidian--position (nth 0 v))
                        (propertize link-txt 'face 'markdown-metadata-value-face))))
-    ;; (message "%s: %s" k v)
     (insert ptxt)))
 
 (defun obsidian-backlinks-other-window ()
+  "Create a backlinks buffer for the current buffer and show in other window."
   (interactive)
-  (if (and obsidian-mode (obsidian--file-p))
-      (let* ((obs-name (file-name-sans-extension (buffer-name)))
-             (backlinks (obsidian--backlinks))
-             (base (file-name-base (buffer-file-name)))
-             (buffer "*backlinks*"))
-        (when backlinks
-          (with-current-buffer-window buffer
-              nil
-              nil
-            (progn
-              (insert (propertize (format "# %s\n\n" obs-name) 'face 'markdown-header-face))
-              (insert (propertize (format backlink-format "File Name" "Link Text") 'face 'markdown-header-face))
-              (insert (propertize "-----------------------------------------------------\n" 'face 'markdown-hr-face))
-              (maphash 'link-with-props backlinks)
-              (obsidian-mode t)))))))
+  (when (and obsidian-mode (obsidian--file-p))
+    (let* ((file-path (buffer-file-name))
+           (backlinks (obsidian--backlinks))
+           (base (file-name-base (buffer-file-name)))
+           (buffer "*backlinks*"))
+      (when backlinks
+        (with-current-buffer-window buffer
+            nil
+            nil
+          (progn
+            (insert (propertize (format "# %s\n\n" file-path) 'face 'markdown-header-face))
+            (insert (propertize (format backlink-format "File Name" "Link Text") 'face 'markdown-header-face))
+            (insert (propertize "-----------------------------------------------------\n" 'face 'markdown-hr-face))
+            (maphash 'link-with-props backlinks)
+            (obsidian-mode t)
+            (goto-line 5)))))))
 
 
 ;; (add-hook 'buffer-list-update-hook #'obsidian-backlinks-other-window)
@@ -86,11 +121,28 @@ in the linked file."
   (cond
    (obsidian-backlinks-mode
     ;; mode was turned on
+    (obsidian-backlinks-other-window)
     (add-hook 'buffer-list-update-hook #'obsidian-backlinks-other-window))
    (t
     ;; mode was turned off (or we refused to turn it on)
-    (remove-hook 'buffer-list-update-hook #'obsidian-backlinks-other-window))))
+    (remove-hook 'buffer-list-update-hook #'obsidian-backlinks-other-window)
+    (if (get-buffer obsidian-backlinks-buffer-name)
+        (kill-buffer obsidian-backlinks-buffer-name)))))
 
+
+
+(global-set-key (kbd "<f5>") (lambda () (interactive (message (format "%s" (buffer-list))))))
+(global-set-key (kbd "<f7>") (lambda () (interactive) (message "%s" (text-properties-at (point)))))
+(global-set-key (kbd "<f8>") 'obsidian-backlinks-mode)
+(global-set-key (kbd "<f6>") 'obsidian-backlinks-window)
+(global-set-key (kbd "<f6>") 'obsidian-backlinks-window)
+;; (define-key obsidian-mode-map (kbd "<f6>") 'obsidian-backlinks-window)
+
+
+
+;;
+;; TODO
+;;
 
 (defun obsidian-indent-indent-buffer ()
   "Add indentation properties to the accessible part of the buffer."
@@ -115,10 +167,6 @@ buffer, which can take a few seconds on large buffers, is done
 during idle time."
   :global t
   :lighter " MInd")
-
-
-(global-set-key (kbd "<f7>") (lambda () (interactive) (message "%s" (text-properties-at (point)))))
-(global-set-key (kbd "<f8>") 'obsidian-backlinks-mode)
 
 
 (provide 'obsidian-ext)
