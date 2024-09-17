@@ -130,11 +130,6 @@ in the linked file."
 
 
 
-(global-set-key (kbd "<f5>") (lambda () (interactive (message (format "%s" (buffer-list))))))
-(global-set-key (kbd "<f6>") 'obsidian-backlinks-window)
-(global-set-key (kbd "<f7>") (lambda () (interactive) (message "%s" (text-properties-at (point)))))
-(global-set-key (kbd "<f8>") 'obsidian-backlinks-mode)
-;; (define-key obsidian-mode-map (kbd "<f6>") 'obsidian-backlinks-window)
 
 
 
