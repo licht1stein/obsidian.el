@@ -752,7 +752,7 @@ If ARG is set, the file will be opened in other window."
         f
       (concat (file-relative-name (file-name-directory (buffer-file-name)) obsidian-directory) "/" f))))
 
-;; TODO: We're not using this fn anymore, but need to update tests
+;; TODO: We're not using this fn anymore, but need to update tests... yes we are...?
 (defun obsidian--wiki-link-p ()
   "Return non-nil if `point' is at a true wiki link.
 A true wiki link name matches `markdown-regex-wiki-link' but does
@@ -803,6 +803,22 @@ Opens markdown links in other window if ARG is non-nil.."
           obsidian-prepare-file-path
           (obsidian-find-point-in-file 0 arg)))))
 
+(defun obsidian-follow-backlink-at-point ()
+  "Open the file pointed to by the backlink and move to the linked location."
+  (let* ((fil (get-text-property (point) 'obsidian--file))
+         (pos (get-text-property (point) 'obsidian--position)))
+    (if obsidian--debug-messages
+        (message "Visiting file %s at position %s" fil pos))
+    (find-file-other-window fil)
+    (goto-char pos)))
+
+(defun obsidian--backlink-p ()
+  "Return true if thing at point represents a backlink, nil otherwise."
+  (and (get-text-property (point) 'obsidian--file)
+       (get-text-property (point) 'obsidian--position)
+       (get-text-property (point) 'obsidian--file)
+       (get-text-property (point) 'obsidian--position)))
+
 ;;;###autoload
 (defun obsidian-follow-link-at-point (&optional arg)
   "Follow thing at point if possible, such as a reference link or wiki link.
@@ -816,13 +832,8 @@ See `markdown-follow-link-at-point' and
          (obsidian-follow-markdown-link-at-point arg))
         ((obsidian--wiki-link-p)
          (obsidian-follow-wiki-link-at-point arg))
-        ((and (get-text-property (point) 'obsidian--file)
-              (get-text-property (point) 'obsidian--position))
-         (let* ((fil (get-text-property (point) 'obsidian--file))
-                (pos (get-text-property (point) 'obsidian--position)))
-           (message "Visiting file %s at position %s" fil pos)
-           (find-file-other-window fil)
-           (goto-char pos)))))
+        ((obsidian--backlink-p)
+         (obsidian-follow-backlink-at-point))))
 
 (defun obsidian--grep (re)
   "Find RE in the Obsidian vault."
