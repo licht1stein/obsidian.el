@@ -40,13 +40,17 @@
   "Position of treemacs buffer.
 
 Valid values are
- * `left',
- * `right'"
-  :type '(choice (const left)
-                 (const right))
+ * `right',
+ ;; * `top',
+ ;; * `bottom',
+ * `left'."
+  :type '(choice (const right)
+                 ;; (const top)
+                 ;; (const bottom)
+                 (const left))
   :group 'backlinks-window)
 
-(defcustom obsidian-backlinks-panel-width 75
+(defcustom obsidian-backlinks-panel-width 55
   "Width of the backlinks window."
   :type 'integer
   :group 'backlinks-window)
@@ -56,12 +60,20 @@ Valid values are
   :type 'string
   :group 'backlinks-window)
 
+(defcustom obsidian-backlinks-show-full-file-path t
+  "If t, show full path for linked file, otherwise only show file name."
+  :type 'boolean
+  :group 'backlinks-window)
+
 ;; "%-33s%-33s\n"
 ;; TODO: Does this update if obsidian-backlinks-panel-width is updated?
 (defcustom obsidian-backlink-format
   (format "%%-%ds%%-%ds\n"
-          (ceiling obsidian-backlinks-panel-width 2)
-          (floor obsidian-backlinks-panel-width 2))
+          (ceiling (* obsidian-backlinks-panel-width 0.4))
+          (floor (* obsidian-backlinks-panel-width 0.6))
+          ;; (ceiling obsidian-backlinks-panel-width 2)
+          ;; (floor obsidian-backlinks-panel-width 2)
+          )
   "String format to use for displaying backlinks and link text."
   :type 'string
   :group 'backlinks-window)
@@ -103,6 +115,81 @@ by markdown-link-at-pos."
             (goto-line 5)))))))
 
 
+(defun obsidian--get-local-backlinks-window (&optional frame)
+  "Return window if backlinks window is visible in FRAME, nil otherwise."
+  (let ((search-frame (or frame (selected-frame))))
+    (->> (window-list search-frame)
+         (--first (->> it  ;; TODO: why is 'it' not a void variable?
+                       (window-buffer)
+                       (buffer-name)
+                       (s-starts-with? obsidian-backlinks-buffer-name))))))
+
+(defun obsidian--get-all-backlinks-windows ()
+  "Return a list of all backlinks windows from all frames."
+  ;; TODO: This does not include windows in other eyebrowse windows
+  (-non-nil (seq-map #'obsidian--get-local-backlinks-window (frame-list))))
+
+(defun obsidian-backlinks-window ()
+  "Visit backlinks buffer if not currently active or return to previous."
+  (interactive)
+  (if obsidian-backlinks-mode
+      (if (equal (buffer-name) obsidian-backlinks-buffer-name)
+          ;; vs pop-to-buffer ?
+          (select-window (get-mru-window (selected-frame) nil :not-selected))
+        (if (get-buffer obsidian-backlinks-buffer-name)
+            (pop-to-buffer obsidian-backlinks-buffer-name)
+          (obsidian-backlinks-other-window)))
+    (obsidian-backlink-jump)))
+
+(defun obsidian--backlinks-set-width (width)
+  "Set the width of the backlinks buffer to WIDTH."
+  (unless (one-window-p)
+    ;; (with-current-buffer
+    ;; (get-buffer (buffer-name))
+    ;; obsidian-backlinks-bufer-name
+    ;; (save-current-buffer
+    (with-current-buffer-window obsidian-backlinks-buffer-name
+        nil
+        nil
+      (let ((window-size-fixed)
+            (w (max width window-safe-min-width)))
+        (cond
+         ((> (window-width) w)
+          (shrink-window-horizontally  (- (window-width) w)))
+         ((< (window-width) w)
+          (enlarge-window-horizontally (- w (window-width)))))))))
+
+(defun obsidian-backlinks-set-width (&optional arg)
+  "Select a new value for `obsidian-backlinks-panel-width'.
+With a prefix ARG simply reset the width of the treemacs window."
+  (interactive "P")
+  (unless arg
+    (setq obsidian-backlinks-panel-width
+          (->> obsidian-backlinks-panel-width
+               (format "New Width (current = %s): ")
+               (read-number))))
+  (obsidian--backlinks-set-width obsidian-backlinks-panel-width))
+
+
+;; TODO: See treemacs--popup-window in treemacs-core-utils.el
+;;       for an example of using display-buffer-in-side-window.
+(defun obsidian-open-backlinks-panel ()
+  "Create a dedicated panel to display the backlinks buffer."
+  (interactive)
+  (display-buffer-in-side-window
+   (get-buffer-create "*backlinks*")
+   `((side . ,obsidian-backlinks-panel-position)
+     (window-width . ,obsidian-backlinks-panel-width)
+     (slot . -1)  ;; because treemacs--popup-window included this
+     (dedicated . t))))
+
+(defun obsidian-close-backlinks-panel ()
+  "Close all windows used for dedicated backlinks panel."
+  (interactive)
+  ;; (delete-window (obsidian--get-local-backlinks-window))
+  (seq-map #'delete-window (obsidian--get-all-backlinks-windows)))
+
+
 ;; (add-hook 'buffer-list-update-hook #'obsidian-backlinks-other-window)
 ;; (remove-hook 'buffer-list-update-hook #'obsidian-backlinks-other-window)
 
@@ -120,13 +207,15 @@ in the linked file."
   (cond
    (obsidian-backlinks-mode
     ;; mode was turned on
-    (obsidian-backlinks-other-window)
+    (obsidian-open-backlinks-panel)
+    ;; (obsidian-backlinks-other-window)
     (add-hook 'buffer-list-update-hook #'obsidian-backlinks-other-window))
    (t
     ;; mode was turned off (or we refused to turn it on)
     (remove-hook 'buffer-list-update-hook #'obsidian-backlinks-other-window)
-    (if (get-buffer obsidian-backlinks-buffer-name)
-        (kill-buffer obsidian-backlinks-buffer-name)))))
+    ;; (if (get-buffer obsidian-backlinks-buffer-name)
+    ;;     (kill-buffer obsidian-backlinks-buffer-name))
+    (obsidian-close-backlinks-panel))))
 
 
 
