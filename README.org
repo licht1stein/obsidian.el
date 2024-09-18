@@ -333,7 +333,7 @@ In order to do these, a timer is start that periodically calls ~obsidian-update~
 
 The code snippet below createsa timer called =update-timer= that runs every 5 minutes (5 * 60 seconds) and then waits for a 5 second period when Emacs is idle before calling =obsidian-update=.
 
-Setting the value of ~obsidian--use-update-timer~ to nil will disable this timer.  If it's already running, call to ~obsidian-stop-update-timer~ will stop it.
+Setting the value of ~obsidian-use-update-timer~ to nil will disable this timer.  If it's already running, call to ~obsidian-stop-update-timer~ will stop it.
 
 *** obsidian--add-file
 One of the two main internal functions along with ~obsidian--remove-file~.
