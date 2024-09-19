@@ -207,7 +207,7 @@ FILE is the full path to an obsidian file."
           (insert (propertize "----------------------------------------------\n"
                               'face 'markdown-hr-face))
           (maphash 'obsidian--link-with-props backlinks)
-          (obsidian-mode t)
+          ;; (obsidian-mode t)
           (goto-line 4))))))
 
 ;;;###autoload
