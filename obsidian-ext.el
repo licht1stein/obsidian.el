@@ -68,12 +68,7 @@ Valid values are
 ;; "%-33s%-33s\n"
 ;; TODO: Does this update if obsidian-backlinks-panel-width is updated?
 (defcustom obsidian-backlink-format
-  (format "%%-%ds%%-%ds\n"
-          (ceiling (1- (* obsidian-backlinks-panel-width 0.45)))
-          (floor (1- (* obsidian-backlinks-panel-width 0.55)))
-          ;; (ceiling obsidian-backlinks-panel-width 2)
-          ;; (floor obsidian-backlinks-panel-width 2)
-          )
+  (format "%%-%ds%%s\n" (ceiling (* obsidian-backlinks-panel-width 0.45)))
   "String format to use for displaying backlinks and link text."
   :type 'string
   :group 'backlinks-window)
