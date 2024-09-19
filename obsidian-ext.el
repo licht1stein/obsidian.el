@@ -180,26 +180,35 @@ by markdown-link-at-pos."
                        (propertize link-txt 'face 'markdown-metadata-value-face))))
     (insert ptxt)))
 
+(defun obsidian--file-backlinks-displayed-p (&optional file)
+  "Return t if the backlinks panel is showing the backlinks for FILE, else nil.
+
+FILE is the full path to an obsidian file."
+  (let* ((file-path (or file (buffer-file-name)))
+         (bakbuf (get-buffer obsidian-backlinks-buffer-name))
+         (file-prop (get-text-property 1 'obsidian-mru-file bakbuf)))
+    (equal file-path file-prop)))
+
 (defun obsidian-populate-backlinks-buffer ()
   "Populate backlinks buffer with backlinks for current Obsidian file."
   (interactive)
-  (when (and obsidian-mode (obsidian--file-p))
+  (unless (obsidian--file-backlinks-displayed-p)
     (let* ((file-path (buffer-file-name))
            (vault-path (obsidian--file-relative-name file-path))
            (backlinks (obsidian--backlinks))
            (file-str (if obsidian-backlinks-show-vault-path
                          vault-path
                        (file-name-base file-path))))
-
       (with-current-buffer (get-buffer obsidian-backlinks-buffer-name)
         (erase-buffer)
         (insert (propertize (format "# %s\n\n" file-str)
-                            'face 'markdown-header-face))
+                            'face 'markdown-header-face
+                            'obsidian-mru-file file-path))
         (insert (propertize "----------------------------------------------\n"
                             'face 'markdown-hr-face))
         (maphash 'obsidian--link-with-props backlinks)
         (obsidian-mode t)
-        (goto-line 5)))))
+        (goto-line 4)))
 
 
 ;; (add-hook 'buffer-list-update-hook #'obsidian-populate-backlinks-buffer)
