@@ -208,11 +208,7 @@ FILE is the full path to an obsidian file."
                             'face 'markdown-hr-face))
         (maphash 'obsidian--link-with-props backlinks)
         (obsidian-mode t)
-        (goto-line 4)))
-
-
-;; (add-hook 'buffer-list-update-hook #'obsidian-populate-backlinks-buffer)
-;; (remove-hook 'buffer-list-update-hook #'obsidian-populate-backlinks-buffer)
+        (goto-line 4)))))
 
 ;;;###autoload
 (define-minor-mode obsidian-backlinks-mode
