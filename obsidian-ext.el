@@ -92,10 +92,9 @@ Valid values are
   (interactive)
   (if obsidian-backlinks-mode
       (if (equal (buffer-name) obsidian-backlinks-buffer-name)
-          ;; vs pop-to-buffer ?
           (select-window (get-mru-window (selected-frame) nil :not-selected))
-        (if (get-buffer obsidian-backlinks-buffer-name)
-            (pop-to-buffer obsidian-backlinks-buffer-name)
+        (if-let ((bakbuf (get-buffer obsidian-backlinks-buffer-name)))
+            (pop-to-buffer bakbuf)
           (obsidian-populate-backlinks-buffer)))
     (obsidian-backlink-jump)))
 
@@ -193,22 +192,23 @@ FILE is the full path to an obsidian file."
   "Populate backlinks buffer with backlinks for current Obsidian file."
   (interactive)
   (unless (obsidian--file-backlinks-displayed-p)
-    (let* ((file-path (buffer-file-name))
-           (vault-path (obsidian--file-relative-name file-path))
-           (backlinks (obsidian--backlinks))
-           (file-str (if obsidian-backlinks-show-vault-path
-                         vault-path
-                       (file-name-base file-path))))
-      (with-current-buffer (get-buffer obsidian-backlinks-buffer-name)
-        (erase-buffer)
-        (insert (propertize (format "# %s\n\n" file-str)
-                            'face 'markdown-header-face
-                            'obsidian-mru-file file-path))
-        (insert (propertize "----------------------------------------------\n"
-                            'face 'markdown-hr-face))
-        (maphash 'obsidian--link-with-props backlinks)
-        (obsidian-mode t)
-        (goto-line 4)))))
+    (when (and obsidian-mode (obsidian--file-p))
+      (let* ((file-path (buffer-file-name))
+             (vault-path (obsidian--file-relative-name file-path))
+             (backlinks (obsidian--backlinks))
+             (file-str (if obsidian-backlinks-show-vault-path
+                           vault-path
+                         (file-name-base file-path))))
+        (with-current-buffer (get-buffer obsidian-backlinks-buffer-name)
+          (erase-buffer)
+          (insert (propertize (format "# %s\n\n" file-str)
+                              'face 'markdown-header-face
+                              'obsidian-mru-file file-path))
+          (insert (propertize "----------------------------------------------\n"
+                              'face 'markdown-hr-face))
+          (maphash 'obsidian--link-with-props backlinks)
+          (obsidian-mode t)
+          (goto-line 4))))))
 
 ;;;###autoload
 (define-minor-mode obsidian-backlinks-mode
