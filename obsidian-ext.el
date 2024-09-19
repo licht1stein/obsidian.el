@@ -50,7 +50,7 @@ Valid values are
                  (const left))
   :group 'backlinks-window)
 
-(defcustom obsidian-backlinks-panel-width 55
+(defcustom obsidian-backlinks-panel-width 75
   "Width of the backlinks window."
   :type 'integer
   :group 'backlinks-window)
@@ -60,8 +60,8 @@ Valid values are
   :type 'string
   :group 'backlinks-window)
 
-(defcustom obsidian-backlinks-show-full-file-path t
-  "If t, show full path for linked file, otherwise only show file name."
+(defcustom obsidian-backlinks-show-vault-path t
+  "If t, show path relative to Obsidian vault, otherwise only show file name."
   :type 'boolean
   :group 'backlinks-window)
 
@@ -69,51 +69,14 @@ Valid values are
 ;; TODO: Does this update if obsidian-backlinks-panel-width is updated?
 (defcustom obsidian-backlink-format
   (format "%%-%ds%%-%ds\n"
-          (ceiling (* obsidian-backlinks-panel-width 0.4))
-          (floor (* obsidian-backlinks-panel-width 0.6))
+          (ceiling (1- (* obsidian-backlinks-panel-width 0.45)))
+          (floor (1- (* obsidian-backlinks-panel-width 0.55)))
           ;; (ceiling obsidian-backlinks-panel-width 2)
           ;; (floor obsidian-backlinks-panel-width 2)
           )
   "String format to use for displaying backlinks and link text."
   :type 'string
   :group 'backlinks-window)
-
-(defun obsidian--link-with-props (k v)
-  "Create a propertized link and link text string from a link list v.
-
-k is the file name that contains the link.
-v is the list object associated with the link as returned
-by markdown-link-at-pos."
-  (let* ((rel-file (obsidian--file-relative-name k))
-         (link-txt (nth 2 v))
-         (ptxt (format obsidian-backlink-format
-                       (propertize rel-file
-                                   'face 'markdown-metadata-key-face
-                                   'obsidian--file k
-                                   'obsidian--position (nth 0 v))
-                       (propertize link-txt 'face 'markdown-metadata-value-face))))
-    (insert ptxt)))
-
-(defun obsidian-backlinks-other-window ()
-  "Create a backlinks buffer for the current buffer and show in other window."
-  (interactive)
-  (when (and obsidian-mode (obsidian--file-p))
-    (let* ((file-path (buffer-file-name))
-           (backlinks (obsidian--backlinks))
-           (base (file-name-base (buffer-file-name)))
-           (buffer "*backlinks*"))
-      (when backlinks
-        (with-current-buffer-window buffer
-            nil
-            nil
-          (progn
-            (insert (propertize (format "# %s\n\n" file-path) 'face 'markdown-header-face))
-            (insert (propertize (format obsidian-backlink-format "File Name" "Link Text") 'face 'markdown-header-face))
-            (insert (propertize "-----------------------------------------------------\n" 'face 'markdown-hr-face))
-            (maphash 'obsidian--link-with-props backlinks)
-            (obsidian-mode t)
-            (goto-line 5)))))))
-
 
 (defun obsidian--get-local-backlinks-window (&optional frame)
   "Return window if backlinks window is visible in FRAME, nil otherwise."
@@ -138,7 +101,7 @@ by markdown-link-at-pos."
           (select-window (get-mru-window (selected-frame) nil :not-selected))
         (if (get-buffer obsidian-backlinks-buffer-name)
             (pop-to-buffer obsidian-backlinks-buffer-name)
-          (obsidian-backlinks-other-window)))
+          (obsidian-populate-backlinks-buffer)))
     (obsidian-backlink-jump)))
 
 (defun obsidian--backlinks-set-width (width)
@@ -170,7 +133,6 @@ With a prefix ARG simply reset the width of the treemacs window."
                (read-number))))
   (obsidian--backlinks-set-width obsidian-backlinks-panel-width))
 
-
 ;; TODO: See treemacs--popup-window in treemacs-core-utils.el
 ;;       for an example of using display-buffer-in-side-window.
 (defun obsidian-open-backlinks-panel ()
@@ -184,14 +146,69 @@ With a prefix ARG simply reset the width of the treemacs window."
      (dedicated . t))))
 
 (defun obsidian-close-backlinks-panel ()
-  "Close all windows used for dedicated backlinks panel."
+  "Close local window used for dedicated backlinks panel."
   (interactive)
-  ;; (delete-window (obsidian--get-local-backlinks-window))
+  (delete-window (obsidian--get-local-backlinks-window)))
+
+;; TODO: Doesn't work for hidden eyebrowse windows
+(defun obsidian-close-all-backlinks-panels ()
+  "Close all windows used for dedicated backlinks panels."
   (seq-map #'delete-window (obsidian--get-all-backlinks-windows)))
 
+(defun obsidian-toggle-backlinks-panel ()
+  "Create backlinks panel if it doesn't exist, close it otherwise.
 
-;; (add-hook 'buffer-list-update-hook #'obsidian-backlinks-other-window)
-;; (remove-hook 'buffer-list-update-hook #'obsidian-backlinks-other-window)
+Returns t if a panel was created, nil if closed."
+  (interactive)
+  (if (obsidian--get-local-backlinks-window)
+      (progn
+        (obsidian-close-backlinks-panel)
+        nil)
+    (progn
+      (obsidian-open-backlinks-panel)
+      (obsidian-backlinks-mode t)
+      t)))
+
+(defun obsidian--link-with-props (k v)
+  "Create a propertized link and link text string from K and V.
+
+K is the file name that contains the link.
+V is the list object associated with the link as returned
+by markdown-link-at-pos."
+  (let* ((rel-file (obsidian--file-relative-name k))
+         (link-txt (nth 2 v))
+         (ptxt (format obsidian-backlink-format
+                       (propertize rel-file
+                                   'face 'markdown-metadata-key-face
+                                   'obsidian--file k
+                                   'obsidian--position (nth 0 v))
+                       (propertize link-txt 'face 'markdown-metadata-value-face))))
+    (insert ptxt)))
+
+(defun obsidian-populate-backlinks-buffer ()
+  "Populate backlinks buffer with backlinks for current Obsidian file."
+  (interactive)
+  (when (and obsidian-mode (obsidian--file-p))
+    (let* ((file-path (buffer-file-name))
+           (vault-path (obsidian--file-relative-name file-path))
+           (backlinks (obsidian--backlinks))
+           (file-str (if obsidian-backlinks-show-vault-path
+                         vault-path
+                       (file-name-base file-path))))
+
+      (with-current-buffer (get-buffer obsidian-backlinks-buffer-name)
+        (erase-buffer)
+        (insert (propertize (format "# %s\n\n" file-str)
+                            'face 'markdown-header-face))
+        (insert (propertize "----------------------------------------------\n"
+                            'face 'markdown-hr-face))
+        (maphash 'obsidian--link-with-props backlinks)
+        (obsidian-mode t)
+        (goto-line 5)))))
+
+
+;; (add-hook 'buffer-list-update-hook #'obsidian-populate-backlinks-buffer)
+;; (remove-hook 'buffer-list-update-hook #'obsidian-populate-backlinks-buffer)
 
 ;;;###autoload
 (define-minor-mode obsidian-backlinks-mode
@@ -208,14 +225,12 @@ in the linked file."
    (obsidian-backlinks-mode
     ;; mode was turned on
     (obsidian-open-backlinks-panel)
-    ;; (obsidian-backlinks-other-window)
-    (add-hook 'buffer-list-update-hook #'obsidian-backlinks-other-window))
+    (obsidian-populate-backlinks-buffer)
+    (add-hook 'buffer-list-update-hook #'obsidian-populate-backlinks-buffer))
    (t
     ;; mode was turned off (or we refused to turn it on)
-    (remove-hook 'buffer-list-update-hook #'obsidian-backlinks-other-window)
-    ;; (if (get-buffer obsidian-backlinks-buffer-name)
-    ;;     (kill-buffer obsidian-backlinks-buffer-name))
-    (obsidian-close-backlinks-panel))))
+    (remove-hook 'buffer-list-update-hook #'obsidian-populate-backlinks-buffer)
+    (obsidian-close-all-backlinks-panels))))
 
 
 
