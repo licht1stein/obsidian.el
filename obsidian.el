@@ -499,8 +499,6 @@ If you need to run this manually, please report this as an issue on Github."
 (defun obsidian-populate-cache ()
   "Create an empty cache and populate cache with files, tags, aliases, and links."
   (interactive)
-  ;; TODO: Once the cache is initially populated, we'd like a better way to update
-  ;;       than a full recreation
   (-let* ((obs-files (obsidian--find-all-files))
           (file-count (length obs-files)))
     (setq obsidian--vault-cache (make-hash-table :test 'equal :size file-count))
@@ -638,7 +636,7 @@ Note is created in the `obsidian-daily-notes-directory' if set, or in
                  obsidian-daily-note-template))
       (save-buffer))))
 
-;; TODO: allow links to subsections of a note
+;; TODO: allow links to subsections of a note like we have with backlinks
 ;;;###autoload
 (defun obsidian-jump ()
   "Jump to Obsidian note."

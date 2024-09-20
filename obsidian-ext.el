@@ -40,16 +40,6 @@
 
 ;; TODO: Need a function to find and (help) fix *conflicte* files
 
-;; TODO: Write a function to display a list of all files that have no backlinks
-;;       - the list shoud be list to easily visit
-;; TODO: Create another function showing a list of all files with their
-;;       backlinks counts, ordered by number of backlinks
-
-;; TODO: After visiting a link in another window, I'd like a way to
-;;       1) return to the previous buffer in that other window and
-;;       2) return my point to the initial file being visited.
-;;       I can do this now with M-` C-x ; but maybe M-, would make more sense?
-
 (defcustom obsidian-backlinks-panel-position 'right
   "Position of treemacs buffer.
 
