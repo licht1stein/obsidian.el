@@ -515,7 +515,7 @@ If you need to run this manually, please report this as an issue on Github."
   (interactive)
   (async-start
    (lambda () (function obsidian-update))
-   (lambda (_) (message "Obsidian cache asynchronously reset"))))
+   (lambda (_) (message "Obsidian cache asynchronously updated"))))
 
 (defun obsidian--format-link (file-path &optional toggle)
   "Format link from FILE-PATH based on `obsidian-links-use-vault-path'.
@@ -692,7 +692,7 @@ Note is created in the `obsidian-daily-notes-directory' if set, or in
     (obsidian--remove-file old-file-path)
     (message "Moved to %s" new-file-path)))
 
-(defun obsidian-prepare-file-path (s)
+(defun obsidian--prepare-file-path (s)
   "Replace %20 with spaces in file path.
 Argument S relative file name to clean and convert to absolute."
   (let* ((cleaned-name (s-replace "%20" " " s)))
@@ -787,7 +787,7 @@ From 'filename#section' keep only the 'filename'."
     (if (s-contains-p ":" url)
         (browse-url url)
       (-> url
-          obsidian-prepare-file-path
+          obsidian--prepare-file-path
           obsidian-wiki->normal
           (obsidian-tap #'message)
           (obsidian-find-point-in-file 0 arg)))))
@@ -800,7 +800,7 @@ Opens markdown links in other window if ARG is non-nil.."
     (if (s-contains-p ":" normalized)
         (browse-url normalized)
       (-> normalized
-          obsidian-prepare-file-path
+          obsidian--prepare-file-path
           (obsidian-find-point-in-file 0 arg)))))
 
 (defun obsidian-follow-backlink-at-point ()
@@ -815,8 +815,6 @@ Opens markdown links in other window if ARG is non-nil.."
 (defun obsidian--backlink-p ()
   "Return true if thing at point represents a backlink, nil otherwise."
   (and (get-text-property (point) 'obsidian--file)
-       (get-text-property (point) 'obsidian--position)
-       (get-text-property (point) 'obsidian--file)
        (get-text-property (point) 'obsidian--position)))
 
 ;;;###autoload
