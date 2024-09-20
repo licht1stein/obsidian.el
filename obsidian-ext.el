@@ -35,6 +35,11 @@
 
 ;;; Code:
 
+;; TODO: markdown-next-link does not trigger markdown-eldoc-function
+;;       - this would show the hidden link in the echo area
+
+;; TODO: Need a function to find and (help) fix *conflicte* files
+
 ;; TODO: Implement this functionality
 (defcustom obsidian-backlinks-panel-position 'right
   "Position of treemacs buffer.
@@ -207,8 +212,11 @@ FILE is the full path to an obsidian file."
           (insert (propertize "----------------------------------------------\n"
                               'face 'markdown-hr-face))
           (maphash 'obsidian--link-with-props backlinks)
-          ;; (obsidian-mode t)
-          (goto-line 4))))))
+          (obsidian-mode t)  ;; Allows for using keybindings for obsidian-open-link
+          (goto-line 4)
+          (set-window-point
+           (get-buffer-window obsidian-backlinks-buffer-name)
+           (point)))))))
 
 ;;;###autoload
 (define-minor-mode obsidian-backlinks-mode
