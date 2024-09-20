@@ -205,6 +205,24 @@ Each link list contains the following as returned by markdown-link-at-pos:
   (set-text-properties 0 (length s) nil s)
   s)
 
+(defun obsidian--sort-map-by-values (mm)
+  "Return the hashmap MM sorted by the values.
+
+The function is taken from xahlee:
+- http://xahlee.info/emacs/emacs/elisp_sort_hash_table.html"
+  (let* ((resp (make-hash-table :test 'equal
+                                :size (length (hash-table-keys mm))))
+         (xlist (let ((yy nil))
+                  (maphash
+                   (lambda (k v)
+                     (push (list k v) yy))
+                   mm)
+                  yy))
+         (xlist (sort xlist (lambda (a b) (string< (car a) (car b)))))
+         (xlist (sort xlist (lambda (a b) (< (nth 1 a) (nth 1 b))))))
+    (seq-map (lambda (ii) (puthash (nth 0 ii) (nth 1 ii) resp)) xlist)
+    resp))
+
 (defun obsidian--set-tags (file tag-list)
   "Set list TAG-LIST to FILE in files cache."
   (when tag-list
