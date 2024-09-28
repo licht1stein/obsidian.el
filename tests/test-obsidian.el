@@ -10,6 +10,7 @@
 (defvar obsidian--test-number-of-notes 11)
 (defvar obsidian--test-number-of-visible-notes 9)
 (defvar obsidian--test-visibility-cfg obsidian-include-hidden-files)
+(defvar obsidian--test-number-of-visible-directories 2)
 
 (describe "check path setting"
   (before-all (obsidian-specify-path obsidian--test-dir))
@@ -71,6 +72,13 @@
 
   (it "check file count"
     (expect (length (obsidian-list-all-files)) :to-equal obsidian--test-number-of-notes)))
+
+(describe "obsidian-list-all-directories"
+  (before-all (obsidian-specify-path obsidian--test-dir))
+  (after-all (obsidian-specify-path obsidian--test--original-dir))
+
+  (it "check directory count"
+    (expect (length (obsidian-list-all-directories)) :to-equal obsidian--test-number-of-visible-directories)))
 
 (describe "obsidian-find-tags"
   (before-all (obsidian-specify-path obsidian--test-dir))
@@ -153,7 +161,17 @@ key4:
 
   (it "check that front-matter is ignored if not at the top of file"
     (expect (obsidian-find-yaml-front-matter obsidian--test-incorret-front-matter--not-start-of-file)
-	    :to-equal nil)))
+	    :to-equal nil))
+
+  (it "check that front-matter in vault is retrieved correctly"
+    (let ((alias-list (obsidian--all-aliases)))
+      (expect (-count #'identity alias-list) :to-equal 6)
+      (expect (seq-contains-p alias-list "2") :to-equal t)
+      (expect (seq-contains-p alias-list "2-sub-alias") :to-equal t)
+      (expect (seq-contains-p alias-list "complex file name") :to-equal t)
+      (expect (seq-contains-p alias-list "alias-one-off") :to-equal t)
+      (expect (seq-contains-p alias-list "alias1") :to-equal t)
+      (expect (seq-contains-p alias-list "alias2") :to-equal t))))
 
 (describe "obsidian--link-p"
   (it "non link"
