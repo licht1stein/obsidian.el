@@ -409,9 +409,10 @@ markdown-link-at-pos:
                                 ;; for the current tag in the response hash table
                                 (if-let ((file-list (gethash tag obsidian--tags-map)))
                                     (progn
-                                      (add-to-list 'file-list file)
+                                      (add-to-list 'file-list (obsidian--file-relative-name file))
                                       (puthash tag file-list obsidian--tags-map))
-                                  (puthash tag (list file) obsidian--tags-map))))
+                                  (puthash tag (list (obsidian--file-relative-name file))
+                                           obsidian--tags-map))))
                             (gethash 'tags obsidian--file-metadata))))
                obsidian--vault-cache)
       (maphash (lambda (k v)
