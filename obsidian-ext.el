@@ -82,6 +82,39 @@ Valid values are
                        (buffer-name)
                        (s-starts-with? obsidian-backlinks-buffer-name))))))
 
+
+
+(defun obsidian--backlinks-window-list (eyebrowse-config)
+  (get-buffer-window-list)
+  )
+
+(defun obsidian--eyebrowse-configs ()
+  "Return a list of window configs used by eyebrowse.
+
+The function eyebrowse-renumber-window-configs provided the logic.
+
+OTHER POSSIBILITIES:
+  - eyebrowse--walk-window-config
+  - eyebrowse--get 'window-configs
+  - eyebrowse--set 'window-configs <modified-configs>
+
+"
+  (when eyebrowse-mode
+    (mapcar 'car (eyebrowse--get 'window-configs))))
+
+;; (seq-map (lambda (cfg) (get-buffer-window-list "*backlinks*" nil t)) (eyebrowse--get 'window-configs))
+;; eyebrowse--set
+
+;; (message "%s" (eyebrowse--get 'window-configs))
+
+;; (let ((cfg (car (eyebrowse--get 'window-configs))))
+;;   (message "%s" (type-of cfg))
+;;   (message "%s" (length cfg))
+;;   (eyebrowse--walk-window-config cfg (lambda (w) (message "Type of w: %s" w)))
+;;   )
+
+
+
 (defun obsidian--get-all-backlinks-windows ()
   "Return a list of all backlinks windows from all frames."
   ;; TODO: This does not include windows in other eyebrowse windows
@@ -317,20 +350,6 @@ in the linked file."
     (org-indent-remove-properties (point-min) (point-max))
     (org-indent-add-properties (point-min) (point-max))
     (message "Indentation of buffer set.")))
-
-;; TODO: This docstring is taken right from org-indent-mode
-;;;###autoload
-(define-minor-mode obsidian-indent-mode
-  "When active, indent text according to outline structure.
-
-Internally this works by adding `line-prefix' and `wrap-prefix'
-properties, after each buffer modification, on the modified zone.
-
-The process is synchronous.  Though, initial indentation of
-buffer, which can take a few seconds on large buffers, is done
-during idle time."
-  :global t
-  :lighter " OInd")
 
 
 (provide 'obsidian-ext)
