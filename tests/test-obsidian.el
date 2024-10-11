@@ -120,7 +120,8 @@ key4:
 - six
 ---
 ")
-(defvar obsidian--test-incorrect-front-matter--not-start-of-file (s-concat "# Header\n" obsidian--test-correct-front-matter))
+(defvar obsidian--test-incorrect-front-matter--not-start-of-file
+  (s-concat "# Header\n" obsidian--test-correct-front-matter))
 
 (describe "obsidian-aliases"
   (before-all (progn
@@ -135,8 +136,8 @@ key4:
                  (gethash 'aliases)) :to-equal ["AI" "Artificial Intelligence"]))
 
   (it "check that front-matter is ignored if not at the top of file"
-    (expect (->> obsidian--test-incorrect-front-matter--not-start-of-file
-                 obsidian--find-yaml-front-matter-in-string) :to-equal nil))
+    (expect (obsidian-find-yaml-front-matter
+             obsidian--test-incorret-front-matter--not-start-of-file) :to-equal nil))
 
   (it "check that front-matter in vault is correct"
     (let ((alias-list (obsidian-aliases)))
