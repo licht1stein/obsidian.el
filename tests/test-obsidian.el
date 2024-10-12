@@ -136,8 +136,8 @@ key4:
                  (gethash 'aliases)) :to-equal ["AI" "Artificial Intelligence"]))
 
   (it "check that front-matter is ignored if not at the top of file"
-    (expect (obsidian-find-yaml-front-matter
-             obsidian--test-incorret-front-matter--not-start-of-file) :to-equal nil))
+    (expect (obsidian--find-yaml-front-matter-in-string
+             obsidian--test-incorrect-front-matter--not-start-of-file) :to-equal nil))
 
   (it "check that front-matter in vault is correct"
     (let ((alias-list (obsidian-aliases)))
