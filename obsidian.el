@@ -1036,6 +1036,12 @@ Valid values are
   ;; Functions of interest:
   ;; - get-buffer-window-list
   ;; - window-state-get
+  ;; - window-state-put
+  ;; - memq
+  ;; - memql
+
+  ;; hc vs vc in window.el (window-state-get and window-state-put)
+  ;; - horizoncal configuration vs vertical configuration?
 
   (defun obsidian-tree-assoc (key tree)
     "Recursively search a nested cons tree for KEY.
@@ -1045,14 +1051,9 @@ Taken from StackOverflow answer: https://stackoverflow.com/a/11922036"
         (if (eql x key) tree
           (or (obsidian-tree-assoc key x) (obsidian-tree-assoc key y))))))
 
-  (defun obsidian--eyebrowse-close-backlinks-panels (cfg)
-    "Close any backlinks panel in eyebrowse window config CFG."
-    (eyebrowse--walk-window-config
-     cfg
-     (lambda (w) (if-let ((buf (obsidian-tree-assoc 'buffer w)))
-                (when (equal (cadr buf) obsidian-backlinks-buffer-name)
-                  (message "Found a backlinks buffer: %s" buf))))))
+  ;; TODO: Need to look through all frames for eyebrowse configs
 
+  ;; TODO: Is this a useful function?
   (defun obsidian--eyebrowse-active-configs ()
     "Return a list of active eyebrowse window configs."
     (if eyebrowse-mode
@@ -1061,14 +1062,58 @@ Taken from StackOverflow answer: https://stackoverflow.com/a/11922036"
           configs)
       (message "Not in eyebrowse mode")))
 
+  ;; TODO: How will this work for multiple frames?
+  (defun obsidian--eyebrowse-other-slots ()
+    "Return a list of active eyebrowse config slots other than the current one."
+    (let ((ebno (eyebrowse--get 'current-slot))
+          (cfgs (obsidian--eyebrowse-active-configs)))
+      (seq-remove (lambda (item) (equal item ebno)) cfgs)))
+
+  (defun obsidian--eyebrowse-close-backlinks-panels (cfg)
+    "Close any backlinks panel in eyebrowse window config CFG."
+    (eyebrowse--walk-window-config
+     cfg
+     (lambda (w) (if-let ((buf (obsidian-tree-assoc 'buffer w)))
+                (when (equal (cadr buf) obsidian-backlinks-buffer-name)
+                  (message "Found a backlinks buffer in cfg:\n%s" (pp cfg))
+                  (message "Found a backlinks buffer w:\n%s" (pp w))
+                  (message "Found a backlinks buffer:\n%s" (pp buf)))))))
+
   (defun obsidian-eyebrowse-close-backlinks-panels ()
     "Close backlinks panels found in any active eyebrowse window configuration."
     (interactive)
     (if eyebrowse-mode
-        (let ((configs  (eyebrowse--get 'window-configs)))
+        (let ((configs (eyebrowse--get 'window-configs)))
           (seq-map #'obsidian--eyebrowse-close-backlinks-panels configs))
       (message "Not in eyebrowse mode")))
 
+
+  (defun do-stuff ()
+    (interactive)
+    (let* ((cfgs (eyebrowse--get 'window-configs))
+           (cfg (assoc 2 cfgs)))
+
+      ;; (message "cfg before:\n%s" (pp cfg))
+      (print (format "cfg before:\n%s" (pp cfg)))
+
+      ;; cadr - car of the cdr
+      ;; caar - car of the car
+      ;; caddr - car of the cdr of the cdr
+      ;; caaaar - car of the car of the car of the car
+
+      ;; (assq-delete-all 'leaf (cadr cfg))
+      (assoc-delete-all 'leaf (cadr cfg)
+                        (lambda (key val)
+                          (message "key: %s" key)
+                          (message "val: %s" val)
+                          (equal key obsidian-backlinks-buffer-name)
+                          ;; (equal key val)
+                          ))
+
+      ;; (message "cfg after\n%s" (pp cfg))
+      (print (format "cfg after\n%s" (pp cfg)))
+
+      ))
 
 
   )
