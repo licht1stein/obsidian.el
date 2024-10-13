@@ -1031,32 +1031,47 @@ Valid values are
                        (s-starts-with? obsidian-backlinks-buffer-name))))))
 
 
+(with-eval-after-load 'eyebrowse
 
-;; (defun obsidian--backlinks-window-list (eyebrowse-config)
-;;   (get-buffer-window-list))
+  ;; Functions of interest:
+  ;; - get-buffer-window-list
+  ;; - window-state-get
 
-;; (defun obsidian--eyebrowse-configs ()
-;;   "Return a list of window configs used by eyebrowse.
+  (defun obsidian-tree-assoc (key tree)
+    "Recursively search a nested cons tree for KEY.
+Taken from StackOverflow answer: https://stackoverflow.com/a/11922036"
+    (when (consp tree)
+      (cl-destructuring-bind (x . y)  tree
+        (if (eql x key) tree
+          (or (obsidian-tree-assoc key x) (obsidian-tree-assoc key y))))))
 
-;; The function eyebrowse-renumber-window-configs provided the logic."
-;;   ;; OTHER POSSIBILITIES:
-;;   ;;   - eyebrowse--walk-window-config
-;;   ;;   - eyebrowse--get 'window-configs
-;;   ;;   - eyebrowse--set 'window-configs <modified-configs>
-;;   (when eyebrowse-mode
-;;     (mapcar 'car (eyebrowse--get 'window-configs))))
+  (defun obsidian--eyebrowse-close-backlinks-panels (cfg)
+    "Close any backlinks panel in eyebrowse window config CFG."
+    (eyebrowse--walk-window-config
+     cfg
+     (lambda (w) (if-let ((buf (obsidian-tree-assoc 'buffer w)))
+                (when (equal (cadr buf) obsidian-backlinks-buffer-name)
+                  (message "Found a backlinks buffer: %s" buf))))))
 
-;; (seq-map (lambda (cfg) (get-buffer-window-list "*backlinks*" nil t)) (eyebrowse--get 'window-configs))
-;; eyebrowse--set
+  (defun obsidian--eyebrowse-active-configs ()
+    "Return a list of active eyebrowse window configs."
+    (if eyebrowse-mode
+        (let ((configs (mapcar 'car (eyebrowse--get 'window-configs))))
+          (message "Configs: %s" configs)
+          configs)
+      (message "Not in eyebrowse mode")))
 
-;; (message "%s" (eyebrowse--get 'window-configs))
+  (defun obsidian-eyebrowse-close-backlinks-panels ()
+    "Close backlinks panels found in any active eyebrowse window configuration."
+    (interactive)
+    (if eyebrowse-mode
+        (let ((configs  (eyebrowse--get 'window-configs)))
+          (seq-map #'obsidian--eyebrowse-close-backlinks-panels configs))
+      (message "Not in eyebrowse mode")))
 
-;; (let ((cfg (car (eyebrowse--get 'window-configs))))
-;;   (message "%s" (type-of cfg))
-;;   (message "%s" (length cfg))
-;;   (eyebrowse--walk-window-config cfg (lambda (w) (message "Type of w: %s" w)))
-;;   )
 
+
+  )
 
 
 (defun obsidian--get-all-backlinks-windows ()
