@@ -1040,6 +1040,13 @@ Valid values are
   ;; - memq
   ;; - memql
 
+  ;; setq
+  ;; setf
+  ;; setcar
+  ;; setcdr
+
+  ;; delete-window
+
   ;; hc vs vc in window.el (window-state-get and window-state-put)
   ;; - horizoncal configuration vs vertical configuration?
 
@@ -1087,33 +1094,39 @@ Taken from StackOverflow answer: https://stackoverflow.com/a/11922036"
           (seq-map #'obsidian--eyebrowse-close-backlinks-panels configs))
       (message "Not in eyebrowse mode")))
 
+  (defun obsidian--backlinks-leaf-p (obj)
+    (when (and (consp obj) (consp (cdr obj)))
+      (when (equal (car obj) 'leaf)
+        (when (assoc 'buffer obj)
+          (when (equal obsidian-backlinks-buffer-name
+                       (nth 1 (assoc 'buffer obj)))
+            t)))))
 
-  (defun do-stuff ()
+  (defun obsidian--close-backlinks-windows (slot)
+    (when (numberp slot)
+      (message "Processing for slot %d" slot)
+      (let* ((cfgs (eyebrowse--get 'window-configs))
+             (cfg (assoc slot cfgs))
+             (obj (cadr cfg))
+             (tmp (seq-remove #'obsidian--backlinks-leaf-p obj)))
+        (if (equal obj tmp)
+            (message "No backlinks closed for config %d:\n%s" slot (pp cfg))
+          (progn
+            (message "Backlinks closed in config %d" slot)
+            (let ((newcfg (list slot tmp nil)))
+              ;; (message "Original config:\n%s" (pp cfg))
+              ;; (message "Modified config:\n%s" (pp newcfg))
+              (eyebrowse--update-window-config-element newcfg)))))))
+
+  (defun obsidian-close-all-backlinks-windows ()
+    "Closes all backlinks buffer in other eyebrowse configs.
+
+The backlinks window in the current eyebrowse config will not be closed.
+The buffer is currently replaced with a different buffer; ideally, the
+window would be closed but this functionality is not yet working."
     (interactive)
-    (let* ((cfgs (eyebrowse--get 'window-configs))
-           (cfg (assoc 2 cfgs)))
-
-      ;; (message "cfg before:\n%s" (pp cfg))
-      (print (format "cfg before:\n%s" (pp cfg)))
-
-      ;; cadr - car of the cdr
-      ;; caar - car of the car
-      ;; caddr - car of the cdr of the cdr
-      ;; caaaar - car of the car of the car of the car
-
-      ;; (assq-delete-all 'leaf (cadr cfg))
-      (assoc-delete-all 'leaf (cadr cfg)
-                        (lambda (key val)
-                          (message "key: %s" key)
-                          (message "val: %s" val)
-                          (equal key obsidian-backlinks-buffer-name)
-                          ;; (equal key val)
-                          ))
-
-      ;; (message "cfg after\n%s" (pp cfg))
-      (print (format "cfg after\n%s" (pp cfg)))
-
-      ))
+    (seq-map #'obsidian--close-backlinks-windows
+             (obsidian--eyebrowse-other-slots)))
 
 
   )
