@@ -1118,7 +1118,6 @@ Inspired by `treemacs-get-local-window' in `treemacs-scope.el'."
                        (buffer-name)
                        (s-starts-with? obsidian-backlinks-buffer-name))))))
 
-;; TODO: This does not include windows in other eyebrowse windows
 (defun obsidian--get-all-backlinks-windows ()
   "Return a list of all backlinks windows from all frames."
   (-non-nil (seq-map #'obsidian--get-local-backlinks-window (frame-list))))
@@ -1188,10 +1187,10 @@ for an example of using `display-buffer-in-side-window'."
   (interactive)
   (delete-window (obsidian--get-local-backlinks-window)))
 
-;; TODO: Doesn't work for non-active eyebrowse configs
 (defun obsidian-close-all-backlinks-panels ()
   "Close all windows used for dedicated backlinks panels."
-  (seq-map #'delete-window (obsidian--get-all-backlinks-windows)))
+  (seq-map #'delete-window (obsidian--get-all-backlinks-windows))
+  (balance-windows))
 
 (defun obsidian-toggle-backlinks-panel ()
   "Create backlinks panel if it doesn't exist, close it otherwise.
@@ -1338,11 +1337,15 @@ in the linked file."
     ;; mode was turned on
     (obsidian-open-backlinks-panel)
     (obsidian--populate-backlinks-buffer)
-    (add-hook 'buffer-list-update-hook #'obsidian--populate-backlinks-buffer))
+    (add-hook 'buffer-list-update-hook #'obsidian--populate-backlinks-buffer)
+    (if (boundp 'eyebrowse-post-window-switch-hook)
+        (remove-hook 'eyebrowse-post-window-switch-hook #'obsidian-close-all-backlinks-panels)))
    (t
     ;; mode was turned off (or we refused to turn it on)
     (remove-hook 'buffer-list-update-hook #'obsidian--populate-backlinks-buffer)
-    (obsidian-close-all-backlinks-panels))))
+    (obsidian-close-all-backlinks-panels)
+    (if (boundp 'eyebrowse-post-window-switch-hook)
+        (add-hook 'eyebrowse-post-window-switch-hook #'obsidian-close-all-backlinks-panels)))))
 
 
 

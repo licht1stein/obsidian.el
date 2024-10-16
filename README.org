@@ -218,13 +218,6 @@ If ~obsidian-backlinks-mode~ is active when ~obsidian-backlink-jump~ is called, 
 
 Another useful command is ~obsidian-backlinks-window~ which will move your cursor back and forth between the current note and the backlinks window.
 
-NOTE: Using window configuration packages such as Eyebrowser or Perspective may prevent all of the backlinks panels from closing
-
-**** Window configuration packages
-***** Eyebrowse
-
-***** Perspective
-
 ** Inserting links
 [[./resources/insert-link.png]]
 
