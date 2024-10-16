@@ -71,7 +71,9 @@
   (after-all (obsidian-specify-path obsidian--test--original-dir))
 
   (it "find tags in string"
-    (expect (length (obsidian--find-tags-in-string "#foo bar #spam #bar-spam #spam_bar #foo+spam #foo=bar not tags")) :to-equal 6)))
+    (expect (length (obsidian--find-tags-in-string
+                     "#foo bar #spam #bar-spam #spam_bar #foo+spam #foo=bar not tags #123 #+invalidtag"))
+            :to-equal 6)))
 
 (describe "obsidian-list-visible-tags"
   (before-all (progn
@@ -167,7 +169,7 @@ key4:
   (after-all (obsidian-specify-path obsidian--test--original-dir))
 
   (it "1.md"
-    (let* ((linkmap (obsidian-file-links "1.md"))
+    (let* ((linkmap (obsidian-backlinks "1.md"))
            (file1 (car (hash-table-keys linkmap))))
       (expect (length (hash-table-keys linkmap)) :to-equal 1)
       (expect (file-name-nondirectory file1) :to-equal "2.md"))))

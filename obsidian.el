@@ -107,7 +107,7 @@ If it is true, a timer will be created using the values of
   :group 'obsidian)
 
 (defcustom obsidian-update-idle-wait 5
-  "The number of seconds to wait for Emacs to be idle after cache expiry before running update function."
+  "Seconds to wait after cache expiry for Emacs to be idle before running update."
   :type 'integer
   :group 'obsidian)
 
@@ -151,10 +151,31 @@ the mode, `toggle' toggles the state."
   :after-hook (obsidian-update)
   :keymap (make-sparse-keymap))
 
-(defvar obsidian--debug-messages nil)
+(defvar obsidian--debug-messages t "Additional messages will be displayed for debugging.")
 
 ;; TOOD: This doesn't produce the same tag rules as Obsidian Notes
-(defvar obsidian--tag-regex "#[[:alnum:]-_/+]+" "Regex pattern used to find tags in Obsidian files.")
+;; (defvar obsidian--tag-regex "#[[:alnum:]-_/+]+" "Regex pattern used to find tags in Obsidian files.")
+
+(defvar obsidian--tag-regex
+  "\\(?:\\`\\|[[:space:]]\\)\\#\\(?:[A-Za-z_/][-A-Za-z0-9_/]*[A-Za-z_/][-A-Za-z0-9_/]*\\)"
+  "Regex pattern used to find tags in Obsidian files.
+
+Here's a breakdown of the pattern:
+
+- `\\(?:\\`\\|[[:space:]]\\)`: Matches the beginning of the document (`\\``) or any
+whitespace character (`[[:space:]]`). This ensures that the tag either starts at the
+beginning of the document or is preceded by a whitespace character.
+
+- `\\(#`: Matches the starting hashtag of the tag and begins a capturing group for the tag itself.
+
+- `\\(?:[A-Za-z_/][-A-Za-z0-9_/]*[A-Za-z_/][-A-Za-z0-9_/]*\\)`: This ensures that
+the tag has at least one non-numerical character (A-Z) and allows the use of letters,
+numbers, underscores, hyphens, and forward slashes. The first and last
+segments (`[A-Za-z_/]`) ensure that the tag contains at least one non-numeric
+character outside the start and end. Numbers will not be allowed as the only characters of a tag.
+
+- `[#)]`: Ends the capturing group for the whole tag that starts with a `#`. ")
+
 
 (defvar obsidian--basic-wikilink-regex "\\[\\[[[:graph:][:blank:]]*\\]\\]"
   "Regex pattern used to find wikilinks.")
@@ -187,10 +208,12 @@ Each link list contains the following as returned by markdown-link-at-pos:
 
 (defvar obsidian--backlinks-alist (make-hash-table :test 'equal) "Alist of backlinks.")
 
+(defvar obsidian--jump-list nil "List of buffer locations visited via jump.")
+
 (defvar obsidian--update-timer nil "Timer to periodically update the cache.")
-;; TODO: We can use this to check to see if any files are newer than this
-;;       and may therefore need to be updated
-(defvar obsidian--updated-time nil "Timer when the last update occurred.")
+
+(defvar obsidian--updated-time nil
+  "Time of last cache update as a float number of seconds since the epoch.")
 
 (defun obsidian--stringify (obj)
   "Return OBJ as a string regardless of input type."
@@ -294,9 +317,7 @@ FILE is an Org-roam file if:
 - Is not a dot file or, if `obsidian-include-hidden-files' is t, then:
   - It is not in .trash
   - It is not an Emacs temp file"
-
   (-when-let* ((path (or file (buffer-file-name (buffer-base-buffer))))
-               ;; TODO: This won't work if hidden files is true
                (md-ext (s-ends-with-p ".md" path))
                (not-dot-file (or obsidian-include-hidden-files
                                  (not (obsidian--dot-file-p path))))
@@ -327,13 +348,37 @@ FILE is an Org-roam file if:
   (->> (directory-files-recursively obsidian-directory "" t)
        (-filter #'obsidian--user-directory-p)))
 
+(defun obsidian--process-front-matter-tags (front-matter)
+  "FRONT-MATTER is the hashmap returned by obsidian--find-yaml-front-matter-in-string.
+
+This function filters invalid tags (eg tags that are not in a list, or tags that
+already have hashtags as these are not allowed in front matter, or values of :null
+as may be returned by the YAML parser), trims whitespace, and concatenates a hashtag
+to the beginning of each valid tag.
+A list of valid tags is returned."
+  (when front-matter
+    (let* ((tags (gethash 'tags front-matter)))
+      ;; tags in front matter should be specified as a list
+      (when (and tags (not (equal 'string (type-of tags))))
+        (if (equal tags :null)
+            nil
+          (seq-map (lambda (tag) (format "#%s" tag))
+                   (->> tags
+                        ;; spaces are not allowed in tags; use commas between tags
+                        (seq-remove (lambda (tag) (s-contains-p " " tag)))
+                        ;; tags in front matter shouldn't start with a hashtag
+                        (seq-remove (lambda (tag) (s-starts-with-p "#" tag))))))))))
+
 (defun obsidian--find-tags-in-string (s)
-  "Retrieve list of #tags from string S."
+  "Retrieve list of #tags from string S.
+
+First searches for front matter to find tags there, then searches through
+the entire string."
   (let* ((front-matter (obsidian--find-yaml-front-matter-in-string s))
-         (add-tag-fn (lambda (tag) (concat "#" tag))))
-    (->> (s-match-strings-all obsidian--tag-regex s)
-         (append (and front-matter (mapcar add-tag-fn (gethash 'tags front-matter))))
-         -flatten)))
+         (fm-tags (obsidian--process-front-matter-tags front-matter))
+         (body-tags-raw (-flatten (s-match-strings-all obsidian--tag-regex s)))
+         (body-tags (seq-map #'string-trim-left body-tags-raw)))
+    (-flatten (append fm-tags body-tags))))
 
 (defun obsidian--find-aliases-in-string (s)
   "Retrieve list of aliases from string S."
@@ -374,9 +419,11 @@ markdown-link-at-pos:
       (let* ((split (s-split-up-to "---" s 2))
              (looks-like-yaml-p (eq (length split) 3)))
         (if looks-like-yaml-p
-            (->> split
-                 (nth 1)
-                 yaml-parse-string)))))
+            (condition-case nil
+                (yaml-parse-string (nth 1 split))
+              (error
+               (message "Warning: erorr parsing YAML front matter")
+               nil))))))
 
 (defun obsidian-tags-ht ()
   "Hashtable with each tags as the keys and list of file path as the values."
@@ -494,21 +541,40 @@ If you need to run this manually, please report this as an issue on Github."
       (obsidian--add-file i))
     (message "Obsidian cache populated at %s with %d files"
              (format-time-string "%H:%M:%S") file-count)
+    (setq obsidian--updated-time (float-time))
     file-count))
+
+(defun obsidian--updated-externally-p (file)
+  "Has the file been modified by a process other than obsidian.el."
+  (let ((file-mod-time (float-time (nth 5 (file-attributes file)))))
+    ;; Has the file been modified more recently than obsidian--updated-time
+    (> file-mod-time obsidian--updated-time)))
 
 ;;;###autoload
 (defun obsidian-update ()
-  "Check the cache against files on disk and update cache as necessary."
+  "Check the cache against files on disk and update cache as necessary.
+
+If a file has been modified more recently than obsidian--updated-time,
+we assume it may have been modified outside of obisidian.el so we call
+obisidan--add-file.  Note that files modified by obsidian.el would also
+show more recent modified times if they called obsidian--update-on-save
+that was triggered by the after-save-hook.  We have no way to distinguish
+this from a file modified outside of obsidian.el, so we'll re-process
+them all just in case."
   (interactive)
   (if (or (not (boundp 'obsidian--vault-cache)) (not obsidian--vault-cache))
       (obsidian-populate-cache)
     (-let* ((cached (obsidian-files))
             (ondisk (obsidian--find-all-files))
             (new-files (-difference ondisk cached))
-            (old-files (-difference cached ondisk)))
+            (old-files (-difference cached ondisk))
+            (to-reprocess (seq-filter #'obsidian--updated-externally-p ondisk)))
       (seq-map #'obsidian--add-file new-files)
       (seq-map #'obsidian--remove-file old-files)
+      (seq-map #'obsidian--add-file to-reprocess)
+      (setq obsidian--updated-time (float-time))
       (if obsidian--debug-messages
+          (message "Reprocesed the following files:\n%s" (pp to-reprocess))
           (message "Obsidian cache updated at %s" (format-time-string "%H:%M:%S"))))))
 
 (defun obsidian--format-link (file-path &optional toggle)
@@ -582,6 +648,15 @@ replaced by the link."
     (insert link-str)))
 
 ;;;###autoload
+(defun obsidian-insert-tag ()
+  "Insert a tag from the existing tags."
+  (interactive)
+  (let* ((tags (-sort #'string< (obsidian-tags)))
+         (choice (completing-read "Insert tag: " tags))
+         (tag (if (s-starts-with-p "#" choice) choice (format "#%s" choice))))
+    (insert tag)))
+
+;;;###autoload
 (defun obsidian-capture ()
   "Create new obsidian note.
 
@@ -639,7 +714,6 @@ Note is created in the `obsidian-daily-notes-directory' if set, or in
              obsidian--aliases-map )
     aliases))
 
-;; (defun obsidian--upsert-file (file)
 (defun obsidian--add-file (file)
   "Add a FILE to the files cache and update tags and aliases for the file."
   (when (not (gethash file obsidian--vault-cache))
@@ -651,8 +725,6 @@ Note is created in the `obsidian-daily-notes-directory' if set, or in
   (-map #'obsidian--remove-alias (obsidian--mapped-aliases file))
   (remhash file obsidian--vault-cache))
 
-;; TODO: Is there a hook for file remove?
-;; TODO: after-change-functions hook(s) ?
 (defun obsidian--update-on-save ()
   "Used as a hook to update the vault cache when a file is saved."
   (when (obsidian--file-p (buffer-file-name))
@@ -722,7 +794,7 @@ If ARG is set, the file will be opened in other window."
                  (0 (obsidian--prepare-new-file-from-rel-path (obsidian--maybe-in-same-dir f)))
                  (1 (car matches))
                  (t
-                  (let* ((choice (completing-read "Jump to: " matches)))
+                  (let ((choice (completing-read "Jump to: " matches)))
                     choice))))
          (path (obsidian--expand-file-name file)))
     (if arg (find-file-other-window path) (find-file path))))
@@ -774,11 +846,11 @@ From `filename#section' keep only the `filename'."
                    s-trim)))
     (if (s-contains-p ":" url)
         (browse-url url)
-      (-> url
-          obsidian--prepare-file-path
-          obsidian-wiki->normal
-          (obsidian-tap #'message)
-          (obsidian-find-point-in-file 0 arg)))))
+      (let ((prepped-path (-> url
+                              obsidian--prepare-file-path
+                              obsidian-wiki->normal)))
+        (push (point-marker) obsidian--jump-list)
+        (obsidian-find-point-in-file 0 arg prepped-path)))))
 
 (defun obsidian-follow-markdown-link-at-point (&optional arg)
   "Find and follow markdown link at point.
@@ -787,9 +859,9 @@ Opens markdown links in other window if ARG is non-nil.."
   (let ((normalized (s-replace "%20" " " (markdown-link-url))))
     (if (s-contains-p ":" normalized)
         (browse-url normalized)
-      (-> normalized
-          obsidian--prepare-file-path
-          (obsidian-find-point-in-file 0 arg)))))
+      (let ((prepped-path (obsidian--prepare-file-path normalized)))
+        (push (point-marker) obsidian--jump-list)
+        (obsidian-find-point-in-file prepped-path 0 arg )))))
 
 (defun obsidian-follow-backlink-at-point ()
   "Open the file pointed to by the backlink and move to the linked location."
@@ -797,6 +869,7 @@ Opens markdown links in other window if ARG is non-nil.."
          (pos (get-text-property (point) 'obsidian--position)))
     (if obsidian--debug-messages
         (message "Visiting file %s at position %s" fil pos))
+    (push (point-marker) obsidian--jump-list)
     (find-file-other-window fil)
     (goto-char pos)))
 
@@ -805,6 +878,27 @@ Opens markdown links in other window if ARG is non-nil.."
   (and (get-text-property (point) 'obsidian--file)
        (get-text-property (point) 'obsidian--position)))
 
+(defun obsidian-follow-toc-link-at-point ()
+  "Move point to section of note pointed to by table of contents links."
+  (push (point-marker) obsidian--jump-list)
+  (markdown-toc-follow-link-at-point))
+
+(defun obsidian--toc-link-p ()
+  "Check if thing at point represent a table of contents."
+  (and (functionp 'markdown-toc-follow-link-at-point)
+       (markdown-link-p)
+       (s-starts-with-p "#" (markdown-link-url))))
+
+;;;###autoload
+(defun obsidian-jump-back ()
+  "Jump backward to previous location."
+  (interactive)
+  (if-let ((jump-marker (pop obsidian--jump-list)))
+      (progn
+        (switch-to-buffer (marker-buffer jump-marker))
+        (goto-char jump-marker))
+    (message "No previous location to jump to.")))
+
 ;;;###autoload
 (defun obsidian-follow-link-at-point (&optional arg)
   "Follow thing at point if possible, such as a reference link or wiki link.
@@ -812,7 +906,9 @@ Opens inline and reference links in a browser.  Opens wiki links
 to other files in the current window, or another window if ARG is non-nil.
 See `markdown-follow-link-at-point' and `markdown-follow-wiki-link-at-point'."
   (interactive "P")
-  (cond ((markdown-link-p)
+  (cond ((obsidian--toc-link-p)
+         (obsidian-follow-toc-link-at-point))
+        ((markdown-link-p)
          (obsidian-follow-markdown-link-at-point arg))
         ((obsidian--wiki-link-p)
          (obsidian-follow-wiki-link-at-point arg))
@@ -833,13 +929,11 @@ See `markdown-follow-link-at-point' and `markdown-follow-wiki-link-at-point'."
     (or (s-matches-p obsidian--basic-wikilink-regex s)
         (s-matches-p obsidian--basic-markdown-link-regex s))))
 
-;; TODO: if filename is only the name and extension, we can parse that from a full path
 ;; TODO: Search for filename only as well as filename with relative subdir(s)
-(defun obsidian-file-links (filename)
-  "FILENAME is the base and extension without directories.
+(defun obsidian--file-backlinks (file)
+  "Return a hashtable of backlinks to FILE.
 
-TODO: Fix this docstring
-or relative to the Obsidian vault directory...?
+The variables used for retrieving links are as follows:
 
 host - host file; the one that includes the link.  full path filename
 targ - target file being pointed to by the host link, name and extension only
@@ -852,8 +946,9 @@ The files cache has the following structure:
   {filepath: {tags:    (tag list)
               aliases: (alias list)
               links:   {linkname: (link info list)}}}"
-  (let ((targ filename)
-        (resp (make-hash-table :test 'equal)))
+  (let* ((filename (file-name-nondirectory file))
+         (targ filename)
+         (resp (make-hash-table :test 'equal)))
     (maphash
      (lambda (host meta)
        (when-let ((links-map (gethash 'links meta)))
@@ -897,18 +992,18 @@ Template vars: {{title}}, {{date}}, and {{time}}"
                        lambda (str) (concat "\tlink text: " (cdr (assoc str obsidian--backlinks-alist)))))
          (all-completions str (mapcar #'car obsidian--backlinks-alist) pred))))))
 
-(defun obsidian--backlinks (&optional file)
+(defun obsidian-backlinks (&optional file)
   "Return a backlinks hashmap for FILE."
   (let* ((filepath (or file (buffer-file-name)))
          (filename (file-name-nondirectory filepath))
-         (linkmap (obsidian-file-links filename)))
+         (linkmap (obsidian--file-backlinks filename)))
     linkmap))
 
 ;;;###autoload
 (defun obsidian-backlink-jump (&optional file)
   "Select a backlink to this FILE and follow it."
   (interactive)
-  (let ((linkmap (obsidian--backlinks file)))
+  (let ((linkmap (obsidian-backlinks file)))
     (if (> (length (hash-table-keys linkmap)) 0)
         (let* ((choice (obsidian--backlinks-completion-fn linkmap))
                (target (obsidian--expand-file-name choice))
@@ -924,7 +1019,7 @@ Template vars: {{title}}, {{date}}, and {{time}}"
   (let* ((query (-> (read-from-minibuffer "Search query or regex: ")))
          (results (obsidian--grep query)))
     (message (s-concat "Found " (pp-to-string (length results)) " matches"))
-    (let* ((choice (completing-read "Select file: " results)))
+    (let ((choice (completing-read "Select file: " results)))
       (obsidian-find-point-in-file choice 0))))
 
 ;;;###autoload
@@ -966,7 +1061,7 @@ _s_earch by expr.   _u_pdate tags/alises etc.
 (defun obsidian-idle-timer ()
   "Wait until Emacs is idle to call update."
   (if obsidian--debug-messages
-      (message "Update timer buzz at %s" (format-time-string "%H:%M:%S")))
+      (message "Update timer triggered at %s" (format-time-string "%H:%M:%S")))
   (run-with-idle-timer obsidian-update-idle-wait nil #'obsidian-update))
 
 (when obsidian-use-update-timer
@@ -1013,7 +1108,6 @@ Valid values are
   :type 'boolean
   :group 'backlinks-window)
 
-;; "%-33s%-33s\n"
 ;; TODO: Does this update if obsidian-backlinks-panel-width is updated?
 (defcustom obsidian-backlink-format
   (format "%%-%ds%%s\n" (ceiling (* obsidian-backlinks-panel-width 0.45)))
@@ -1022,10 +1116,12 @@ Valid values are
   :group 'backlinks-window)
 
 (defun obsidian--get-local-backlinks-window (&optional frame)
-  "Return window if backlinks window is visible in FRAME, nil otherwise."
+  "Return window if backlinks window is visible in FRAME, nil otherwise.
+
+Inspired by `treemacs-get-local-window' in `treemacs-scope.el'."
   (let ((search-frame (or frame (selected-frame))))
     (->> (window-list search-frame)
-         (--first (->> it  ;; TODO: why is 'it' not a void variable?
+         (--first (->> it
                        (window-buffer)
                        (buffer-name)
                        (s-starts-with? obsidian-backlinks-buffer-name))))))
@@ -1043,7 +1139,7 @@ Valid values are
           (select-window (get-mru-window (selected-frame) nil :not-selected))
         (if-let ((bakbuf (get-buffer obsidian-backlinks-buffer-name)))
             (pop-to-buffer bakbuf)
-          (obsidian-populate-backlinks-buffer)))
+          (obsidian--populate-backlinks-buffer)))
     (obsidian-backlink-jump)))
 
 (defun obsidian--backlinks-set-width (width)
@@ -1064,6 +1160,8 @@ Valid values are
          ((< (window-width) w)
           (enlarge-window-horizontally (- w (window-width)))))))))
 
+;; TODO: Balancing windows affects the width of the backlinks panel
+;;       ...but if I run balance-windows twice then it works as desired..?
 (defun obsidian-backlinks-set-width (&optional arg)
   "Select a new value for `obsidian-backlinks-panel-width'.
 With a prefix ARG simply reset the width of the treemacs window."
@@ -1075,10 +1173,16 @@ With a prefix ARG simply reset the width of the treemacs window."
                (read-number))))
   (obsidian--backlinks-set-width obsidian-backlinks-panel-width))
 
-;; TODO: See treemacs--popup-window in treemacs-core-utils.el
-;;       for an example of using display-buffer-in-side-window.
+;; TODO: If a dedicated window is left open when backlinks-mode is turned off,
+;;       ie if you're in a different eyebrowse config, that panel stays
+;;       dedicated and can therefore not be changed to display a different buffer
+;; TODO: If a user has backlinks mode t in their config, a backlinks panel
+;;       should be open the first time they visit a markdown file
 (defun obsidian-open-backlinks-panel ()
-  "Create a dedicated panel to display the backlinks buffer."
+  "Create a dedicated panel to display the backlinks buffer.
+
+Inspired by treemacs. See `treemacs--popup-window' in `treemacs-core-utils.el'
+for an example of using `display-buffer-in-side-window'."
   (interactive)
   (display-buffer-in-side-window
    (get-buffer-create "*backlinks*")
@@ -1136,14 +1240,14 @@ FILE is the full path to an obsidian file."
          (file-prop (get-text-property 1 'obsidian-mru-file bakbuf)))
     (equal file-path file-prop)))
 
-(defun obsidian-populate-backlinks-buffer ()
+(defun obsidian--populate-backlinks-buffer ()
   "Populate backlinks buffer with backlinks for current Obsidian file."
   (interactive)
   (unless (obsidian--file-backlinks-displayed-p)
     (when (and obsidian-mode (obsidian--file-p))
       (let* ((file-path (buffer-file-name))
              (vault-path (obsidian--file-relative-name file-path))
-             (backlinks (obsidian--backlinks))
+             (backlinks (obsidian-backlinks))
              (file-str (if obsidian-backlinks-show-vault-path
                            vault-path
                          (file-name-base file-path))))
@@ -1156,8 +1260,8 @@ FILE is the full path to an obsidian file."
                               'face 'markdown-hr-face))
           (maphash 'obsidian--link-with-props backlinks)
           (obsidian-mode t)  ;; Allows for using keybindings for obsidian-open-link
-          ;; (goto-line 4)
-          (forward-line 3)
+          (goto-line 4)
+          ;; (forward-line 3)
           (set-window-point
            (get-buffer-window obsidian-backlinks-buffer-name)
            (point)))))))
@@ -1171,7 +1275,7 @@ of the number of backlinks pointing to that file."
          (num-files (length obs-files))
          (bakmap (make-hash-table :test 'equal :size num-files)))
     (seq-map (lambda (f)
-               (let* ((backlinks (obsidian--backlinks f))
+               (let* ((backlinks (obsidian-backlinks f))
                       (count (length (hash-table-keys backlinks)))
                       ;; (rel-file (obsidian--file-relative-name f))
                       (rel-file f))
@@ -1241,11 +1345,11 @@ in the linked file."
    (obsidian-backlinks-mode
     ;; mode was turned on
     (obsidian-open-backlinks-panel)
-    (obsidian-populate-backlinks-buffer)
-    (add-hook 'buffer-list-update-hook #'obsidian-populate-backlinks-buffer))
+    (obsidian--populate-backlinks-buffer)
+    (add-hook 'buffer-list-update-hook #'obsidian--populate-backlinks-buffer))
    (t
     ;; mode was turned off (or we refused to turn it on)
-    (remove-hook 'buffer-list-update-hook #'obsidian-populate-backlinks-buffer)
+    (remove-hook 'buffer-list-update-hook #'obsidian--populate-backlinks-buffer)
     (obsidian-close-all-backlinks-panels))))
 
 

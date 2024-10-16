@@ -130,7 +130,7 @@ Obsidian.el must empower us to stay in Emacs for things that make sense in Emacs
 - [X] Searching all notes
 - [X] Finding all notes with a tag
 - [X] Following backlinks
-- [ ] Viewing backlinks in a separate list
+- [X] Viewing backlinks in a separate list
 
 When all of the above is ready we will almost never need the Obsidian app on desktop, but will still be able to use it on mobile or when specifically needed.
 
@@ -157,9 +157,18 @@ When [[https://github.com/abo-abo/hydra][Hydra]] is installed, ~obsidian-hydra~ 
 Obsidian does not track hidden files; obsidian.el can be configured to either track them or ignore them by setting the value of `obsidian-include-hidden-files`.
 
 ** Manual re-scan
+Metadata for a note, including links, backlinks, tags, and aliases, will not be recognized until after a call to ~obsidian-update~.  This function is called automatically each time a file is saved.
+
 You can update the lists of tags, links etc. manually if it's lagging for some reason by running an interactive command:
 
 #+begin_src
+  M-x obsidian-update RET
+#+end_src
+
+If this doesn't seem to fix the issue, the entire vault can be rescanned by first clearing out the old vault cache and then repopulating it with the following set of commands:
+
+#+begin_src
+  M-x obsidian-clear-cache RET
   M-x obsidian-update RET
 #+end_src
 
@@ -180,6 +189,9 @@ Note that the Obsidian app replaces spaces with ~%20~ when inserting markdown li
 
 Both these types of links are correctly handled by ~obsidian-follow-link-at-point~.
 
+*** Multiple matches
+Obsidian doesn't insert relative path by default, only does it when there are multiple files with the same name. ~obsidian-follow-link-at-point~ handles this correctly. Every time you follow a link it checks, if there's only one match for the filename linked. If there's just one it simply opens that file. If there's more than one it prompts you to select which file to open.
+
 ** Following backlinks
 You can quickly jump to backlinks to current file using ~obsidian-backlink-jump~
 
@@ -187,9 +199,31 @@ You can quickly jump to backlinks to current file using ~obsidian-backlink-jump~
   M-x obsidian-backlink-jump RET
 #+end_src
 
+*** Backlinks panel and ~obsidian-backlinks-mode~
+~obsidian-backlinks-mode~ is a minor mode that provides a side panel for displaying the backlinks of the current note file.  The placement and size of the panel can be customized as part of the =obsidian= group.  A =Bk= will be shown in the modeline to indicate when this minor mode is active.
 
-*** Multiple matches
-Obsidian doesn't insert relative path by default, only does it when there are multiple files with the same name. ~obsidian-follow-link-at-point~ handles this correctly. Every time you follow a link it checks, if there's only one match for the filename linked. If there's just one it simply opens that file. If there's more than one it prompts you to select which file to open.
+#+begin_src
+  M-x obsidian-backlinks-mode RET
+#+end_src
+
+If backlinks mode is active, a call to ~obsidian-backlink-jump~ will move the cursor to the backlinks panel where a link can be visited using ~obsidian-follow-link-at-point~.  Alternatively, a call to ~obsidian-backlink-jump~ from within the backlinks panel will return the cursor to the previously visited note window.
+
+The backlinks panel can be toggled open and closed using ~obsidian-toggle-backlinks-panel~.  Even if the panel is toggled closed, a called to ~obsidian-backlink-jump~ with re-open the backlinks panel and move the cursor to that window.
+
+#+begin_src
+  M-x obsidian-toggle-backlinks-panel RET
+#+end_src
+
+If ~obsidian-backlinks-mode~ is active when ~obsidian-backlink-jump~ is called, the cursor will move to the backlinks panel.  From the backlinks panel, notes can be visited using ~obsidian-follow-link-at-point~.
+
+Another useful command is ~obsidian-backlinks-window~ which will move your cursor back and forth between the current note and the backlinks window.
+
+NOTE: Using window configuration packages such as Eyebrowser or Perspective may prevent all of the backlinks panels from closing
+
+**** Window configuration packages
+***** Eyebrowse
+
+***** Perspective
 
 ** Inserting links
 [[./resources/insert-link.png]]
@@ -219,6 +253,8 @@ Example: ~[[path/fo/file.md|Link description]]~
   M-x obsidian-insert-wikilink RET
 #+end_src
 
+** Inserting tags
+
 ** Jumping between notes
 Quickly jump between notes using ~obsidian-jump~
 
@@ -228,6 +264,9 @@ Quickly jump between notes using ~obsidian-jump~
 
 *** Aliases
 If you have YAML front matter in your note, Obsidian.el will find aliases in it and add them to the ~obsidian-jump~ selection. Both ~aliases~ and ~alias~ keys are supported.
+
+** Returning to previous location
+After jumping to a new note, or following a link or backlink, you can return to your previous location using ~obsidian-jump-back~.
 
 ** Capturing new note
 Use ~obsidian-capture~. If you specified ~obsidian-inbox-directory~, it will create new notes in this directory. Otherwise in your Obsidian vault root directory:
@@ -275,6 +314,10 @@ without customization. {{title}}, {{date}}, and {{time}} can be used. {{title}} 
 - [X] Jumping between notes
 - [X] Following links
 - [X] Following backlinks
+
+** markdown-toc
+
+Obsidian.el recognized ~markdown-toc~ as a way to generate a table of contents for a note file.
 
 * Why obsidian.el and not...
 ** Obsidian App itself, Athens Research or any other great app?
@@ -355,6 +398,9 @@ One of the two main internal functions along with ~obsidian--remove-file~.
 Meant to be added as a hook to ~after-save-hook~.
 
 Checks to see if the saved file is an obsidian file and if it already exists in the file cache.
+
+*** Backlinks panel
+The backlinks panel behavior was modeled after =treemacs=.
 
 * Gratitude
 - The work on Obsidian.el was made considerably easier and definitely more fun thanks to the great work of [[https://github.com/magnars][Magnar Sveen]] and his packages [[https://github.com/magnars/dash.el][dash.el]] and [[https://github.com/magnars/s.el][s.el]]. Thank you for making Elisp almost as convenient as Clojure!
