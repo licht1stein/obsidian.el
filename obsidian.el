@@ -151,10 +151,7 @@ the mode, `toggle' toggles the state."
   :after-hook (obsidian-update)
   :keymap (make-sparse-keymap))
 
-(defvar obsidian--debug-messages t "Additional messages will be displayed for debugging.")
-
-;; TOOD: This doesn't produce the same tag rules as Obsidian Notes
-;; (defvar obsidian--tag-regex "#[[:alnum:]-_/+]+" "Regex pattern used to find tags in Obsidian files.")
+(defvar obsidian--debug-messages nil "Additional messages will be displayed for debugging.")
 
 (defvar obsidian--tag-regex
   "\\(?:\\`\\|[[:space:]]\\)\\#\\(?:[A-Za-z_/][-A-Za-z0-9_/]*[A-Za-z_/][-A-Za-z0-9_/]*\\)"
@@ -162,20 +159,21 @@ the mode, `toggle' toggles the state."
 
 Here's a breakdown of the pattern:
 
-- `\\(?:\\`\\|[[:space:]]\\)`: Matches the beginning of the document (`\\``) or any
-whitespace character (`[[:space:]]`). This ensures that the tag either starts at the
-beginning of the document or is preceded by a whitespace character.
+- `\\(?:\\`\\|[[:space:]]\\)`: Matches the beginning of the document (`\\``) or
+any whitespace character (`[[:space:]]`). This ensures that the tag either
+starts at the beginning of the document or is preceded by a whitespace character.
 
-- `\\(#`: Matches the starting hashtag of the tag and begins a capturing group for the tag itself.
+- `\\(#`: Matches the starting hashtag of the tag and begins a capturing group
+for the tag itself.
 
 - `\\(?:[A-Za-z_/][-A-Za-z0-9_/]*[A-Za-z_/][-A-Za-z0-9_/]*\\)`: This ensures that
-the tag has at least one non-numerical character (A-Z) and allows the use of letters,
-numbers, underscores, hyphens, and forward slashes. The first and last
+the tag has at least one non-numerical character (A-Z) and allows the use of
+letters,numbers, underscores, hyphens, and forward slashes. The first and last
 segments (`[A-Za-z_/]`) ensure that the tag contains at least one non-numeric
-character outside the start and end. Numbers will not be allowed as the only characters of a tag.
+character outside the start and end. Numbers will not be allowed as the only
+characters of a tag.
 
-- `[#)]`: Ends the capturing group for the whole tag that starts with a `#`. ")
-
+- `[#)]`: Ends the capturing group for the whole tag that starts with a `#`.")
 
 (defvar obsidian--basic-wikilink-regex "\\[\\[[[:graph:][:blank:]]*\\]\\]"
   "Regex pattern used to find wikilinks.")
@@ -349,13 +347,14 @@ FILE is an Org-roam file if:
        (-filter #'obsidian--user-directory-p)))
 
 (defun obsidian--process-front-matter-tags (front-matter)
-  "FRONT-MATTER is the hashmap returned by obsidian--find-yaml-front-matter-in-string.
+  "FRONT-MATTER is the hashmap from obsidian--find-yaml-front-matter-in-string.
 
-This function filters invalid tags (eg tags that are not in a list, or tags that
-already have hashtags as these are not allowed in front matter, or values of :null
-as may be returned by the YAML parser), trims whitespace, and concatenates a hashtag
-to the beginning of each valid tag.
-A list of valid tags is returned."
+A list of valid tags is returned.
+
+This function filters invalid tags (eg tags that are not in a list, or tags
+that already have hashtags as these are not allowed in front matter, or
+values of :null as may be returned by the YAML parser), trims whitespace,
+and concatenates a hashtag to the beginning of each valid tag."
   (when front-matter
     (let* ((tags (gethash 'tags front-matter)))
       ;; tags in front matter should be specified as a list
@@ -545,7 +544,7 @@ If you need to run this manually, please report this as an issue on Github."
     file-count))
 
 (defun obsidian--updated-externally-p (file)
-  "Has the file been modified by a process other than obsidian.el."
+  "Has FILE been modified by a process other than obsidian.el."
   (let ((file-mod-time (float-time (nth 5 (file-attributes file)))))
     ;; Has the file been modified more recently than obsidian--updated-time
     (> file-mod-time obsidian--updated-time)))
@@ -554,11 +553,11 @@ If you need to run this manually, please report this as an issue on Github."
 (defun obsidian-update ()
   "Check the cache against files on disk and update cache as necessary.
 
-If a file has been modified more recently than obsidian--updated-time,
+If a file has been modified more recently than `obsidian--updated-time',
 we assume it may have been modified outside of obisidian.el so we call
-obisidan--add-file.  Note that files modified by obsidian.el would also
-show more recent modified times if they called obsidian--update-on-save
-that was triggered by the after-save-hook.  We have no way to distinguish
+`obisidan--add-file'.  Note that files modified by obsidian.el would also
+show more recent modified times if they called `obsidian--update-on-save'
+that was triggered by the `after-save-hook'.  We have no way to distinguish
 this from a file modified outside of obsidian.el, so we'll re-process
 them all just in case."
   (interactive)
@@ -575,7 +574,7 @@ them all just in case."
       (setq obsidian--updated-time (float-time))
       (if obsidian--debug-messages
           (message "Reprocesed the following files:\n%s" (pp to-reprocess))
-          (message "Obsidian cache updated at %s" (format-time-string "%H:%M:%S"))))))
+        (message "Obsidian cache updated at %s" (format-time-string "%H:%M:%S"))))))
 
 (defun obsidian--format-link (file-path &optional toggle)
   "Format link from FILE-PATH based on `obsidian-links-use-vault-path'.
@@ -1073,16 +1072,9 @@ _s_earch by expr.   _u_pdate tags/alises etc.
   (interactive)
   (cancel-timer obsidian--update-timer))
 
-
-
-
-
-
 ;;
 ;; Backlinks Panel
 ;;
-
-
 (defcustom obsidian-backlinks-panel-position 'right
   "Position of treemacs buffer.
 
