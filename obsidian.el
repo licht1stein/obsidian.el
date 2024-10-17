@@ -572,8 +572,10 @@ them all just in case."
       (seq-map #'obsidian--remove-file old-files)
       (seq-map #'obsidian--add-file to-reprocess)
       (setq obsidian--updated-time (float-time))
-      (if obsidian--debug-messages
-          (message "Reprocesed the following files:\n%s" (pp to-reprocess))
+      (when obsidian--debug-messages
+        (if to-reprocess
+            (message "Reprocesed the following files:\n%s" (pp to-reprocess))
+          (message "No files to be re-processed"))
         (message "Obsidian cache updated at %s" (format-time-string "%H:%M:%S"))))))
 
 (defun obsidian--format-link (file-path &optional toggle)
@@ -866,9 +868,8 @@ Opens markdown links in other window if ARG is non-nil.."
   "Open the file pointed to by the backlink and move to the linked location."
   (let* ((fil (get-text-property (point) 'obsidian--file))
          (pos (get-text-property (point) 'obsidian--position)))
-    (if obsidian--debug-messages
+    (when obsidian--debug-messages
         (message "Visiting file %s at position %s" fil pos))
-    (push (point-marker) obsidian--jump-list)
     (find-file-other-window fil)
     (goto-char pos)))
 
@@ -894,7 +895,7 @@ Opens markdown links in other window if ARG is non-nil.."
   (interactive)
   (if-let ((jump-marker (pop obsidian--jump-list)))
       (progn
-        (switch-to-buffer (marker-buffer jump-marker))
+        (pop-to-buffer (marker-buffer jump-marker))
         (goto-char jump-marker))
     (message "No previous location to jump to.")))
 
@@ -1059,7 +1060,7 @@ _s_earch by expr.   _u_pdate tags/alises etc.
 
 (defun obsidian-idle-timer ()
   "Wait until Emacs is idle to call update."
-  (if obsidian--debug-messages
+  (when obsidian--debug-messages
       (message "Update timer triggered at %s" (format-time-string "%H:%M:%S")))
   (run-with-idle-timer obsidian-update-idle-wait nil #'obsidian-update))
 
@@ -1127,9 +1128,13 @@ Inspired by `treemacs-get-local-window' in `treemacs-scope.el'."
   (interactive)
   (if obsidian-backlinks-mode
       (if (equal (buffer-name) obsidian-backlinks-buffer-name)
-          (select-window (get-mru-window (selected-frame) nil :not-selected))
+          (progn
+            (pop obsidian--jump-list)
+            (select-window (get-mru-window (selected-frame) nil :not-selected)))
         (if-let ((bakbuf (get-buffer obsidian-backlinks-buffer-name)))
-            (pop-to-buffer bakbuf)
+            (progn
+              (push (point-marker) obsidian--jump-list)
+              (pop-to-buffer bakbuf))
           (obsidian--populate-backlinks-buffer)))
     (obsidian-backlink-jump)))
 
@@ -1164,9 +1169,6 @@ With a prefix ARG simply reset the width of the treemacs window."
                (read-number))))
   (obsidian--backlinks-set-width obsidian-backlinks-panel-width))
 
-;; TODO: If a dedicated window is left open when backlinks-mode is turned off,
-;;       ie if you're in a different eyebrowse config, that panel stays
-;;       dedicated and can therefore not be changed to display a different buffer
 ;; TODO: If a user has backlinks mode t in their config, a backlinks panel
 ;;       should be open the first time they visit a markdown file
 (defun obsidian-open-backlinks-panel ()
@@ -1175,12 +1177,17 @@ With a prefix ARG simply reset the width of the treemacs window."
 Inspired by treemacs. See `treemacs--popup-window' in `treemacs-core-utils.el'
 for an example of using `display-buffer-in-side-window'."
   (interactive)
-  (display-buffer-in-side-window
-   (get-buffer-create "*backlinks*")
-   `((side . ,obsidian-backlinks-panel-position)
-     (window-width . ,obsidian-backlinks-panel-width)
-     (slot . -1)  ;; because treemacs--popup-window included this
-     (dedicated . t))))
+  (let ((bakbuf (get-buffer-create obsidian-backlinks-buffer-name)))
+    (save-excursion
+      (set-buffer bakbuf)
+      (setq window-size-fixed 'width))
+    (display-buffer-in-side-window
+     bakbuf
+     `((side . ,obsidian-backlinks-panel-position)
+       (window-width . ,obsidian-backlinks-panel-width)
+       (slot . -1)  ;; because treemacs--popup-window included this
+       (dedicated . t)
+       (window-size-fixed . t)))))
 
 (defun obsidian-close-backlinks-panel ()
   "Close local window used for dedicated backlinks panel."
