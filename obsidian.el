@@ -1093,9 +1093,7 @@ _s_earch by expr.   _u_pdate tags/alises etc.
 ;; Backlinks Panel
 ;;
 (defcustom obsidian-backlinks-panel-position 'right
-  "Position of treemacs buffer.
-
-Valid values are
+  "Position of backlinks buffer. Valid values are
  * `right',
  * `left'."
   :type '(choice (const right)
@@ -1181,12 +1179,11 @@ Inspired by `treemacs-get-local-window' in `treemacs-scope.el'."
       (setq obsidian-backlinks-panel-width new-width)
       (obsidian--populate-backlinks-buffer 'force))))
 
-;; TODO: Does this arg make sense here?
-(defun obsidian-backlinks-set-width (&optional arg)
-  "Select a new value for `obsidian-backlinks-panel-width'.
-With a prefix ARG simply reset the width of the treemacs window."
+(defun obsidian-backlinks-set-width (&optional width)
+  "Select a new width for the backlinks panel, or specify one with WIDTH."
   (interactive "P")
-  (unless arg
+  (if width
+      (setq obsidian-backlinks-panel-width width)
     (setq obsidian-backlinks-panel-width
           (->> obsidian-backlinks-panel-width
                (format "New Width (current = %s): ")
@@ -1209,7 +1206,7 @@ for an example of using `display-buffer-in-side-window'."
      bakbuf
      `((side . ,obsidian-backlinks-panel-position)
        (window-width . ,obsidian-backlinks-panel-width)
-       (slot . -1)  ;; because treemacs--popup-window included this
+       (slot . -1)
        (dedicated . t)))))
 
 (defun obsidian-close-backlinks-panel ()
