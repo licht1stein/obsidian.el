@@ -1196,8 +1196,9 @@ for an example of using `display-buffer-in-side-window'."
 
 (defun obsidian-close-all-backlinks-panels ()
   "Close all windows used for dedicated backlinks panels."
-  (seq-map #'delete-window (obsidian--get-all-backlinks-windows))
-  (balance-windows))
+  (when-let ((wins (obsidian--get-all-backlinks-windows)))
+    (seq-map #'delete-window wins)
+    (balance-windows)))
 
 (defun obsidian-toggle-backlinks-panel ()
   "Create backlinks panel if it doesn't exist, close it otherwise.
