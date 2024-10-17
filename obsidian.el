@@ -856,8 +856,10 @@ From `filename#section' keep only the `filename'."
   "Find Wiki Link at point. Opens wiki links in other window if ARG is non-nil."
   (interactive "P")
   (thing-at-point-looking-at markdown-regex-wiki-link)
-  (let* ((url (->> (match-string-no-properties 3)
-                   s-trim)))
+  (let* ((url (s-trim (if markdown-wiki-link-alias-first
+                          (or (match-string-no-properties 5)
+                              (match-string-no-properties 3))
+                        (match-string-no-properties 3)))))
     (if (s-contains-p ":" url)
         (browse-url url)
       (let ((prepped-path (-> url
