@@ -573,9 +573,8 @@ them all just in case."
       (seq-map #'obsidian--add-file to-reprocess)
       (setq obsidian--updated-time (float-time))
       (when obsidian--debug-messages
-        (if to-reprocess
-            (message "Reprocesed the following files:\n%s" (pp to-reprocess))
-          (message "No files to be re-processed"))
+        (when to-reprocess
+          (message "Reprocesed the following files:\n%s" (pp to-reprocess)))
         (message "Obsidian cache updated at %s" (format-time-string "%H:%M:%S"))))))
 
 (defun obsidian--format-link (file-path &optional toggle)
@@ -647,6 +646,18 @@ replaced by the link."
     (if (use-region-p)
         (delete-active-region))
     (insert link-str)))
+
+;;;###autoload
+(defun obsidian-remove-link ()
+  "Remove link and replace with link text."
+  (interactive)
+  (cond ((markdown-link-p)
+         (let ((link (markdown-link-at-pos (point))))
+           (delete-region (nth 0 link) (nth 1 link))
+           (insert (or (nth 2 link) (nth 3 link)))))
+        ((obsidian--wiki-link-p)
+         (markdown-kill-thing-at-point)
+         (yank))))
 
 ;;;###autoload
 (defun obsidian-insert-tag ()
@@ -880,8 +891,9 @@ Opens markdown links in other window if ARG is non-nil.."
 
 (defun obsidian-follow-toc-link-at-point ()
   "Move point to section of note pointed to by table of contents links."
-  (push (point-marker) obsidian--jump-list)
-  (markdown-toc-follow-link-at-point))
+  (when (functionp 'markdown-toc-follow-link-at-point)
+    (push (point-marker) obsidian--jump-list)
+    (markdown-toc-follow-link-at-point)))
 
 (defun obsidian--toc-link-p ()
   "Check if thing at point represent a table of contents."
@@ -1258,9 +1270,11 @@ FILE is the full path to an obsidian file."
           (insert (propertize "----------------------------------------------\n"
                               'face 'markdown-hr-face))
           (maphash 'obsidian--link-with-props backlinks)
-          (obsidian-mode t)  ;; Allows for using keybindings for obsidian-open-link
-          (goto-line 4)
-          ;; (forward-line 3)
+          ;; Allows for using keybindings for obsidian-open-link
+          (obsidian-mode t)
+          ;; Put cursor on the first link
+          (goto-char (point-min))
+          (forward-line 3)
           (set-window-point
            (get-buffer-window obsidian-backlinks-buffer-name)
            (point)))))))
