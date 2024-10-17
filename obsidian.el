@@ -626,7 +626,9 @@ the current link insertion."
          (description (plist-get file :description))
          (no-ext (file-name-sans-extension filename))
          (link (if (and description (not (s-ends-with-p description no-ext)))
-                   (s-concat "[[" no-ext "|" description"]]")
+                   (if markdown-wiki-link-alias-first
+                       (s-concat "[[" description "|" no-ext "]]")
+                     (s-concat "[[" no-ext "|" description"]]"))
                  (s-concat "[[" no-ext "]]"))))
     (insert link)))
 
@@ -655,7 +657,7 @@ replaced by the link."
          (let ((link (markdown-link-at-pos (point))))
            (delete-region (nth 0 link) (nth 1 link))
            (insert (or (nth 2 link) (nth 3 link)))))
-        ((obsidian--wiki-link-p)
+        ((obsidian-wiki-link-p)
          (markdown-kill-thing-at-point)
          (yank))))
 
@@ -826,7 +828,7 @@ If ARG is set, the file will be opened in other window."
         f
       (concat (file-relative-name (file-name-directory (buffer-file-name)) obsidian-directory) "/" f))))
 
-(defun obsidian--wiki-link-p ()
+(defun obsidian-wiki-link-p ()
   "Return non-nil if `point' is at a true wiki link.
 A true wiki link name matches `markdown-regex-wiki-link' but does
 not match the current file name after conversion.  This modifies
@@ -884,7 +886,7 @@ Opens markdown links in other window if ARG is non-nil.."
     (find-file-other-window fil)
     (goto-char pos)))
 
-(defun obsidian--backlink-p ()
+(defun obsidian-backlink-p ()
   "Check if thing at point represents a backlink."
   (and (get-text-property (point) 'obsidian--file)
        (get-text-property (point) 'obsidian--position)))
@@ -895,7 +897,7 @@ Opens markdown links in other window if ARG is non-nil.."
     (push (point-marker) obsidian--jump-list)
     (markdown-toc-follow-link-at-point)))
 
-(defun obsidian--toc-link-p ()
+(defun obsidian-toc-link-p ()
   "Check if thing at point represent a table of contents."
   (and (functionp 'markdown-toc-follow-link-at-point)
        (markdown-link-p)
@@ -918,13 +920,13 @@ Opens inline and reference links in a browser.  Opens wiki links
 to other files in the current window, or another window if ARG is non-nil.
 See `markdown-follow-link-at-point' and `markdown-follow-wiki-link-at-point'."
   (interactive "P")
-  (cond ((obsidian--toc-link-p)
+  (cond ((obsidian-toc-link-p)
          (obsidian-follow-toc-link-at-point))
         ((markdown-link-p)
          (obsidian-follow-markdown-link-at-point arg))
-        ((obsidian--wiki-link-p)
+        ((obsidian-wiki-link-p)
          (obsidian-follow-wiki-link-at-point arg))
-        ((obsidian--backlink-p)
+        ((obsidian-backlink-p)
          (obsidian-follow-backlink-at-point))))
 
 (defun obsidian--grep (re)
