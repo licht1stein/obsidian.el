@@ -1117,12 +1117,21 @@ Valid values are
   :type 'boolean
   :group 'backlinks-window)
 
-;; TODO: Does this update if obsidian-backlinks-panel-width is updated?
-(defcustom obsidian-backlink-format
-  (format "%%-%ds%%s\n" (ceiling (* obsidian-backlinks-panel-width 0.45)))
-  "String format to use for displaying backlinks and link text."
-  :type 'string
+(defcustom obsidian-backlinks-filename-proportion 0.45
+  "Proportion of space to be used to display the file, the rest
+being used for the link text.
+Setting a value of 1.0+ will cause 2 lines to be used per backlink with
+the filename on the first line and the link text on the line below."
+  :type 'float
   :group 'backlinks-window)
+
+(defun obsidian--backlinks-format ()
+  "Return a format string based on current `obsidian-backlinks-panel-width'."
+  (if (< obsidian-backlinks-filename-proportion 1.0)
+      (format "%%-%ds%%s\n"
+              (ceiling (* obsidian-backlinks-panel-width
+                          obsidian-backlinks-filename-proportion)))
+    "%s\n - %s\n"))
 
 (defun obsidian--get-local-backlinks-window (&optional frame)
   "Return window if backlinks window is visible in FRAME, nil otherwise.
@@ -1157,23 +1166,22 @@ Inspired by `treemacs-get-local-window' in `treemacs-scope.el'."
 (defun obsidian--backlinks-set-width (width)
   "Set the width of the backlinks buffer to WIDTH."
   (unless (one-window-p)
-    ;; (with-current-buffer
-    ;; (get-buffer (buffer-name))
-    ;; obsidian-backlinks-bufer-name
-    ;; (save-current-buffer
-    (with-current-buffer-window obsidian-backlinks-buffer-name
-        nil
-        nil
-      (let ((window-size-fixed)
-            (w (max width window-safe-min-width)))
-        (cond
-         ((> (window-width) w)
-          (shrink-window-horizontally  (- (window-width) w)))
-         ((< (window-width) w)
-          (enlarge-window-horizontally (- w (window-width)))))))))
+    (let* ((bakbuf (get-buffer obsidian-backlinks-buffer-name))
+           (win (get-buffer-window obsidian-backlinks-buffer-name))
+           (win-width (window-width win))
+           (new-width (max width window-safe-min-width)))
+      ;; (message "win-width: %d\tnew-width: %d" win-width new-width)
+      (save-excursion
+        (set-buffer bakbuf)
+        (setq window-size-fixed nil)
+        (window-resize win (- new-width win-width) t)
+        (message "> :: adjusted %d to %d (win-width: %d\tnew-width: %d)"
+                 (- new-width win-width) (window-width win) win-width new-width)
+        (setq window-size-fixed 'width))
+      (setq obsidian-backlinks-panel-width new-width)
+      (obsidian--populate-backlinks-buffer 'force))))
 
-;; TODO: Balancing windows affects the width of the backlinks panel
-;;       ...but if I run balance-windows twice then it works as desired..?
+;; TODO: Does this arg make sense here?
 (defun obsidian-backlinks-set-width (&optional arg)
   "Select a new value for `obsidian-backlinks-panel-width'.
 With a prefix ARG simply reset the width of the treemacs window."
@@ -1202,8 +1210,7 @@ for an example of using `display-buffer-in-side-window'."
      `((side . ,obsidian-backlinks-panel-position)
        (window-width . ,obsidian-backlinks-panel-width)
        (slot . -1)  ;; because treemacs--popup-window included this
-       (dedicated . t)
-       (window-size-fixed . t)))))
+       (dedicated . t)))))
 
 (defun obsidian-close-backlinks-panel ()
   "Close local window used for dedicated backlinks panel."
@@ -1238,7 +1245,7 @@ V is the list object associated with the link as returned
 by `markdown-link-at-pos'."
   (let* ((rel-file (obsidian--file-relative-name k))
          (link-txt (nth 2 v))
-         (ptxt (format obsidian-backlink-format
+         (ptxt (format (obsidian--backlinks-format)
                        (propertize rel-file
                                    'face 'markdown-metadata-key-face
                                    'obsidian--file k
@@ -1255,10 +1262,13 @@ FILE is the full path to an obsidian file."
          (file-prop (get-text-property 1 'obsidian-mru-file bakbuf)))
     (equal file-path file-prop)))
 
-(defun obsidian--populate-backlinks-buffer ()
-  "Populate backlinks buffer with backlinks for current Obsidian file."
+(defun obsidian--populate-backlinks-buffer (&optional force)
+  "Populate backlinks buffer with backlinks for current Obsidian file.
+
+The backlinks buffer will not be updated if it's already showing the
+backlinks for the current buffer unless FORCE is non-nil."
   (interactive)
-  (unless (obsidian--file-backlinks-displayed-p)
+  (unless (and (obsidian--file-backlinks-displayed-p) (not force))
     (when (and obsidian-mode (obsidian--file-p))
       (let* ((file-path (buffer-file-name))
              (vault-path (obsidian--file-relative-name file-path))
@@ -1268,17 +1278,18 @@ FILE is the full path to an obsidian file."
                          (file-name-base file-path))))
         (with-current-buffer (get-buffer obsidian-backlinks-buffer-name)
           (erase-buffer)
-          (insert (propertize (format "# %s\n\n" file-str)
+          (insert (propertize (format "# %s\n" file-str)
                               'face 'markdown-header-face
                               'obsidian-mru-file file-path))
-          (insert (propertize "----------------------------------------------\n"
-                              'face 'markdown-hr-face))
+          (insert (propertize
+                   (format "%s\n" (make-string (- obsidian-backlinks-panel-width 2) ?-))
+                   'face 'markdown-hr-face))
           (maphash 'obsidian--link-with-props backlinks)
           ;; Allows for using keybindings for obsidian-open-link
           (obsidian-mode t)
-          ;; Put cursor on the first link
+          ;; Put cursor on the line of the first link
           (goto-char (point-min))
-          (forward-line 3)
+          (forward-line 2)
           (set-window-point
            (get-buffer-window obsidian-backlinks-buffer-name)
            (point)))))))
