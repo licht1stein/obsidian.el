@@ -1282,53 +1282,6 @@ of the number of backlinks pointing to that file."
              obs-files)
     bakmap))
 
-(defun obsidian-backlinks-file-compare (&optional sort)
-  "Show a list of all files and their corresponding backlinks count.
-
-Non-nil SORT will return files sorted in order of increasing backlink count."
-  (interactive)
-  (if (y-or-n-p "This is a resource intensive function. Proceed?")
-      (let* ((bakmap (obsidian-backlinks-count-map))
-             (max-len (apply 'max (->> (hash-table-keys bakmap)
-                                       (seq-map 'obsidian--file-relative-name)
-                                       (seq-map 'length))))
-             (bakmap (if sort (obsidian--sort-map-by-values bakmap) bakmap)))
-        (with-current-buffer (get-buffer-create "*backlinks-info*")
-          (erase-buffer)
-          (insert (propertize "File Name\t\tNumber of Backlinks\n" 'face 'markdown-header-face))
-          (insert (propertize "------------------------------------\n" 'face 'markdown-hr-face))
-          (maphash (lambda (k v)
-                     (insert (format (format "%%-%ds%%s\n" (1+ max-len))
-                                     (propertize (obsidian--file-relative-name k)
-                                                 'face 'markdown-metadata-key-face
-                                                 'obsidian--file k 'obsidian--position 0)
-                                     (propertize (format "%s" v)
-                                                 'face 'markdown-metadata-value-face))))
-                   bakmap)
-          (obsidian-mode t)
-          (message "Processed %d files (max key length: %d)"
-                   (length (hash-table-keys bakmap)) max-len)))))
-
-(defun obsidian-files-without-backlinks ()
-  "Show a list of all file that do not have any backlinks."
-  (interactive)
-  (if (y-or-n-p "This is a resource intensive function. Proceed?")
-      (let* ((bakmap (obsidian-backlinks-count-map))
-             (resp '()))
-        (maphash (lambda (k v) (if (= 0 v) (add-to-list 'resp k))) bakmap)
-        (with-current-buffer (get-buffer-create "*backlinks-info*")
-          (erase-buffer)
-          (insert (propertize "Files without backlinks:\n" 'face 'markdown-header-face))
-          (insert (propertize "----------------------------------------\n" 'face 'markdown-hr-face))
-          (seq-map (lambda (f)
-                     (insert (propertize (format "%s\n" (obsidian--file-relative-name f))
-                                         'face 'markdown-metadata-key-face
-                                         'obsidian--file f
-                                         'obsidian--position 0)))
-                   resp)
-          (obsidian-mode t))
-        resp)))
-
 ;;;###autoload
 (define-minor-mode obsidian-backlinks-mode
   "When active, open a buffer showing the backlinks for the current file.
