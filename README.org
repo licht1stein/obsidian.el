@@ -29,77 +29,6 @@ Emacs front-end for [[https://obsidian.md/][Obsidian Notes]].
 - [[#contributing][Contributing]]
 - [[#gratitude][Gratitude]]
 
-* Installation
-Obsidian.el is available from [[https://melpa.org][MELPA]] or [[https://stable.melpa.org/#/obsidian][MELPA Stable]] and can be installed with:
-
-#+begin_src
-  M-x package-install RET obsidian RET
-#+end_src
-
-Put this in your ~init.el~:
-
-#+begin_src elisp
-(require 'obsidian)
-;; Location of obsidian vault
-(setq obsidian-path "~/MY_OBSIDIAN_FOLDER")
-;; Default location for new notes from `obsidian-capture'
-(setq obsidian-inbox-directory "Inbox")
-
-;; These bindings are only suggestions; it's okay to use other bindings
-;; Open note
-(define-key obsidian-mode-map (kbd "C-c C-p") 'obsidian-jump)
-;; Open link at point
-(define-key obsidian-mode-map (kbd "C-c C-o") 'obsidian-follow-link-at-point)
-;; Follow a backlink for the current file
-(define-key obsidian-mode-map (kbd "C-c C-b") 'obsidian-backlink-jump)
-;; If you prefer you can use `obsidian-insert-wikilink'
-(define-key obsidian-mode-map (kbd "C-c C-l") 'obsidian-insert-link)
-
-;; Activate obsidian mode and backlinks mode
-(global-obsidian-mode t)
-(obsidian-backlinks-mode t)
-#+end_src
-
-*Or using [[https://github.com/jwiegley/use-package][use-package]]:*
-
-#+begin_src elisp
-(use-package obsidian
-  :config
-  (global-obsidian-mode t)
-  (obsidian-backlinks-mode t)
-  :custom
-  ;; location of obsidian vault
-  (obsidian-path "~/MY_OBSIDIAN_FOLDER")
-  ;; Default location for new notes from `obsidian-capture'
-  (obsidian-inbox-directory "Inbox")
-
-  ;; These bindings are only suggestions; it's okay to use other bindings
-  :bind (:map obsidian-mode-map
-              ;; Open note
-              ("C-c C-p" . obsidian-jump)
-              ;; Open link at point
-              ("C-c C-o" . obsidian-follow-link-at-point)
-              ;; Follow a backlink for the current file
-              ("C-c C-b" . obsidian-backlink-jump)
-              ;; If you prefer you can use `obsidian-insert-wikilink'
-              ("C-c C-l" . obsidian-insert-link)))
-#+end_src
-
-** Customization
-
-Optionally you can specify ~obsidian-inbox-directory~, it will be used by ~obsidian-capture~ to store new notes into. If you don't set it the root folder of your Obsidian vault will be used.
-
-*** Custom Variables
-- obsidian-inbox-directory :: location for new notes created via ~obsidian-capture~
-- obsidian-daily-notes-directory :: location for new notes created via ~obsidian-daily-note~
-- obsidian-templates-directory :: location for obsidian.el to find template files
-  ;; TODO: Why is this called out separate from other templates?
-- obsidian-daily-note-template ::
-
-- obsidian-backlinks-panel-position :: which side of the window to host backlinks panel: 'left or 'right
-- obsidian-backlinks-panel-width :: width of the backlinks panel in characters
-- obsidian-backlinks-filename-proportion :: Proportion of space to be used to display file name vs link text. A value of 1.0 will use 2 lines.
-
 * About Obsidian.el
 
 I wanted to work with Obsidian Notes using Emacs. Obviously you already can open your Obsidian folder and start editing markdown files with Emacs. But I want to improve that and split the responsibilities between Emacs and Obsidian the way it makes sense for an Emacs user.
@@ -131,7 +60,85 @@ The answer is mostly the same for all of them. Mobile support. Or rather — NO 
 
 So there were two ways to go about it: build a mobile app for something like org-roam (which would be cool, but is above my front-end skills) or build a light-weight Emacs client for something like Obsidian. I chose the simpler task.
 
+* Installation
+Obsidian.el is available from [[https://melpa.org][MELPA]] or [[https://stable.melpa.org/#/obsidian][MELPA Stable]] and can be installed with:
+
+#+begin_src
+  M-x package-install RET obsidian RET
+#+end_src
+
+Put this in your ~init.el~:
+
+#+begin_src elisp
+(require 'obsidian)
+;; Location of obsidian vault
+(setq obsidian-path "~/MY_OBSIDIAN_FOLDER")
+;; Default location for new notes from `obsidian-capture'
+(setq obsidian-inbox-directory "Inbox")
+;; Useful if you're going to be using wiki links
+(setq markdown-enable-wiki-links t)
+
+;; These bindings are only suggestions; it's okay to use other bindings
+;; Open note
+(define-key obsidian-mode-map (kbd "C-c C-p") 'obsidian-jump)
+;; Open link at point
+(define-key obsidian-mode-map (kbd "C-c C-o") 'obsidian-follow-link-at-point)
+;; Follow a backlink for the current file
+(define-key obsidian-mode-map (kbd "C-c C-b") 'obsidian-backlink-jump)
+;; If you prefer you can use `obsidian-insert-wikilink'
+(define-key obsidian-mode-map (kbd "C-c C-l") 'obsidian-insert-link)
+
+;; Activate obsidian mode and backlinks mode
+(global-obsidian-mode t)
+(obsidian-backlinks-mode t)
+#+end_src
+
+*Or using [[https://github.com/jwiegley/use-package][use-package]]:*
+
+#+begin_src elisp
+(use-package obsidian
+  :config
+  (global-obsidian-mode t)
+  (obsidian-backlinks-mode t)
+  :custom
+  ;; location of obsidian vault
+  (obsidian-path "~/MY_OBSIDIAN_FOLDER")
+  ;; Default location for new notes from `obsidian-capture'
+  (obsidian-inbox-directory "Inbox")
+  ;; Useful if you're going to be using wiki links
+  (markdown-enable-wiki-links t)
+
+  ;; These bindings are only suggestions; it's okay to use other bindings
+  :bind (:map obsidian-mode-map
+              ;; Open note
+              ("C-c C-p" . obsidian-jump)
+              ;; Open link at point
+              ("C-c C-o" . obsidian-follow-link-at-point)
+              ;; Follow a backlink for the current file
+              ("C-c C-b" . obsidian-backlink-jump)
+              ;; If you prefer you can use `obsidian-insert-wikilink'
+              ("C-c C-l" . obsidian-insert-link)))
+#+end_src
+
+** Customization
+
+Optionally you can specify ~obsidian-inbox-directory~, it will be used by ~obsidian-capture~ to store new notes into. If you don't set it the root folder of your Obsidian vault will be used.
+
+*** Custom Variables
+- obsidian-inbox-directory :: location for new notes created via ~obsidian-capture~
+- obsidian-daily-notes-directory :: location for new notes created via ~obsidian-daily-note~
+- obsidian-templates-directory :: location for obsidian.el to find template files
+  ;; TODO: Why is this called out separate from other templates?
+- obsidian-daily-note-template :: name of template file to use for daily notes
+- obsidian-create-unfound-files-in-inbox :: whether to create files for unfound link in inbox or in same directory as file
+- obsidian-backlinks-panel-position :: which side of the window to host backlinks panel: 'left or 'right
+- obsidian-backlinks-panel-width :: width of the backlinks panel in characters
+- obsidian-backlinks-filename-proportion :: Proportion of space to be used to display file name vs link text. A value of 1.0 will use 2 lines.
+
 * How does obsidian.el work?
+
+Some of the functionality is provided by [[https://jblevins.org/projects/markdown-mode/][markdown-mode]].
+
 ** obsidian-mode
 When you require obsidian.el via ~use-package~ or in other ways (see snippet above), you have to specify the root folder of your Obsidian Notes vault. If ~global-obsidian-mode~ is enabled and if you specified the root folder, each time you open a markdown buffer it checks, if that file is part of your Obsidian Notes vault. If it is ~obsidian-mode~ minor mode is activated for this buffer.
 
@@ -159,48 +166,55 @@ Metadata for a note, including links, backlinks, tags, and aliases, will not be 
 You can update the lists of tags, links etc. manually if it's lagging for some reason by running an interactive command:
 
 #+begin_src
-  M-x obsidian-update RET
+M-x obsidian-update RET
 #+end_src
 
 If this doesn't seem to fix the issue, the entire vault can be rescanned by first clearing out the old vault cache and then repopulating it with the following set of commands:
 
 #+begin_src
-  M-x obsidian-clear-cache RET
-  M-x obsidian-update RET
+M-x obsidian-clear-cache RET
+M-x obsidian-update RET
 #+end_src
 
 ** Following links
-Obsidian.el implements a custom command ~obsidian-follow-link-at-point~ which correctly follows markdown and wiki links generated by the Obsidian App. In the install example above this command is bound to ~C-c C-o~ in ~obsidian-mode~.
+Obsidian.el implements a custom command ~obsidian-follow-link-at-point~ which correctly follows markdown and wiki links generated by the Obsidian App. In the installation example above, this command is bound to ~C-c C-o~ in ~obsidian-mode~.
 
 #+begin_src
-  M-x obsidian-follow-link-at-point RET
+M-x obsidian-follow-link-at-point RET
 #+end_src
 
-Note that the Obsidian app replaces spaces with ~%20~ when inserting markdown links, and doesn't do that when inserting wiki links. Obsidian.el follows this convention to maximize compatibility:
-
-#+begin_src markdown
-  Markdown link with spaces: [2-sub with spaces and буквы](subdir/2-sub%20with%20spaces%20and%20буквы.md)
-
-  Wikilink with spaces: [[Subdir/2-sub with spaces and буквы]]
-#+end_src
-
-Both these types of links are correctly handled by ~obsidian-follow-link-at-point~.
+After jumping to a backlink, you can return to the previous note using ~obsidian-jump-back~.
 
 *** Multiple matches
 Obsidian doesn't insert relative path by default, only does it when there are multiple files with the same name. ~obsidian-follow-link-at-point~ handles this correctly. Every time you follow a link it checks, if there's only one match for the filename linked. If there's just one it simply opens that file. If there's more than one it prompts you to select which file to open.
 
-** Following backlinks
-You can quickly jump to backlinks to current file using ~obsidian-backlink-jump~
+*** Link syntax
+Note that the Obsidian app replaces spaces with ~%20~ when inserting markdown links, and doesn't do that when inserting wiki links. Obsidian.el follows this convention to maximize compatibility:
 
-#+begin_src
-  M-x obsidian-backlink-jump RET
+#+begin_src markdown
+Markdown link with spaces: [2-sub with spaces and буквы](subdir/2-sub%20with%20spaces%20and%20буквы.md)
+
+Wikilink with spaces: [[Subdir/2-sub with spaces and буквы]]
 #+end_src
 
-*** Backlinks panel and ~obsidian-backlinks-mode~
+Both these types of links are correctly handled by ~obsidian-follow-link-at-point~.
+
+** Following backlinks
+If ~obsidian-backlinks-mode~ is enabled, running the command ~obsidian-backlink-jump~ will move the cursor to and from the backlinks panel.  From the backlinks panel, a backlink can be visited using ~obsidian-follow-link-at-point~.
+
+If ~obsidian-backlinks-mode~ is disabled, you can quickly jump to a backlink from the current file using ~obsidian-backlink-jump~.
+
+#+begin_src
+M-x obsidian-backlink-jump RET
+#+end_src
+
+After jumping to a backlink, you can return to the previous note using ~obsidian-jump-back~.
+
+*** Backlinks panel and obsidian-backlinks-mode
 ~obsidian-backlinks-mode~ is a minor mode that provides a side panel for displaying the backlinks of the current note file.  The placement and size of the panel can be customized as part of the =obsidian= group.  A =Bk= will be shown in the modeline to indicate when this minor mode is active.
 
 #+begin_src
-  M-x obsidian-backlinks-mode RET
+M-x obsidian-backlinks-mode RET
 #+end_src
 
 If backlinks mode is active, a call to ~obsidian-backlink-jump~ will move the cursor to the backlinks panel where a link can be visited using ~obsidian-follow-link-at-point~.  Alternatively, a call to ~obsidian-backlink-jump~ from within the backlinks panel will return the cursor to the previously visited note window.
@@ -208,30 +222,35 @@ If backlinks mode is active, a call to ~obsidian-backlink-jump~ will move the cu
 The backlinks panel can be toggled open and closed using ~obsidian-toggle-backlinks-panel~.  Even if the panel is toggled closed, a called to ~obsidian-backlink-jump~ with re-open the backlinks panel and move the cursor to that window.
 
 #+begin_src
-  M-x obsidian-toggle-backlinks-panel RET
+M-x obsidian-toggle-backlinks-panel RET
 #+end_src
 
 If ~obsidian-backlinks-mode~ is active when ~obsidian-backlink-jump~ is called, the cursor will move to the backlinks panel.  From the backlinks panel, notes can be visited using ~obsidian-follow-link-at-point~.
 
+;; TODO: Is this redundant to using obsidian-backlink-jump ?
 Another useful command is ~obsidian-backlinks-window~ which will move your cursor back and forth between the current note and the backlinks window.
 
 ** Inserting links
 [[./resources/insert-link.png]]
 
+There are two commands to insert links: ~obsidian-insert-link~ and ~obsidian-insert-wikilink~.  You can choose one depending on your preferred link format.
+
 When inserting links, two different formats can be used to specify the file: the filename alone, or the path to the file within the Obsidian vault.  The default is to only use the filename, but this behavior can be changed by setting the variable ~obsidian-links-use-vault-path~ to ~t~.  Alternately, using the prefix argument before the call to insert a link will toggle this behavior, inserting a link with the format opposite of this variable.
 
-There are two commands to insert links ~obsidian-insert-link~ and ~obsidian-insert-wikilink~, you can choose one depending on your preferred link format:
+When inserting links for files that don't exist, an empty file will be created.  The location of this new file depends upon the variable ~obsidian-create-unfound-files-in-inbox~.  For a non-nil value, the files will be created in the directory specified by ~obsidian-inbox-directory~ if that value is set, or in the ~obsidian-directory~ otherwise.  If ~obsidian-create-unfound-files-in-inbox~ is nil, new files will be created in the same directory into which the link is inserted.
+
+TODO: Why do markdown links not work well for me? (toggle-wiki-links) Should they be formatted prettier?
 
 *** Inserts a link in Markdown format
 Example: ~[Link description](path/to/file.md)~
 #+begin_src
-  M-x obsidian-insert-link RET
+M-x obsidian-insert-link RET
 #+end_src
 
 Note, that when you insert a link to file that has spaces in it's name, like "facts about inserting links.md", Obsidian app would html-format the spaces, meaning the link will look like
 
-#+begin_src markdown
-  [facts](facts%20about%20inserting%20links.md)
+#+begin_src text
+[facts](facts%20about%20inserting%20links.md)
 #+end_src
 
 Obsidian.el follows this convention and does the same when inserting markdown links. ~obsidian-follow-link-at-point~ handles this correctly.
@@ -267,6 +286,10 @@ Use ~obsidian-capture~. If you specified ~obsidian-inbox-directory~, it will cre
 #+begin_src
   M-x obsidian-capture RET
 #+end_src
+
+*** Inbox
+
+*** Daily Notes
 
 ** Searching notes
 Use ~obsidian-search~ to look for a string or a regular expression:
