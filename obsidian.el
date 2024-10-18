@@ -1158,7 +1158,7 @@ Inspired by `treemacs-get-local-window' in `treemacs-scope.el'."
           (obsidian--populate-backlinks-buffer)))
     (obsidian-backlink-jump)))
 
-(defun obsidian--backlinks-set-width (width)
+(defun obsidian--backlinks-set-panel-width (width)
   "Set the width of the backlinks buffer to WIDTH."
   (unless (one-window-p)
     (let* ((bakbuf (get-buffer obsidian-backlinks-buffer-name))
@@ -1176,16 +1176,16 @@ Inspired by `treemacs-get-local-window' in `treemacs-scope.el'."
       (setq obsidian-backlinks-panel-width new-width)
       (obsidian--populate-backlinks-buffer 'force))))
 
-(defun obsidian-backlinks-set-width (&optional width)
-  "Select a new width for the backlinks panel, or specify one with WIDTH."
+(defun obsidian-backlinks-set-panel-width (&optional arg)
+  "Select a new value for `obsidian-backlinks-panel-width'.
+With a prefix ARG simply reset the width of the treemacs window."
   (interactive "P")
-  (if width
-      (setq obsidian-backlinks-panel-width width)
+  (unless arg
     (setq obsidian-backlinks-panel-width
           (->> obsidian-backlinks-panel-width
                (format "New Width (current = %s): ")
                (read-number))))
-  (obsidian--backlinks-set-width obsidian-backlinks-panel-width))
+  (obsidian--backlinks-set-panel-width obsidian-backlinks-panel-width))
 
 (defun obsidian-open-backlinks-panel ()
   "Create a dedicated panel to display the backlinks buffer.
