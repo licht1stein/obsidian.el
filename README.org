@@ -3,6 +3,8 @@
 
 Emacs front-end for [[https://obsidian.md/][Obsidian Notes]].
 
+#+TOC: headlines 2
+
 * Table of Contents                                                     :toc:
 - [[#installation][Installation]]
 - [[#about-obsidianel][About Obsidian.el]]
