@@ -305,7 +305,7 @@ The function is taken from xahlee:
   "Return t if FILE is not in .obsidian dir of Obsidian."
   (not (s-contains-p "/.obsidian" file)))
 
-(defun obsidian--file-p (&optional file)
+(defun obsidian-file-p (&optional file)
   "Return t if FILE is an obsidian.el file, nil otherwise.
 
 If FILE is not specified, use the current buffer's file-path.
@@ -510,15 +510,15 @@ allows completion with both lower and upper case versions of the tags."
          -distinct)))
 
 (defun obsidian-enable-minor-mode ()
-  "Check if current buffer is an `obsidian--file-p' and toggle `obsidian-mode'."
+  "Check if current buffer is an `obsidian-file-p' and toggle `obsidian-mode'."
   (and (derived-mode-p 'markdown-mode)
-       (obsidian--file-p)
+       (obsidian-file-p)
        (obsidian-mode t)))
 
 (defun obsidian--find-all-files()
   "Return a list of all obsidian files in the vault."
   (let ((all-files (directory-files-recursively obsidian-directory "\.*$")))
-    (-filter #'obsidian--file-p all-files)))
+    (-filter #'obsidian-file-p all-files)))
 
 (defun obsidian-clear-cache ()
   "Clears the obsidian.el cache.
@@ -741,7 +741,7 @@ Note is created in the `obsidian-daily-notes-directory' if set, or in
 
 (defun obsidian--update-on-save ()
   "Used as a hook to update the vault cache when a file is saved."
-  (when (obsidian--file-p (buffer-file-name))
+  (when (obsidian-file-p (buffer-file-name))
     (obsidian--add-file (buffer-file-name))))
 
 (defun obsidian--vault-directories ()
@@ -756,7 +756,7 @@ Note is created in the `obsidian-daily-notes-directory' if set, or in
 (defun obsidian-move-file ()
   "Move current note to another directory."
   (interactive)
-  (when (not (obsidian--file-p (buffer-file-name)))
+  (when (not (obsidian-file-p (buffer-file-name)))
     (user-error "Current file is not an obsidian-file"))
   (let* ((old-file-path (buffer-file-name))
          (dict (obsidian--vault-directories))
@@ -945,25 +945,22 @@ See `markdown-follow-link-at-point' and `markdown-follow-wiki-link-at-point'."
     (or (s-matches-p obsidian--basic-wikilink-regex s)
         (s-matches-p obsidian--basic-markdown-link-regex s))))
 
-;; TODO: Search for filename only as well as filename with relative subdir(s)
 (defun obsidian--file-backlinks (file)
   "Return a hashtable of backlinks to FILE.
 
 The variables used for retrieving links are as follows:
-
-host - host file; the one that includes the link.  full path filename
-targ - target file being pointed to by the host link, name and extension only
-meta - metadata hashtable
-lmap - hashmap of links from meta
-link - link target from links hashmap
-info - info list for target link from links hashmap
+  host - host file; the one that includes the link.  full path filename
+  targ - target file being pointed to by the host link, name and extension only
+  meta - metadata hashtable
+  lmap - hashmap of links from meta
+  link - link target from links hashmap
+  info - info list for target link from links hashmap
 
 The files cache has the following structure:
   {filepath: {tags:    (tag list)
               aliases: (alias list)
               links:   {linkname: (link info list)}}}"
-  (let* ((filename (file-name-nondirectory file))
-         (targ filename)
+  (let* ((targ file)
          (resp (make-hash-table :test 'equal)))
     (maphash
      (lambda (host meta)
@@ -1264,7 +1261,7 @@ The backlinks buffer will not be updated if it's already showing the
 backlinks for the current buffer unless FORCE is non-nil."
   (interactive)
   (unless (and (obsidian--file-backlinks-displayed-p) (not force))
-    (when (and obsidian-mode (obsidian--file-p))
+    (when (and obsidian-mode (obsidian-file-p))
       (let* ((file-path (buffer-file-name))
              (vault-path (obsidian--file-relative-name file-path))
              (backlinks (obsidian-backlinks))
@@ -1334,7 +1331,7 @@ in the linked file."
                   #'obsidian-close-all-backlinks-panels)))))
 
 (defun obsidian--startup ()
-  (when (and obsidian-backlinks-mode (obsidian--file-p))
+  (when (and obsidian-backlinks-mode (obsidian-file-p))
     (obsidian-open-backlinks-panel)))
 
 (add-hook 'window-setup-hook #'obsidian--startup)

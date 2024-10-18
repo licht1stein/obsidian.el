@@ -19,16 +19,16 @@
     (expect obsidian-directory :to-equal (expand-file-name obsidian--test-dir))
     (expect (obsidian-specify-path ".") :to-equal (expand-file-name "."))))
 
-(describe "obsidian--file-p"
+(describe "obsidian-file-p"
   (before-all (obsidian-specify-path obsidian--test-dir))
   (after-all (obsidian-specify-path obsidian--test--original-dir))
 
   (it "include files right in vault"
-    (expect (obsidian--file-p "./tests/test_vault/1.md") :to-be t))
+    (expect (obsidian-file-p "./tests/test_vault/1.md") :to-be t))
   (it "include files in subdirs"
-    (expect (obsidian--file-p "./tests/test_vault/subdir/1-sub.md") :to-be t))
+    (expect (obsidian-file-p "./tests/test_vault/subdir/1-sub.md") :to-be t))
   (it "exclude files in trash"
-    (expect (obsidian--file-p "./tests/test_vault/.trash/trash.md") :to-be nil)))
+    (expect (obsidian-file-p "./tests/test_vault/.trash/trash.md") :to-be nil)))
 
 (describe "obsidian list all visible files"
    (before-all (progn
