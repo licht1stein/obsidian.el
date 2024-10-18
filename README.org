@@ -246,6 +246,9 @@ Example: ~[[path/fo/file.md|Link description]]~
   M-x obsidian-insert-wikilink RET
 #+end_src
 
+*** Removing a link
+If you have a link but decide that you'd like to remove it while keeping the link text, use the command ~obsidian-remove-link~.
+
 ** Inserting tags
 
 ** Jumping between notes
