@@ -75,10 +75,19 @@
   "If true, files beginning with a period are considered valid Obsidian files."
   :type 'boolean)
 
-;;;###autoload
-(defcustom obsidian-wiki-link-create-file-in-inbox t
-  "Controls where to create a new file from a wiki link if its target is missing.
-If it is true, create in inbox, otherwise next to the current buffer."
+;; This was included because `markdown-wiki-link-alias-first' defaults
+;; to t, which is the opposite of most (all?) wiki link specifications.
+(defcustom obsidian-wiki-link-alias-first nil
+  "When non-nil, treat aliased wiki links like [[alias text|PageName]].
+Otherwise, they will be treated as [[PageName|alias text]]."
+  :type 'boolean)
+(setq markdown-wiki-link-alias-first obsidian-wiki-link-alias-first)
+
+(defcustom obsidian-create-unfound-files-in-inbox t
+  "Where to create a file when target file is missing.
+
+Controls where to create a new file when visiting a link when the target is
+missing. If true, create in inbox, otherwise next to the current buffer."
   :type 'boolean)
 
 (defcustom obsidian-daily-notes-directory obsidian-inbox-directory
@@ -90,6 +99,37 @@ Default is the inbox directory"
 (defcustom obsidian-templates-directory nil
   "Subdirectory containing templates."
   :type 'directory)
+
+(defcustom obsidian-backlinks-panel-position 'right
+  "Position of backlinks buffer. Valid values are
+ * `right',
+ * `left'."
+  :type '(choice (const right)
+                 (const left))
+  :group 'backlinks-window)
+
+(defcustom obsidian-backlinks-panel-width 75
+  "Width of the backlinks window."
+  :type 'integer
+  :group 'backlinks-window)
+
+(defcustom obsidian-backlinks-filename-proportion 1.0
+  "Proportion of space to be used to display the file, the rest
+being used for the link text.
+Setting a value of 1.0+ will cause 2 lines to be used per backlink with
+the filename on the first line and the link text on the line below."
+  :type 'float
+  :group 'backlinks-window)
+
+(defcustom obsidian-backlinks-show-vault-path t
+  "If t, show path relative to Obsidian vault, otherwise only show file name."
+  :type 'boolean
+  :group 'backlinks-window)
+
+(defcustom obsidian-backlinks-buffer-name "*backlinks*"
+  "Name to use for the obsidian backlinks buffer."
+  :type 'string
+  :group 'backlinks-window)
 
 (defcustom obsidian-daily-note-template "Daily Note Template.md"
   "Daily notes' template filename in templates directory."
@@ -590,13 +630,23 @@ Obsidian link and is returned unmodified."
       (if toggle file-path (file-name-nondirectory file-path)))))
 
 (defun obsidian--verify-relative-path (f)
-  "Check that relative file path F exists, and create it if it does not."
+  "Check that relative file path F exists, and create it if it does not.
+Returns a file path relative to the obsidian vault."
   (if (s-contains-p ":" f)
       f
     (let* ((obs-path (obsidian--expand-file-name f))
            (exists (obsidian-cached-file-p obs-path)))
       (if (not exists)
-          (obsidian--file-relative-name (obsidian--prepare-new-file-from-rel-path f))
+          (if obsidian-create-unfound-files-in-inbox
+              (-> f
+                  obsidian--prepare-new-file-from-rel-path
+                  obsidian--file-relative-name)
+            (-> (buffer-file-name)
+                file-name-directory
+                obsidian--file-relative-name
+                (concat f)
+                obsidian--prepare-new-file-from-rel-path
+                obsidian--file-relative-name))
         f))))
 
 (defun obsidian--request-link (&optional toggle-path)
@@ -604,13 +654,17 @@ Obsidian link and is returned unmodified."
 
 TOGGLE-PATH is a boolean that will toggle the behavior of
 `obsidian-links-use-vault-path' for this single link insertion."
-  (let* ((all-files (->> (obsidian-files) (-map (lambda (f) (file-relative-name f obsidian-directory)))))
+  (let* ((all-files (->> (obsidian-files)
+                         (-map (lambda (f) (file-relative-name f obsidian-directory)))))
          (region (when (use-region-p)
                    (buffer-substring-no-properties (region-beginning) (region-end))))
          (chosen-file (completing-read "Link: " all-files))
          (verified-file (obsidian--verify-relative-path chosen-file))
-         (default-description (-> verified-file file-name-nondirectory file-name-sans-extension))
-         (description (read-from-minibuffer "Description (optional): " (or region default-description)))
+         (default-description (-> verified-file
+                                  file-name-nondirectory
+                                  file-name-sans-extension))
+         (description (->> (or region default-description)
+                           (read-from-minibuffer "Description (optional): ")))
          (file-link (obsidian--format-link verified-file toggle-path)))
     (list :file file-link :description description)))
 
@@ -626,7 +680,7 @@ the current link insertion."
          (description (plist-get file :description))
          (no-ext (file-name-sans-extension filename))
          (link (if (and description (not (s-ends-with-p description no-ext)))
-                   (if markdown-wiki-link-alias-first
+                   (if obsidian-wiki-link-alias-first
                        (s-concat "[[" description "|" no-ext "]]")
                      (s-concat "[[" no-ext "|" description"]]"))
                  (s-concat "[[" no-ext "]]"))))
@@ -805,7 +859,8 @@ If ARG is set, the file will be opened in other window."
   (let* ((all-files (->> (obsidian-files) (-map #'obsidian--file-relative-name)))
          (matches (obsidian--match-files f all-files))
          (file (cl-case (length matches)
-                 (0 (obsidian--prepare-new-file-from-rel-path (obsidian--maybe-in-same-dir f)))
+                 (0 (obsidian--prepare-new-file-from-rel-path
+                     (obsidian--prepare-rel-path f)))
                  (1 (car matches))
                  (t
                   (let ((choice (completing-read "Jump to: " matches)))
@@ -820,13 +875,16 @@ If ARG is set, the file will be opened in other window."
   (obsidian-find-file f arg)
   (goto-char p))
 
-(defun obsidian--maybe-in-same-dir (f)
+(defun obsidian--prepare-rel-path (f)
   "If `/' in F, return F, otherwise with buffer, relative to the buffer."
   (if (s-contains-p "/" f)
       f
-    (if obsidian-wiki-link-create-file-in-inbox
+    (if obsidian-create-unfound-files-in-inbox
         f
-      (concat (file-relative-name (file-name-directory (buffer-file-name)) obsidian-directory) "/" f))))
+      (-> (buffer-file-name)
+          file-name-directory
+          obsidian--file-relative-name
+          (concat f)))))
 
 (defun obsidian-wiki-link-p ()
   "Return non-nil if `point' is at a true wiki link.
@@ -856,7 +914,7 @@ From `filename#section' keep only the `filename'."
   "Find Wiki Link at point. Opens wiki links in other window if ARG is non-nil."
   (interactive "P")
   (thing-at-point-looking-at markdown-regex-wiki-link)
-  (let* ((url (s-trim (if markdown-wiki-link-alias-first
+  (let* ((url (s-trim (if obsidian-wiki-link-alias-first
                           (or (match-string-no-properties 5)
                               (match-string-no-properties 3))
                         (match-string-no-properties 3)))))
@@ -866,7 +924,7 @@ From `filename#section' keep only the `filename'."
                               obsidian--prepare-file-path
                               obsidian-wiki->normal)))
         (push (point-marker) obsidian--jump-list)
-        (obsidian-find-point-in-file 0 arg prepped-path)))))
+        (obsidian-find-point-in-file prepped-path 0 arg)))))
 
 (defun obsidian-follow-markdown-link-at-point (&optional arg)
   "Find and follow markdown link at point.
@@ -1086,40 +1144,6 @@ _s_earch by expr.   _u_pdate tags/alises etc.
   (interactive)
   (cancel-timer obsidian--update-timer))
 
-;;
-;; Backlinks Panel
-;;
-(defcustom obsidian-backlinks-panel-position 'right
-  "Position of backlinks buffer. Valid values are
- * `right',
- * `left'."
-  :type '(choice (const right)
-                 (const left))
-  :group 'backlinks-window)
-
-(defcustom obsidian-backlinks-panel-width 75
-  "Width of the backlinks window."
-  :type 'integer
-  :group 'backlinks-window)
-
-(defcustom obsidian-backlinks-buffer-name "*backlinks*"
-  "Name to use for the obsidian backlinks buffer."
-  :type 'string
-  :group 'backlinks-window)
-
-(defcustom obsidian-backlinks-show-vault-path t
-  "If t, show path relative to Obsidian vault, otherwise only show file name."
-  :type 'boolean
-  :group 'backlinks-window)
-
-(defcustom obsidian-backlinks-filename-proportion 0.45
-  "Proportion of space to be used to display the file, the rest
-being used for the link text.
-Setting a value of 1.0+ will cause 2 lines to be used per backlink with
-the filename on the first line and the link text on the line below."
-  :type 'float
-  :group 'backlinks-window)
-
 (defun obsidian--backlinks-format ()
   "Return a format string based on current `obsidian-backlinks-panel-width'."
   (if (< obsidian-backlinks-filename-proportion 1.0)
@@ -1261,7 +1285,7 @@ The backlinks buffer will not be updated if it's already showing the
 backlinks for the current buffer unless FORCE is non-nil."
   (interactive)
   (unless (and (obsidian--file-backlinks-displayed-p) (not force))
-    (when (and obsidian-mode (obsidian-file-p))
+    (when (and obsidian-mode (obsidian-file-p) (obsidian--get-local-backlinks-window))
       (let* ((file-path (buffer-file-name))
              (vault-path (obsidian--file-relative-name file-path))
              (backlinks (obsidian-backlinks))
