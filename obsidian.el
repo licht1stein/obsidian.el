@@ -1190,8 +1190,6 @@ Inspired by `treemacs-get-local-window' in `treemacs-scope.el'."
                (read-number))))
   (obsidian--backlinks-set-width obsidian-backlinks-panel-width))
 
-;; TODO: If a user has backlinks mode t in their config, a backlinks panel
-;;       should be open the first time they visit a markdown file
 (defun obsidian-open-backlinks-panel ()
   "Create a dedicated panel to display the backlinks buffer.
 
@@ -1332,12 +1330,14 @@ in the linked file."
     (remove-hook 'buffer-list-update-hook #'obsidian--populate-backlinks-buffer)
     (obsidian-close-all-backlinks-panels)
     (if (boundp 'eyebrowse-post-window-switch-hook)
-        (add-hook 'eyebrowse-post-window-switch-hook #'obsidian-close-all-backlinks-panels)))))
+        (add-hook 'eyebrowse-post-window-switch-hook
+                  #'obsidian-close-all-backlinks-panels)))))
 
+(defun obsidian--startup ()
+  (when (and obsidian-backlinks-mode (obsidian--file-p))
+    (obsidian-open-backlinks-panel)))
 
-
-
-
+(add-hook 'window-setup-hook #'obsidian--startup)
 
 (provide 'obsidian)
 ;;; obsidian.el ends here
