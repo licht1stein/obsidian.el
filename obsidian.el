@@ -594,8 +594,8 @@ If you need to run this manually, please report this as an issue on Github."
   "Check the cache against files on disk and update cache as necessary.
 
 If a file has been modified more recently than `obsidian--updated-time',
-we assume it may have been modified outside of obisidian.el so we call
-`obisidan--add-file'.  Note that files modified by obsidian.el would also
+we assume it may have been modified outside of obsidian.el so we call
+`obsidian--add-file'.  Note that files modified by obsidian.el would also
 show more recent modified times if they called `obsidian--update-on-save'
 that was triggered by the `after-save-hook'.  We have no way to distinguish
 this from a file modified outside of obsidian.el, so we'll re-process
