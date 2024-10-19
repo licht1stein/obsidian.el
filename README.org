@@ -12,7 +12,6 @@ Emacs front-end for [[https://obsidian.md/][Obsidian Notes]].
   - [[#initel][init.el]]
   - [[#obsidian-mode][obsidian-mode]]
   - [[#obsidian-backlinks-mode][obsidian-backlinks-mode]]
-  - [[#including-hidden-dot-files][Including hidden dot files]]
   - [[#additional-customization][Additional Customization]]
 - [[#usage][Usage]]
   - [[#creating-a-new-note][Creating a new note]]
@@ -100,7 +99,7 @@ Put this in your ~init.el~:
 (obsidian-backlinks-mode t)
 #+end_src
 
-*Or using [[https://github.com/jwiegley/use-package][use-package]]:*
+or using [[https://github.com/jwiegley/use-package][use-package]]:
 
 #+begin_src elisp
 (use-package obsidian
@@ -132,8 +131,6 @@ When you require obsidian.el via ~use-package~ or in other ways (see snippet abo
 
 ** obsidian-backlinks-mode
 
-** Including hidden dot files
-Obsidian does not track hidden files; obsidian.el can be configured to either track them or ignore them by setting the value of `obsidian-include-hidden-files`.
 
 ** Additional Customization
 
@@ -143,8 +140,8 @@ Optionally you can specify ~obsidian-inbox-directory~, it will be used by ~obsid
 - obsidian-inbox-directory :: location for new notes created via ~obsidian-capture~
 - obsidian-daily-notes-directory :: location for new notes created via ~obsidian-daily-note~
 - obsidian-templates-directory :: location for obsidian.el to find template files
-  ;; TODO: Why is this called out separate from other templates?
 - obsidian-daily-note-template :: name of template file to use for daily notes
+- obsidian-include-hidden-files :: configure obsidian.el to either track or ignore hidden files
 - obsidian-create-unfound-files-in-inbox :: whether to create files for unfound link in inbox or in same directory as file
 - obsidian-backlinks-panel-position :: which side of the window to host backlinks panel: 'left or 'right
 - obsidian-backlinks-panel-width :: width of the backlinks panel in characters
@@ -161,9 +158,8 @@ Use ~obsidian-capture~ to create new notes.
 
 If you specified ~obsidian-inbox-directory~, the new note will be created in this directory. Otherwise they will be placed in your Obsidian vault root directory specified by ~obsidian-directory~.
 
-*** Inbox
-
 *** Daily Notes
+You can create a daily note using the command ~obsidian-daily-note~. If set, this note will use the template specified by ~obsidian-daily-note-template~.
 
 ** Inserting links
 [[./resources/insert-link.png]]
@@ -173,8 +169,6 @@ There are two commands to insert links: ~obsidian-insert-link~ and ~obsidian-ins
 When inserting links, two different formats can be used to specify the file: the filename alone, or the path to the file within the Obsidian vault.  The default is to only use the filename, but this behavior can be changed by setting the variable ~obsidian-links-use-vault-path~ to ~t~.  Alternately, using the prefix argument before the call to insert a link will toggle this behavior, inserting a link with the format opposite of this variable.
 
 When inserting links for files that don't exist, an empty file will be created.  The location of this new file depends upon the variable ~obsidian-create-unfound-files-in-inbox~.  For a non-nil value, the files will be created in the directory specified by ~obsidian-inbox-directory~ if that value is set, or in the ~obsidian-directory~ otherwise.  If ~obsidian-create-unfound-files-in-inbox~ is nil, new files will be created in the same directory into which the link is inserted.
-
-TODO: Why do markdown links not work well for me? (toggle-wiki-links) Should they be formatted prettier?
 
 *** Inserts a link in Markdown format
 Example: ~[Link description](path/to/file.md)~
