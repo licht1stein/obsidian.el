@@ -1182,7 +1182,8 @@ Inspired by `treemacs-get-local-window' in `treemacs-scope.el'."
   (-non-nil (seq-map #'obsidian--get-local-backlinks-window (frame-list))))
 
 (defun obsidian--backlinks-set-panel-width (width)
-  "Set the width of the backlinks buffer to WIDTH."
+  "Set the width of the backlinks buffer to WIDTH.
+For an interactive version, see `obsidian-backlinks-set-panel-width'."
   (unless (one-window-p)
     (let* ((bakbuf (get-buffer obsidian-backlinks-buffer-name))
            (win (get-buffer-window obsidian-backlinks-buffer-name))
@@ -1260,12 +1261,11 @@ V is the list object associated with the link as returned
 by `markdown-link-at-pos'."
   (let* ((rel-file (obsidian--file-relative-name k))
          (link-txt (nth 2 v))
-         (ptxt (format (obsidian--backlinks-format)
-                       (propertize rel-file
-                                   'face 'markdown-metadata-key-face
-                                   'obsidian--file k
-                                   'obsidian--position (nth 0 v))
-                       (propertize link-txt 'face 'markdown-metadata-value-face))))
+         (ptxt (propertize
+                (format (obsidian--backlinks-format)
+                        (propertize rel-file 'face 'markdown-metadata-key-face)
+                        (propertize link-txt 'face 'markdown-metadata-value-face))
+                'obsidian--file k 'obsidian--position (nth 0 v))))
     (insert ptxt)))
 
 (defun obsidian--file-backlinks-displayed-p (&optional file)
