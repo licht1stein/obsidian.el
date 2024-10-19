@@ -254,7 +254,7 @@ key4:
        (call-interactively #'obsidian-insert-link)
        (expect (file-exists-p bad-path) :to-equal nil)
        (expect (file-exists-p good-path) :to-equal t))
-     (delete-line))
+     (kill-whole-line))
 
  (it "insert link from subdir when inbox setting is t"
      (obsidian-test--jump-to-file "subdir/2-sub.md")
@@ -269,7 +269,7 @@ key4:
        (call-interactively #'obsidian-insert-link)
        (expect (file-exists-p bad-path) :to-equal nil)
        (expect (file-exists-p good-path) :to-equal t))
-     (delete-line))
+     (kill-whole-line))
 
   (it "insert link from vault root when inbox setting is nil"
      (obsidian-test--jump-to-file "1.md")
@@ -284,7 +284,7 @@ key4:
        (call-interactively #'obsidian-insert-link)
        (expect (file-exists-p good-path) :to-equal t)
        (expect (file-exists-p bad-path) :to-equal nil))
-     (delete-line))
+     (kill-whole-line))
 
  (it "insert link from subdir when inbox setting is nil"
      (obsidian-test--jump-to-file "subdir/2-sub.md")
@@ -299,6 +299,6 @@ key4:
        (call-interactively #'obsidian-insert-link)
        (expect (file-exists-p good-path) :to-equal t)
        (expect (file-exists-p bad-path) :to-equal nil))
-     (delete-line)))
+     (kill-whole-line)))
 
 (provide 'test-obsidian)
