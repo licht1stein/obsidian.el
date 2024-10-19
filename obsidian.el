@@ -721,7 +721,15 @@ replaced by the link."
   (interactive)
   (let* ((tags (-sort #'string< (obsidian-tags)))
          (choice (completing-read "Insert tag: " tags))
-         (tag (if (s-starts-with-p "#" choice) choice (format "#%s" choice))))
+         (fm (s-starts-with-p "tags:" (buffer-substring (pos-bol) (pos-eol))))
+         ;; Include a leading hashtag unless we're in the front matter
+         (tag (if (s-starts-with-p "#" choice)
+                  (if fm
+                      (substring choice 1 (length choice))
+                    choice)
+                (if fm
+                    choice
+                  (format "#%s" choice)))))
     (insert tag)))
 
 ;;;###autoload
