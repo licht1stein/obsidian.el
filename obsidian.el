@@ -1175,21 +1175,6 @@ Inspired by `treemacs-get-local-window' in `treemacs-scope.el'."
   "Return a list of all backlinks windows from all frames."
   (-non-nil (seq-map #'obsidian--get-local-backlinks-window (frame-list))))
 
-(defun obsidian-backlinks-window ()
-  "Visit backlinks buffer if not currently active or return to previous."
-  (interactive)
-  (if obsidian-backlinks-mode
-      (if (equal (buffer-name) obsidian-backlinks-buffer-name)
-          (progn
-            (pop obsidian--jump-list)
-            (select-window (get-mru-window (selected-frame) nil :not-selected)))
-        (if-let ((bakbuf (get-buffer obsidian-backlinks-buffer-name)))
-            (progn
-              (push (point-marker) obsidian--jump-list)
-              (pop-to-buffer bakbuf))
-          (obsidian--populate-backlinks-buffer)))
-    (obsidian-backlink-jump)))
-
 (defun obsidian--backlinks-set-panel-width (width)
   "Set the width of the backlinks buffer to WIDTH."
   (unless (one-window-p)
