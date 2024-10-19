@@ -3,32 +3,36 @@
 
 Emacs front-end for [[https://obsidian.md/][Obsidian Notes]].
 
-#+TOC: headlines 2
-
 * Table of Contents                                                     :toc:
-- [[#installation][Installation]]
 - [[#about-obsidianel][About Obsidian.el]]
   - [[#what-should-we-keep-doing-in-obsidian][What should we keep doing in Obsidian?]]
   - [[#what-should-be-possible-to-do-in-emacs][What should be possible to do in Emacs?]]
-- [[#how-does-obsidianel-work][How does obsidian.el work?]]
+  - [[#why-obsidianel-and-not][Why obsidian.el and not...]]
+- [[#installation][Installation]]
+  - [[#initel][init.el]]
   - [[#obsidian-mode][obsidian-mode]]
-  - [[#company-mode-completion][company-mode completion]]
-  - [[#hydra-menu][Hydra menu]]
-  - [[#manual-re-scan][Manual re-scan]]
+  - [[#obsidian-backlinks-mode][obsidian-backlinks-mode]]
+  - [[#including-hidden-dot-files][Including hidden dot files]]
+  - [[#additional-customization][Additional Customization]]
+- [[#usage][Usage]]
+  - [[#creating-a-new-note][Creating a new note]]
+  - [[#inserting-links][Inserting links]]
   - [[#following-links][Following links]]
   - [[#following-backlinks][Following backlinks]]
-  - [[#inserting-links][Inserting links]]
   - [[#jumping-between-notes][Jumping between notes]]
-  - [[#capturing-new-note][Capturing new note]]
-  - [[#searching-notes][Searching notes]]
-  - [[#finding-all-notes-with-a-tag][Finding all notes with a tag]]
   - [[#move-note-to-another-folder][Move note to another folder]]
+  - [[#searching-in-notes][Searching in notes]]
+  - [[#inserting-tags][Inserting tags]]
+  - [[#finding-all-notes-with-a-tag][Finding all notes with a tag]]
+- [[#how-does-obsidianel-work][How does obsidian.el work?]]
+  - [[#hydra-menu][Hydra menu]]
+  - [[#manual-re-scan][Manual re-scan]]
   - [[#templates][Templates]]
-- [[#why-obsidianel-and-not][Why obsidian.el and not...]]
-  - [[#obsidian-app-itself-athens-research-or-any-other-great-app][Obsidian App itself, Athens Research or any other great app?]]
-  - [[#org-roam-or-any-other-great-emacs-libraries][Org-roam or any other great Emacs libraries?]]
+  - [[#markdown-toc][markdown-toc]]
 - [[#versioning][Versioning]]
 - [[#contributing][Contributing]]
+  - [[#development-tasks][Development tasks]]
+  - [[#internal-workings][Internal Workings]]
 - [[#gratitude][Gratitude]]
 
 * About Obsidian.el
@@ -63,6 +67,7 @@ The answer is mostly the same for all of them. Mobile support. Or rather — NO 
 So there were two ways to go about it: build a mobile app for something like org-roam (which would be cool, but is above my front-end skills) or build a light-weight Emacs client for something like Obsidian. I chose the simpler task.
 
 * Installation
+** init.el
 Obsidian.el is available from [[https://melpa.org][MELPA]] or [[https://stable.melpa.org/#/obsidian][MELPA Stable]] and can be installed with:
 
 #+begin_src
@@ -122,7 +127,15 @@ Put this in your ~init.el~:
               ("C-c C-l" . obsidian-insert-link)))
 #+end_src
 
-** Customization
+** obsidian-mode
+When you require obsidian.el via ~use-package~ or in other ways (see snippet above), you have to specify the root folder of your Obsidian Notes vault. If ~global-obsidian-mode~ is enabled and if you specified the root folder, each time you open a markdown buffer it checks, if that file is part of your Obsidian Notes vault. If it is ~obsidian-mode~ minor mode is activated for this buffer.
+
+** obsidian-backlinks-mode
+
+** Including hidden dot files
+Obsidian does not track hidden files; obsidian.el can be configured to either track them or ignore them by setting the value of `obsidian-include-hidden-files`.
+
+** Additional Customization
 
 Optionally you can specify ~obsidian-inbox-directory~, it will be used by ~obsidian-capture~ to store new notes into. If you don't set it the root folder of your Obsidian vault will be used.
 
@@ -137,46 +150,55 @@ Optionally you can specify ~obsidian-inbox-directory~, it will be used by ~obsid
 - obsidian-backlinks-panel-width :: width of the backlinks panel in characters
 - obsidian-backlinks-filename-proportion :: Proportion of space to be used to display file name vs link text. A value of 1.0 will use 2 lines.
 
-* How does obsidian.el work?
+* Usage
 
-Some of the functionality is provided by [[https://jblevins.org/projects/markdown-mode/][markdown-mode]].
-
-** obsidian-mode
-When you require obsidian.el via ~use-package~ or in other ways (see snippet above), you have to specify the root folder of your Obsidian Notes vault. If ~global-obsidian-mode~ is enabled and if you specified the root folder, each time you open a markdown buffer it checks, if that file is part of your Obsidian Notes vault. If it is ~obsidian-mode~ minor mode is activated for this buffer.
-
-** company-mode completion
-[[./resources/tag-completion.png]]
-
-Once the ~obsidian-mode~ is activated obsidian.el scans all markdown files in the vault for tags and links (links still WIP), and stores these lists in it's global variables. It also adds [[http://company-mode.github.io/][company-mode]] backends to suggest links and tags for completion.
-
-** [[https://github.com/abo-abo/hydra][Hydra]] menu
-
-When [[https://github.com/abo-abo/hydra][Hydra]] is installed, ~obsidian-hydra~ will be defined such that it can be used for bindings:
-
-#+begin_src elisp
-  (bind-key (kbd "C-c M-o") 'obsidian-hydra/body 'obsidian-mode-map)
-#+end_src
-
-[[./resources/hydra-menu.png]]
-
-** Including hidden dot files
-Obsidian does not track hidden files; obsidian.el can be configured to either track them or ignore them by setting the value of `obsidian-include-hidden-files`.
-
-** Manual re-scan
-Metadata for a note, including links, backlinks, tags, and aliases, will not be recognized until after a call to ~obsidian-update~.  This function is called automatically each time a file is saved.
-
-You can update the lists of tags, links etc. manually if it's lagging for some reason by running an interactive command:
+** Creating a new note
+Use ~obsidian-capture~ to create new notes.
 
 #+begin_src
-M-x obsidian-update RET
+  M-x obsidian-capture RET
 #+end_src
 
-If this doesn't seem to fix the issue, the entire vault can be rescanned by first clearing out the old vault cache and then repopulating it with the following set of commands:
+If you specified ~obsidian-inbox-directory~, the new note will be created in this directory. Otherwise they will be placed in your Obsidian vault root directory specified by ~obsidian-directory~.
+
+*** Inbox
+
+*** Daily Notes
+
+** Inserting links
+[[./resources/insert-link.png]]
+
+There are two commands to insert links: ~obsidian-insert-link~ and ~obsidian-insert-wikilink~.  You can choose one depending on your preferred link format.
+
+When inserting links, two different formats can be used to specify the file: the filename alone, or the path to the file within the Obsidian vault.  The default is to only use the filename, but this behavior can be changed by setting the variable ~obsidian-links-use-vault-path~ to ~t~.  Alternately, using the prefix argument before the call to insert a link will toggle this behavior, inserting a link with the format opposite of this variable.
+
+When inserting links for files that don't exist, an empty file will be created.  The location of this new file depends upon the variable ~obsidian-create-unfound-files-in-inbox~.  For a non-nil value, the files will be created in the directory specified by ~obsidian-inbox-directory~ if that value is set, or in the ~obsidian-directory~ otherwise.  If ~obsidian-create-unfound-files-in-inbox~ is nil, new files will be created in the same directory into which the link is inserted.
+
+TODO: Why do markdown links not work well for me? (toggle-wiki-links) Should they be formatted prettier?
+
+*** Inserts a link in Markdown format
+Example: ~[Link description](path/to/file.md)~
+#+begin_src
+M-x obsidian-insert-link RET
+#+end_src
+
+Note, that when you insert a link to file that has spaces in it's name, like "facts about inserting links.md", Obsidian app would html-format the spaces, meaning the link will look like
+
+#+begin_src text
+[facts](facts%20about%20inserting%20links.md)
+#+end_src
+
+Obsidian.el follows this convention and does the same when inserting markdown links. ~obsidian-follow-link-at-point~ handles this correctly.
+
+*** Insert a link in wikilink format
+Example: ~[[path/fo/file.md|Link description]]~
 
 #+begin_src
-M-x obsidian-clear-cache RET
-M-x obsidian-update RET
+  M-x obsidian-insert-wikilink RET
 #+end_src
+
+*** Removing a link
+If you have a link but decide that you'd like to remove it while keeping the link text, use the command ~obsidian-remove-link~.
 
 ** Following links
 Obsidian.el implements a custom command ~obsidian-follow-link-at-point~ which correctly follows markdown and wiki links generated by the Obsidian App. In the installation example above, this command is bound to ~C-c C-o~ in ~obsidian-mode~.
@@ -232,43 +254,6 @@ If ~obsidian-backlinks-mode~ is active when ~obsidian-backlink-jump~ is called, 
 ;; TODO: Is this redundant to using obsidian-backlink-jump ?
 Another useful command is ~obsidian-backlinks-window~ which will move your cursor back and forth between the current note and the backlinks window.
 
-** Inserting links
-[[./resources/insert-link.png]]
-
-There are two commands to insert links: ~obsidian-insert-link~ and ~obsidian-insert-wikilink~.  You can choose one depending on your preferred link format.
-
-When inserting links, two different formats can be used to specify the file: the filename alone, or the path to the file within the Obsidian vault.  The default is to only use the filename, but this behavior can be changed by setting the variable ~obsidian-links-use-vault-path~ to ~t~.  Alternately, using the prefix argument before the call to insert a link will toggle this behavior, inserting a link with the format opposite of this variable.
-
-When inserting links for files that don't exist, an empty file will be created.  The location of this new file depends upon the variable ~obsidian-create-unfound-files-in-inbox~.  For a non-nil value, the files will be created in the directory specified by ~obsidian-inbox-directory~ if that value is set, or in the ~obsidian-directory~ otherwise.  If ~obsidian-create-unfound-files-in-inbox~ is nil, new files will be created in the same directory into which the link is inserted.
-
-TODO: Why do markdown links not work well for me? (toggle-wiki-links) Should they be formatted prettier?
-
-*** Inserts a link in Markdown format
-Example: ~[Link description](path/to/file.md)~
-#+begin_src
-M-x obsidian-insert-link RET
-#+end_src
-
-Note, that when you insert a link to file that has spaces in it's name, like "facts about inserting links.md", Obsidian app would html-format the spaces, meaning the link will look like
-
-#+begin_src text
-[facts](facts%20about%20inserting%20links.md)
-#+end_src
-
-Obsidian.el follows this convention and does the same when inserting markdown links. ~obsidian-follow-link-at-point~ handles this correctly.
-
-*** Insert a link in wikilink format
-Example: ~[[path/fo/file.md|Link description]]~
-
-#+begin_src
-  M-x obsidian-insert-wikilink RET
-#+end_src
-
-*** Removing a link
-If you have a link but decide that you'd like to remove it while keeping the link text, use the command ~obsidian-remove-link~.
-
-** Inserting tags
-
 ** Jumping between notes
 Quickly jump between notes using ~obsidian-jump~
 
@@ -279,33 +264,8 @@ Quickly jump between notes using ~obsidian-jump~
 *** Aliases
 If you have YAML front matter in your note, Obsidian.el will find aliases in it and add them to the ~obsidian-jump~ selection. Both ~aliases~ and ~alias~ keys are supported.
 
-** Returning to previous location
+*** Returning to previous location
 After jumping to a new note, or following a link or backlink, you can return to your previous location using ~obsidian-jump-back~.
-
-** Capturing new note
-Use ~obsidian-capture~. If you specified ~obsidian-inbox-directory~, it will create new notes in this directory. Otherwise in your Obsidian vault root directory:
-
-#+begin_src
-  M-x obsidian-capture RET
-#+end_src
-
-*** Inbox
-
-*** Daily Notes
-
-** Searching notes
-Use ~obsidian-search~ to look for a string or a regular expression:
-
-#+begin_src
-  M-x obsidian-search RET query RET
-#+end_src
-
-** Finding all notes with a tag
-Use ~obsidian-tag-find~ to list all notes that contain a tag. Let's you choose a tag from list of all tags:
-
-#+begin_src
-  M-x obsidian-tag-find RET
-#+end_src
 
 ** Move note to another folder
 Use ~obsidian-move-file~ to move current note to another folder:
@@ -314,24 +274,56 @@ Use ~obsidian-move-file~ to move current note to another folder:
   M-x obsidian-move-file RET
 #+end_src
 
+** Searching in notes
+Use ~obsidian-search~ to look for a string or a regular expression within the notes in your vault:
+
+#+begin_src
+  M-x obsidian-search RET query RET
+#+end_src
+
+** Inserting tags
+
+** Finding all notes with a tag
+Use ~obsidian-find-tag~ to list all notes that contain a tag.
+
+#+begin_src
+  M-x obsidian-find-tag RET
+#+end_src
+
+* How does obsidian.el work?
+
+Some of the functionality is provided by [[https://jblevins.org/projects/markdown-mode/][markdown-mode]].
+
+** [[https://github.com/abo-abo/hydra][Hydra]] menu
+
+When [[https://github.com/abo-abo/hydra][Hydra]] is installed, ~obsidian-hydra~ will be defined such that it can be used for bindings:
+
+#+begin_src elisp
+  (define-key obsidian-mode-map (kbd "C-c M-o") 'obsidian-hydra/body)
+#+end_src
+
+[[./resources/hydra-menu.png]]
+
+** Manual re-scan
+Metadata for a note, including links, backlinks, tags, and aliases, will not be recognized until after a call to ~obsidian-update~.  This function is called automatically each time a file is saved.
+
+You can update the lists of tags, links etc. manually if it's lagging for some reason by running an interactive command:
+
+#+begin_src
+M-x obsidian-update RET
+#+end_src
+
+If this doesn't seem to fix the issue, the entire vault can be rescanned by first clearing out the old vault cache and then repopulating it with the following set of commands:
+
+#+begin_src
+M-x obsidian-clear-cache RET
+M-x obsidian-update RET
+#+end_src
+
 ** Templates
 
 Obsidian.el has a basic template support, where the Obsidian app's template placeholders can be used,
 without customization. {{title}}, {{date}}, and {{time}} can be used. {{title}} is the name of the file without the extension.
-
-*** Development tasks
-- [X] Specify Obsidian folder and save it in variables
-- [X] Enumerate files in the Obsidian folder and save a list
-- [X] Run the scan when entering obsidian-mode
-- [X] Functions to scan notes for tags
-- [X] Get full list of all tags
-- [X] company-backend with tags
-- [X] commands to insert links in markdown and wikilink
-- [X] Capture command to create a new note in Obsidian folder
-- [X] Obsidian minor for matching .md files
-- [X] Jumping between notes
-- [X] Following links
-- [X] Following backlinks
 
 ** markdown-toc
 
@@ -342,6 +334,21 @@ The project uses [[https://github.com/ptaoussanis/encore/blob/master/BREAK-VERSI
 
 * Contributing
 PRs and issues are very welcome. In order to develop locally you need to install [[https://github.com/doublep/eldev/][eldev]]. After that you can run ~make~ commands, in particular ~make test~ and ~make lint~ to make sure that your code will pass all MELPA checks.
+
+Note that the table of contents is generate with the package ~toc-org~.
+
+** Development tasks
+- [X] Specify Obsidian folder and save it in variables
+- [X] Enumerate files in the Obsidian folder and save a list
+- [X] Run the scan when entering obsidian-mode
+- [X] Functions to scan notes for tags
+- [X] Get full list of all tags
+- [X] commands to insert links in markdown and wikilink
+- [X] Capture command to create a new note in Obsidian folder
+- [X] Obsidian minor for matching .md files
+- [X] Jumping between notes
+- [X] Following links
+- [X] Following backlinks
 
 ** Internal Workings
 
