@@ -81,7 +81,7 @@
   "When non-nil, treat aliased wiki links like [[alias text|PageName]].
 Otherwise, they will be treated as [[PageName|alias text]]."
   :type 'boolean)
-(setq markdown-wiki-link-alias-first obsidian-wiki-link-alias-first)
+(customize-set-value 'markdown-wiki-link-alias-first obsidian-wiki-link-alias-first)
 
 (defcustom obsidian-create-unfound-files-in-inbox t
   "Where to create a file when target file is missing.
@@ -131,7 +131,7 @@ the filename on the first line and the link text on the line below."
   :type 'string
   :group 'backlinks-window)
 
-(defcustom obsidian-daily-note-template "Daily Note Template.md"
+(defcustom obsidian-daily-note-template nil
   "Daily notes' template filename in templates directory."
   :type 'file)
 
@@ -174,9 +174,16 @@ of `dirctory-files'."
 
 When run interactively asks user to specify the path."
   (interactive)
-  (->> (or path (read-directory-name "Specify path to Obsidian folder"))
+  (->> (or path (read-directory-name "Specify path to Obsidian vault: "))
        (expand-file-name)
        (customize-set-value 'obsidian-directory)))
+
+(defun obsidian-change-vault (&optional path)
+  "Set vault directory to PATH and repopulate vault cache."
+  (interactive)
+  (message "Obsidian vault set to: %s" (obsidian-specify-path path))
+  (obsidian-clear-cache)
+  (obsidian-populate-cache))
 
 (define-minor-mode obsidian-mode
   "Toggle minor `obsidian-mode' on and off.
@@ -573,10 +580,9 @@ If you need to run this manually, please report this as an issue on Github."
   (-let* ((obs-files (obsidian--find-all-files))
           (file-count (length obs-files)))
     (setq obsidian--vault-cache (make-hash-table :test 'equal :size file-count))
-    (message "Populating cache with %d files" file-count)
     (dolist-with-progress-reporter
         (i obs-files)
-        (format "Adding Obsidian %d files to cache... " file-count)
+        (format "Adding %d files to vault cache... " file-count)
       (obsidian--add-file i))
     (message "Obsidian cache populated at %s with %d files"
              (format-time-string "%H:%M:%S") file-count)
