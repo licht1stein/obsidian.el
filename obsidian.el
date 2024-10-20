@@ -419,7 +419,7 @@ and concatenates a hashtag to the beginning of each valid tag."
   (when tags
     (->> tags
          (seq-map #'string-trim-left)
-         (seq-map (lambda (t) (s-replace-regexp "^#" "" t))))))
+         (seq-map (lambda (tag) (s-replace-regexp "^#" "" tag))))))
 
 (defun obsidian--find-tags-in-string (s)
   "Retrieve list of #tags from string S.
