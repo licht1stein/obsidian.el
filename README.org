@@ -16,13 +16,14 @@ Obsidian Notes does not need to be installed to make use of the full functionali
   - [[#creating-a-new-note][Creating a new note]]
   - [[#inserting-links][Inserting links]]
   - [[#following-links][Following links]]
-  - [[#jumping-between-notes][Jumping between notes]]
+  - [[#opening-other-notes][Opening other notes]]
   - [[#following-backlinks][Following backlinks]]
-  - [[#move-note-to][Move note to]]
+  - [[#move-note-to-another-location][Move note to another location]]
   - [[#searching-in-notes][Searching in notes]]
   - [[#inserting-tags][Inserting tags]]
   - [[#searching-for-a-tag][Searching for a tag]]
   - [[#manual-re-scan][Manual re-scan]]
+  - [[#changing-active-vault][Changing active vault]]
   - [[#hydra-menu][Hydra menu]]
   - [[#front-matter][Front Matter]]
   - [[#templates][Templates]]
@@ -31,12 +32,8 @@ Obsidian Notes does not need to be installed to make use of the full functionali
 - [[#versioning][Versioning]]
 - [[#architecture-of-obsidianel][Architecture of obsidian.el]]
   - [[#data-structures][Data structures]]
-  - [[#obsidian-populate-cache][obsidian-populate-cache]]
-  - [[#obsidian-update][obsidian-update]]
-  - [[#update-timer][Update Timer]]
-  - [[#obsidian--add-file][obsidian--add-file]]
-  - [[#obsidian--remove-file][obsidian--remove-file]]
-  - [[#obsidian--update-on-save][obsidian--update-on-save]]
+  - [[#building-the-cache][Building the cache]]
+  - [[#cache-update-timer][Cache update timer]]
   - [[#backlinks-panel][Backlinks panel]]
 - [[#contributing][Contributing]]
 - [[#gratitude][Gratitude]]
@@ -318,7 +315,7 @@ If this still doesn't seem to fix the issue, the entire vault can be re-scanned 
 
 #+begin_src
   M-x obsidian-clear-cache RET
-  M-x obsidian-populate-cache RET
+  M-x obsidian-obsidian-update RET
 #+end_src
 
 ** Changing active vault

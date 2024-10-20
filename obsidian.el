@@ -169,18 +169,19 @@ of `dirctory-files'."
 (if (< emacs-major-version 28)
     (advice-add 'directory-files :around #'obsidian--directory-files-pre28))
 
-;;;###autoload
 (defun obsidian-specify-path (&optional path)
   "Set `obsidian-directory' to PATH or user-selected directory.
 
-When run interactively asks user to specify the path."
-  (interactive)
+You most likely want to run `obsidian-change-vault'."
   (->> (or path (read-directory-name "Specify path to Obsidian vault: "))
        (expand-file-name)
        (customize-set-value 'obsidian-directory)))
 
+;;;###autoload
 (defun obsidian-change-vault (&optional path)
-  "Set vault directory to PATH and repopulate vault cache."
+  "Set vault directory to PATH and repopulate vault cache.
+
+When run interactively asks user to specify the path."
   (interactive)
   (message "Obsidian vault set to: %s" (obsidian-specify-path path))
   (obsidian-clear-cache)
@@ -742,7 +743,7 @@ Optional argument ARG word to complete."
                      obsidian-prepare-tags-list
                      (-filter (lambda (s) (s-starts-with-p (car arg) s)))))))
 
-(defun obsidian--point-in-front-matter-p (&optional point)
+(defun obsidian-point-in-front-matter-p (&optional point)
   "Return t if POINT is currently inside YAML front matter."
   (let ((point (or point (point))))
     (save-excursion
@@ -757,7 +758,7 @@ Optional argument ARG word to complete."
   (interactive)
   (let* ((tags (-sort #'string< (obsidian-tags)))
          (choice (completing-read "Insert tag: " tags))
-         (fm (obsidian--point-in-front-matter-p (point)))
+         (fm (obsidian-point-in-front-matter-p (point)))
          (tag (if fm
                   choice
                 (format "#%s" choice))))
