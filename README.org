@@ -293,6 +293,11 @@ Use the function ~obsidian-insert-tag~ to insert an existing tag in the file at 
 
 You can also simply type in a tag and obsidian.el and it will be recognized by obsidian.el the next time the file is saved.
 
+*** company-mode completion
+[[./resources/tag-completion.png]]
+
+Obsidian.el also adds a [[http://company-mode.github.io/][company-mode]] backend to suggest tags for completion. This can be triggered with ~obsidian-tags-backend~.
+
 ** Searching for a tag
 Use ~obsidian-find-tag~ to list all notes that contain a tag and select one to open.
 
@@ -323,9 +328,8 @@ If you have multiple obsidian vaults, you can change which one is currently acti
   M-x obsidian-change-vault RET directory-selection RET
 #+end_src
 
-** [[https://github.com/abo-abo/hydra][Hydra]] menu
-
-When [[https://github.com/abo-abo/hydra][Hydra]] is installed, ~obsidian-hydra~ will be defined such that it can be used for bindings:
+** Hydra menu
+[[https://github.com/abo-abo/hydra][Hydra]] is a package for GNU Emacs that can be used to tie related commands into a family of short bindings with a common prefix. When Hydra is installed, ~obsidian-hydra~ will be defined such that it can be configured with a key binding. For example:
 
 #+begin_src elisp
   (define-key obsidian-mode-map (kbd "C-c M-o") 'obsidian-hydra/body)
