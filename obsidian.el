@@ -101,7 +101,8 @@ Default is the inbox directory"
   :type 'directory)
 
 (defcustom obsidian-backlinks-panel-position 'right
-  "Position of backlinks buffer. Valid values are
+  "Position of backlinks buffer in frame.
+Valid values are:
  * `right',
  * `left'."
   :type '(choice (const right)
@@ -114,8 +115,8 @@ Default is the inbox directory"
   :group 'backlinks-window)
 
 (defcustom obsidian-backlinks-filename-proportion 1.0
-  "Proportion of space to be used to display the file, the rest
-being used for the link text.
+  "Proportion of space to be used to display the file.
+The remainder will be used to display the link text.
 Setting a value of 1.0+ will cause 2 lines to be used per backlink with
 the filename on the first line and the link text on the line below."
   :type 'float
@@ -415,7 +416,7 @@ and concatenates a hashtag to the beginning of each valid tag."
                (seq-remove (lambda (tag) (s-starts-with-p "#" tag)))))))))
 
 (defun obsidian--process-body-tags (tags)
-  "Return list of tags with leading whitespace and hashtag removed."
+  "Return list of TAGS with leading whitespace and hashtag removed."
   (when tags
     (->> tags
          (seq-map #'string-trim-left)
@@ -735,19 +736,20 @@ Optional argument ARG word to complete."
   (cl-case command
     (prefix (and (eq major-mode 'markdown-mode)
                  (-contains-p local-minor-modes 'obsidian-mode)
+                 (fboundp company-grab-symbol)
                  (company-grab-symbol)))
     (candidates (->> (obsidian-tags)
                      obsidian-prepare-tags-list
                      (-filter (lambda (s) (s-starts-with-p (car arg) s)))))))
 
 (defun obsidian--point-in-front-matter-p (&optional point)
-  "Returns t if the point is currently in front matter."
-  (let ((point (or point (point)))))
-  (save-excursion
-    (goto-char 0)
-    (when (eq 4 (search-forward-regexp "^---" nil t))
-      (goto-char 4)
-      (<= point (search-forward-regexp "^---" nil t)))))
+  "Return t if POINT is currently inside YAML front matter."
+  (let ((point (or point (point))))
+    (save-excursion
+      (goto-char 0)
+      (when (eq 4 (search-forward-regexp "^---" nil t))
+        (goto-char 4)
+        (<= point (search-forward-regexp "^---" nil t))))))
 
 ;;;###autoload
 (defun obsidian-insert-tag ()
@@ -979,7 +981,7 @@ Opens markdown links in other window if ARG is non-nil.."
   (let* ((fil (get-text-property (point) 'obsidian--file))
          (pos (get-text-property (point) 'obsidian--position)))
     (when obsidian--debug-messages
-        (message "Visiting file %s at position %s" fil pos))
+      (message "Visiting file %s at position %s" fil pos))
     (find-file-other-window fil)
     (goto-char pos)))
 
@@ -1169,7 +1171,7 @@ _s_earch by expr.   _u_pdate tags/alises etc.
 (defun obsidian-idle-timer ()
   "Wait until Emacs is idle to call update."
   (when obsidian--debug-messages
-      (message "Update timer triggered at %s" (format-time-string "%H:%M:%S")))
+    (message "Update timer triggered at %s" (format-time-string "%H:%M:%S")))
   (run-with-idle-timer obsidian-update-idle-wait nil #'obsidian-update))
 
 (when obsidian-use-update-timer
@@ -1212,9 +1214,7 @@ For an interactive version, see `obsidian-backlinks-set-panel-width'."
            (win (get-buffer-window obsidian-backlinks-buffer-name))
            (win-width (window-width win))
            (new-width (max width window-safe-min-width)))
-      ;; (message "win-width: %d\tnew-width: %d" win-width new-width)
-      (save-excursion
-        (set-buffer bakbuf)
+      (with-current-buffer bakbuf
         (setq window-size-fixed nil)
         (window-resize win (- new-width win-width) t)
         (message "> :: adjusted %d to %d (win-width: %d\tnew-width: %d)"
@@ -1241,8 +1241,7 @@ Inspired by treemacs. See `treemacs--popup-window' in `treemacs-core-utils.el'
 for an example of using `display-buffer-in-side-window'."
   (interactive)
   (let ((bakbuf (get-buffer-create obsidian-backlinks-buffer-name)))
-    (save-excursion
-      (set-buffer bakbuf)
+    (with-current-buffer bakbuf
       (setq window-size-fixed 'width))
     (display-buffer-in-side-window
      bakbuf
@@ -1374,12 +1373,6 @@ in the linked file."
     (if (boundp 'eyebrowse-post-window-switch-hook)
         (add-hook 'eyebrowse-post-window-switch-hook
                   #'obsidian-close-all-backlinks-panels)))))
-
-(defun obsidian--startup ()
-  (when (and obsidian-backlinks-mode (obsidian-file-p))
-    (obsidian-open-backlinks-panel)))
-
-(add-hook 'window-setup-hook #'obsidian--startup)
 
 (provide 'obsidian)
 ;;; obsidian.el ends here
