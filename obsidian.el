@@ -336,21 +336,21 @@ The function is taken from xahlee:
   "Return all existing aliases (without values)."
   (hash-table-keys obsidian--aliases-map))
 
-(defun obsidian--user-directory-p (&optional file)
+(defun obsidian-user-directory-p (&optional file)
   "Return t if FILE is a user defined directory inside `obsidian-directory'."
   (and (file-directory-p file)
-       (obsidian--not-dot-obsidian-p file)
-       (obsidian--not-trash-p file)))
+       (obsidian-not-dot-obsidian-p file)
+       (obsidian-not-trash-p file)))
 
-(defun obsidian--dot-file-p (p)
+(defun obsidian-dot-file-p (p)
   "Return t if path P points to a dot file."
   (s-starts-with-p "." (file-name-base p)))
 
-(defun obsidian--not-trash-p (file)
+(defun obsidian-not-trash-p (file)
   "Return t if FILE is not in .trash of Obsidian."
   (not (s-contains-p "/.trash" file)))
 
-(defun obsidian--not-dot-obsidian-p (file)
+(defun obsidian-not-dot-obsidian-p (file)
   "Return t if FILE is not in .obsidian dir of Obsidian."
   (not (s-contains-p "/.obsidian" file)))
 
@@ -367,17 +367,17 @@ FILE is an Org-roam file if:
   (-when-let* ((path (or file (buffer-file-name (buffer-base-buffer))))
                (md-ext (s-ends-with-p ".md" path))
                (not-dot-file (or obsidian-include-hidden-files
-                                 (not (obsidian--dot-file-p path))))
+                                 (not (obsidian-dot-file-p path))))
                (not-node-git-p (not (string-match-p (rx (or "node_modules" ".git")) path)))
-               (not-trash-p (obsidian--not-trash-p path))
-               (not-dot-obsidian (obsidian--not-dot-obsidian-p path)))
+               (not-trash-p (obsidian-not-trash-p path))
+               (not-dot-obsidian (obsidian-not-dot-obsidian-p path)))
     t))
 
-(defun obsidian--file-relative-name (f)
+(defun obsidian-file-relative-name (f)
   "Take file name F and return relative path for `obsidian-directory'."
   (file-relative-name f obsidian-directory))
 
-(defun obsidian--expand-file-name (f)
+(defun obsidian-expand-file-name (f)
   "Take relative file name F and return expanded name."
   (expand-file-name f obsidian-directory))
 
@@ -393,7 +393,7 @@ FILE is an Org-roam file if:
 (defun obsidian-directories ()
   "Lists all Obsidian sub folders."
   (->> (directory-files-recursively obsidian-directory "" t)
-       (-filter #'obsidian--user-directory-p)))
+       (-filter #'obsidian-user-directory-p)))
 
 (defun obsidian--process-front-matter-tags (front-matter)
   "FRONT-MATTER is the hashmap from obsidian--find-yaml-front-matter-in-string.
@@ -494,9 +494,9 @@ markdown-link-at-pos:
                                 ;; for the current tag in the response hash table
                                 (if-let ((file-list (gethash tag obsidian--tags-map)))
                                     (progn
-                                      (push (obsidian--file-relative-name file) file-list)
+                                      (push (obsidian-file-relative-name file) file-list)
                                       (puthash tag file-list obsidian--tags-map))
-                                  (puthash tag (list (obsidian--file-relative-name file))
+                                  (puthash tag (list (obsidian-file-relative-name file))
                                            obsidian--tags-map))))
                             (gethash 'tags obsidian--file-metadata))))
                obsidian--vault-cache)
@@ -616,8 +616,8 @@ them all just in case."
           (message "Reprocesed the following files:\n%s" (pp to-reprocess)))
         (message "Obsidian cache updated at %s" (format-time-string "%H:%M:%S"))))))
 
-(defun obsidian--format-link (file-path &optional toggle)
-  "Format link from FILE-PATH based on `obsidian-links-use-vault-path'.
+(defun obsidian-format-link (file-path &optional toggle)
+  "Return FILE-PATH in form to use as link based on `obsidian-links-use-vault-path'.
 
 Will format FILE-PATH based on `obsidian-links-use-vault-path' and an optional
 prefix argument TOGGLE. If link contains a colon (:), it is assumed to not be an
@@ -628,27 +628,28 @@ Obsidian link and is returned unmodified."
         (if toggle (file-name-nondirectory file-path) file-path)
       (if toggle file-path (file-name-nondirectory file-path)))))
 
-(defun obsidian--verify-relative-path (f)
+(defun obsidian-verify-relative-path (f)
   "Check that relative file path F exists, and create it if it does not.
+
 Returns a file path relative to the obsidian vault."
   (if (s-contains-p ":" f)
       f
-    (let* ((obs-path (obsidian--expand-file-name f))
+    (let* ((obs-path (obsidian-expand-file-name f))
            (exists (obsidian-cached-file-p obs-path)))
       (if (not exists)
           (if obsidian-create-unfound-files-in-inbox
               (-> f
-                  obsidian--prepare-new-file-from-rel-path
-                  obsidian--file-relative-name)
+                  obsidian-prepare-new-file-from-rel-path
+                  obsidian-file-relative-name)
             (-> (buffer-file-name)
                 file-name-directory
-                obsidian--file-relative-name
+                obsidian-file-relative-name
                 (concat f)
-                obsidian--prepare-new-file-from-rel-path
-                obsidian--file-relative-name))
+                obsidian-prepare-new-file-from-rel-path
+                obsidian-file-relative-name))
         f))))
 
-(defun obsidian--request-link (&optional toggle-path)
+(defun obsidian-request-link (&optional toggle-path)
   "Service function to request user for link input.
 
 TOGGLE-PATH is a boolean that will toggle the behavior of
@@ -658,13 +659,13 @@ TOGGLE-PATH is a boolean that will toggle the behavior of
          (region (when (use-region-p)
                    (buffer-substring-no-properties (region-beginning) (region-end))))
          (chosen-file (completing-read "Link: " all-files))
-         (verified-file (obsidian--verify-relative-path chosen-file))
+         (verified-file (obsidian-verify-relative-path chosen-file))
          (default-description (-> verified-file
                                   file-name-nondirectory
                                   file-name-sans-extension))
          (description (->> (or region default-description)
                            (read-from-minibuffer "Description (optional): ")))
-         (file-link (obsidian--format-link verified-file toggle-path)))
+         (file-link (obsidian-format-link verified-file toggle-path)))
     (list :file file-link :description description)))
 
 ;;;###autoload
@@ -674,7 +675,7 @@ TOGGLE-PATH is a boolean that will toggle the behavior of
 If ARG is set, the value of `obsidian-links-use-vault-path' will be toggled for
 the current link insertion."
   (interactive "P")
-  (let* ((file (obsidian--request-link arg))
+  (let* ((file (obsidian-request-link arg))
          (filename (plist-get file :file))
          (description (plist-get file :description))
          (no-ext (file-name-sans-extension filename))
@@ -693,7 +694,7 @@ If ARG is set, the value of `obsidian-links-use-vault-path' will be toggled for
 this link insertion. If text is highlighted, the highlighted text will be
 replaced by the link."
   (interactive "P")
-  (let* ((file-plist (obsidian--request-link arg))
+  (let* ((file-plist (obsidian-request-link arg))
          (file-raw (plist-get file-plist :file))
          (file (s-replace " " "%20" file-raw))
          (description (plist-get file-plist :description))
@@ -864,7 +865,7 @@ Note is created in the `obsidian-daily-notes-directory' if set, or in
     (obsidian--remove-file old-file-path)
     (message "Moved to %s" new-file-path)))
 
-(defun obsidian--prepare-file-path (s)
+(defun obsidian-prepare-file-path (s)
   "Replace %20 with spaces in file path.
 Argument S relative file name to clean and convert to absolute."
   (let* ((cleaned-name (s-replace "%20" " " s)))
@@ -874,7 +875,7 @@ Argument S relative file name to clean and convert to absolute."
   "Filter ALL-FILES to return list with same name as F."
   (-filter (lambda (el) (or (s-equals-p f el) (s-ends-with-p (concat "/" f) el))) all-files))
 
-(defun obsidian--prepare-new-file-from-rel-path (p)
+(defun obsidian-prepare-new-file-from-rel-path (p)
   "Create file if it doesn't exist and return full system path for relative path P.
 
 If the file include directories in its path, we create the file relative to
@@ -896,16 +897,16 @@ If the file include directories in its path, we create the file relative to
   "Open file F, offering a choice if multiple files match F.
 
 If ARG is set, the file will be opened in other window."
-  (let* ((all-files (->> (obsidian-files) (-map #'obsidian--file-relative-name)))
+  (let* ((all-files (->> (obsidian-files) (-map #'obsidian-file-relative-name)))
          (matches (obsidian--match-files f all-files))
          (file (cl-case (length matches)
-                 (0 (obsidian--prepare-new-file-from-rel-path
-                     (obsidian--prepare-rel-path f)))
+                 (0 (obsidian-prepare-new-file-from-rel-path
+                     (obsidian-prepare-rel-path f)))
                  (1 (car matches))
                  (t
                   (let ((choice (completing-read "Jump to: " matches)))
                     choice))))
-         (path (obsidian--expand-file-name file)))
+         (path (obsidian-expand-file-name file)))
     (if arg (find-file-other-window path) (find-file path))))
 
 (defun obsidian-find-point-in-file (f p &optional arg)
@@ -915,7 +916,7 @@ If ARG is set, the file will be opened in other window."
   (obsidian-find-file f arg)
   (goto-char p))
 
-(defun obsidian--prepare-rel-path (f)
+(defun obsidian-prepare-rel-path (f)
   "If `/' in F, return F, otherwise with buffer, relative to the buffer."
   (if (s-contains-p "/" f)
       f
@@ -923,7 +924,7 @@ If ARG is set, the file will be opened in other window."
         f
       (-> (buffer-file-name)
           file-name-directory
-          obsidian--file-relative-name
+          obsidian-file-relative-name
           (concat f)))))
 
 (defun obsidian-wiki-link-p ()
@@ -961,7 +962,7 @@ From `filename#section' keep only the `filename'."
     (if (s-contains-p ":" url)
         (browse-url url)
       (let ((prepped-path (-> url
-                              obsidian--prepare-file-path
+                              obsidian-prepare-file-path
                               obsidian-wiki->normal)))
         (push (point-marker) obsidian--jump-list)
         (obsidian-find-point-in-file prepped-path 0 arg)))))
@@ -973,7 +974,7 @@ Opens markdown links in other window if ARG is non-nil.."
   (let ((normalized (s-replace "%20" " " (markdown-link-url))))
     (if (s-contains-p ":" normalized)
         (browse-url normalized)
-      (let ((prepped-path (obsidian--prepare-file-path normalized)))
+      (let ((prepped-path (obsidian-prepare-file-path normalized)))
         (push (point-marker) obsidian--jump-list)
         (obsidian-find-point-in-file prepped-path 0 arg )))))
 
@@ -1043,7 +1044,7 @@ See `markdown-follow-link-at-point' and `markdown-follow-wiki-link-at-point'."
     (or (s-matches-p obsidian--basic-wikilink-regex s)
         (s-matches-p obsidian--basic-markdown-link-regex s))))
 
-(defun obsidian--file-backlinks (file)
+(defun obsidian-file-backlinks (file)
   "Return a hashtable of backlinks to FILE.
 
 The variables used for retrieving links are as follows:
@@ -1093,7 +1094,7 @@ Template vars: {{title}}, {{date}}, and {{time}}"
   "Completion function to show file path and link text from HMAP."
   (let* ((obsidian--backlinks-alist
           (ht-map (lambda (k v)
-                    (cons (obsidian--file-relative-name k) (nth 2 v)))
+                    (cons (obsidian-file-relative-name k) (nth 2 v)))
                   hmap)))
     (completing-read
      "Backlinks: "
@@ -1107,7 +1108,7 @@ Template vars: {{title}}, {{date}}, and {{time}}"
   "Return a backlinks hashmap for FILE."
   (let* ((filepath (or file (buffer-file-name)))
          (filename (file-name-nondirectory filepath))
-         (linkmap (obsidian--file-backlinks filename)))
+         (linkmap (obsidian-file-backlinks filename)))
     linkmap))
 
 ;;;###autoload
@@ -1117,7 +1118,7 @@ Template vars: {{title}}, {{date}}, and {{time}}"
   (let ((linkmap (obsidian-backlinks file)))
     (if (> (length (hash-table-keys linkmap)) 0)
         (let* ((choice (obsidian--backlinks-completion-fn linkmap))
-               (target (obsidian--expand-file-name choice))
+               (target (obsidian-expand-file-name choice))
                (link-info (gethash target linkmap)))
           (find-file target)
           (goto-char (car link-info)))
@@ -1222,7 +1223,7 @@ For an interactive version, see `obsidian-backlinks-set-panel-width'."
                  (- new-width win-width) (window-width win) win-width new-width)
         (setq window-size-fixed 'width))
       (setq obsidian-backlinks-panel-width new-width)
-      (obsidian--populate-backlinks-buffer 'force))))
+      (obsidian-populate-backlinks-buffer 'force))))
 
 (defun obsidian-backlinks-set-panel-width (&optional arg)
   "Select a new value for `obsidian-backlinks-panel-width'.
@@ -1282,7 +1283,7 @@ Returns t if a panel was created, nil if closed."
 K is the file name that contains the link.
 V is the list object associated with the link as returned
 by `markdown-link-at-pos'."
-  (let* ((rel-file (obsidian--file-relative-name k))
+  (let* ((rel-file (obsidian-file-relative-name k))
          (link-txt (nth 2 v))
          (ptxt (propertize
                 (format (obsidian--backlinks-format)
@@ -1291,7 +1292,7 @@ by `markdown-link-at-pos'."
                 'obsidian--file k 'obsidian--position (nth 0 v))))
     (insert ptxt)))
 
-(defun obsidian--file-backlinks-displayed-p (&optional file)
+(defun obsidian-file-backlinks-displayed-p (&optional file)
   "Return t if the backlinks panel is showing the backlinks for FILE, else nil.
 
 FILE is the full path to an obsidian file."
@@ -1300,15 +1301,15 @@ FILE is the full path to an obsidian file."
          (file-prop (get-text-property 1 'obsidian-mru-file bakbuf)))
     (equal file-path file-prop)))
 
-(defun obsidian--populate-backlinks-buffer (&optional force)
+(defun obsidian-populate-backlinks-buffer (&optional force)
   "Populate backlinks buffer with backlinks for current Obsidian file.
 
 The backlinks buffer will not be updated if it's already showing the
 backlinks for the current buffer unless FORCE is non-nil."
-  (unless (and (obsidian--file-backlinks-displayed-p) (not force))
+  (unless (and (obsidian-file-backlinks-displayed-p) (not force))
     (when (and obsidian-mode (obsidian-file-p) (obsidian--get-local-backlinks-window))
       (let* ((file-path (buffer-file-name))
-             (vault-path (obsidian--file-relative-name file-path))
+             (vault-path (obsidian-file-relative-name file-path))
              (backlinks (obsidian-backlinks))
              (file-str (if obsidian-backlinks-show-vault-path
                            vault-path
@@ -1331,23 +1332,6 @@ backlinks for the current buffer unless FORCE is non-nil."
            (get-buffer-window obsidian-backlinks-buffer-name)
            (point)))))))
 
-(defun obsidian-backlinks-count-map ()
-  "Return a hashmap with a backlinks count for each file.
-
-The key is a full file path and the value with be an integer count
-of the number of backlinks pointing to that file."
-  (let* ((obs-files (hash-table-keys obsidian--vault-cache))
-         (num-files (length obs-files))
-         (bakmap (make-hash-table :test 'equal :size num-files)))
-    (seq-map (lambda (f)
-               (let* ((backlinks (obsidian-backlinks f))
-                      (count (length (hash-table-keys backlinks)))
-                      ;; (rel-file (obsidian--file-relative-name f))
-                      (rel-file f))
-                 (puthash rel-file count bakmap)))
-             obs-files)
-    bakmap))
-
 ;;;###autoload
 (define-minor-mode obsidian-backlinks-mode
   "When active, open a buffer showing the backlinks for the current file.
@@ -1363,13 +1347,13 @@ in the linked file."
    (obsidian-backlinks-mode
     ;; mode was turned on
     (obsidian-open-backlinks-panel)
-    (obsidian--populate-backlinks-buffer)
-    (add-hook 'buffer-list-update-hook #'obsidian--populate-backlinks-buffer)
+    (obsidian-populate-backlinks-buffer)
+    (add-hook 'buffer-list-update-hook #'obsidian-populate-backlinks-buffer)
     (if (boundp 'eyebrowse-post-window-switch-hook)
         (remove-hook 'eyebrowse-post-window-switch-hook #'obsidian-close-all-backlinks-panels)))
    (t
     ;; mode was turned off (or we refused to turn it on)
-    (remove-hook 'buffer-list-update-hook #'obsidian--populate-backlinks-buffer)
+    (remove-hook 'buffer-list-update-hook #'obsidian-populate-backlinks-buffer)
     (obsidian-close-all-backlinks-panels)
     (if (boundp 'eyebrowse-post-window-switch-hook)
         (add-hook 'eyebrowse-post-window-switch-hook

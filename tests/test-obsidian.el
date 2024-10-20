@@ -181,12 +181,12 @@ key4:
     (expect (obsidian--link-p "[foo](bar)") :to-equal t)
     (expect (obsidian--link-p "[foo](bar.md)") :to-equal t)))
 
-(describe "obsidian--file-backlinks"
+(describe "obsidian-file-backlinks"
   (before-all (obsidian-change-vault obsidian--test-dir))
   (after-all (obsidian-change-vault obsidian--test--original-dir))
 
-  (it "1.md using obsidian--file-backlinks"
-    (let* ((linkmap (obsidian--file-backlinks "1.md"))
+  (it "1.md using obsidian-file-backlinks"
+    (let* ((linkmap (obsidian-file-backlinks "1.md"))
            (file1 (car (hash-table-keys linkmap))))
       (expect (length (hash-table-keys linkmap)) :to-equal 1)
       (expect (file-name-nondirectory file1) :to-equal "2.md")))
