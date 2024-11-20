@@ -1028,7 +1028,9 @@ See `markdown-follow-link-at-point' and `markdown-follow-wiki-link-at-point'."
         ((obsidian-wiki-link-p)
          (obsidian-follow-wiki-link-at-point arg))
         ((obsidian-backlink-p)
-         (obsidian-follow-backlink-at-point))))
+         (obsidian-follow-backlink-at-point))
+        ((thing-at-point-url-at-point)
+         (browse-url-at-point))))
 
 (defun obsidian--grep (re)
   "Find RE in the Obsidian vault."
@@ -1123,6 +1125,22 @@ Template vars: {{title}}, {{date}}, and {{time}}"
           (find-file target)
           (goto-char (car link-info)))
       (message "No backlinks found."))))
+
+;;;###autoload
+(defun obsidian-backlinks-window ()
+  "Visit backlinks buffer if not currently active or return to previous."
+  (interactive nil obsidian-mode)
+  (if obsidian-backlinks-mode
+      (if (equal (buffer-name) obsidian-backlinks-buffer-name)
+          (progn
+            (pop obsidian--jump-list)
+            (select-window (get-mru-window (selected-frame) nil :not-selected)))
+        (if-let ((bakbuf (get-buffer obsidian-backlinks-buffer-name)))
+            (progn
+              (push (point-marker) obsidian--jump-list)
+              (pop-to-buffer bakbuf))
+          (obsidian--populate-backlinks-buffer)))
+    (obsidian-backlink-jump)))
 
 ;;;###autoload
 (defun obsidian-search ()
@@ -1316,6 +1334,7 @@ backlinks for the current buffer unless FORCE is non-nil."
                          (file-name-base file-path))))
         (with-current-buffer (get-buffer obsidian-backlinks-buffer-name)
           (erase-buffer)
+          (visual-line-mode t)
           (insert (propertize (format "# %s\n" file-str)
                               'face 'markdown-header-face
                               'obsidian-mru-file file-path))
