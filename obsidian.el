@@ -171,20 +171,23 @@ of `dirctory-files'."
 
 (defun obsidian-specify-path (&optional path)
   "Set `obsidian-directory' to PATH or user-selected directory.
-
 You most likely want to run `obsidian-change-vault'."
-  (->> (or path (read-directory-name "Specify path to Obsidian vault: "))
-       (expand-file-name)
-       (customize-set-value 'obsidian-directory)))
+  (let* ((raw-path (or path
+                       (read-directory-name "Specify path to Obsidian vault: ")))
+         (final-path (expand-file-name raw-path)))
+    (if (file-exists-p final-path)
+        (progn
+          (customize-set-value 'obsidian-directory final-path)
+          (message "Obsidian vault set to: %s" obsidian-directory))
+      (user-error (format "File %s doesn't exist" final-path)))))
 
 ;;;###autoload
 (defun obsidian-change-vault (&optional path)
   "Set vault directory to PATH and repopulate vault cache.
-
 When run interactively asks user to specify the path."
   (interactive)
-  (message "Obsidian vault set to: %s" (obsidian-specify-path path))
   (obsidian-clear-cache)
+  (obsidian-specify-path path)
   (obsidian-populate-cache))
 
 (define-minor-mode obsidian-mode
@@ -230,7 +233,7 @@ characters of a tag.
 (defvar obsidian--basic-markdown-link-regex "\\[[[:graph:][:blank:]]+\\]\([[:graph:][:blank:]]*\)"
   "Regex pattern used to find markdown links.")
 
-(defvar obsidian--vault-cache nil
+(defvar obsidian-vault-cache nil
   "Cache for Obsidian files.
 
 The cache is a hashmap with the following structure
@@ -292,10 +295,10 @@ The function is taken from xahlee:
 (defun obsidian--set-tags (file tag-list)
   "Set list TAG-LIST to FILE in files cache."
   (when tag-list
-    (if-let ((attr-map (gethash file obsidian--vault-cache)))
+    (if-let ((attr-map (gethash file obsidian-vault-cache)))
         (puthash 'tags tag-list attr-map)
       (message "Unable to add tags for %s:\nAvailable keys:\n%s"
-               file (s-join "\n" (hash-table-keys obsidian--vault-cache))))))
+               file (s-join "\n" (hash-table-keys obsidian-vault-cache))))))
 
 (defun obsidian--set-aliases (file alias-list)
   "Set list ALIAS-LIST to FILE in files cache."
@@ -309,16 +312,16 @@ The function is taken from xahlee:
           (when stale-aliases
             (seq-map (lambda (alias) (obsidian--remove-alias alias)) stale-aliases)))
       (seq-map (lambda (alias) (obsidian--add-alias alias file)) alias-list))
-    (when-let ((attr-map (gethash file obsidian--vault-cache)))
+    (when-let ((attr-map (gethash file obsidian-vault-cache)))
       (puthash 'aliases alias-list attr-map))))
 
 (defun obsidian--set-links (file links-map)
   "Set table LINKS-MAP to FILE in files cache."
   (when links-map
-    (if-let ((attr-map (gethash file obsidian--vault-cache)))
+    (if-let ((attr-map (gethash file obsidian-vault-cache)))
         (puthash 'links links-map attr-map)
       (message "Unable to add links for %s:\nAvailable keys:\n%s"
-               file (s-join "\n" (hash-table-keys obsidian--vault-cache))))))
+               file (s-join "\n" (hash-table-keys obsidian-vault-cache))))))
 
 (defun obsidian--add-alias (alias file)
   "Add ALIAS as key to `obsidian--aliases-map' with FILE as value."
@@ -383,8 +386,8 @@ FILE is an Org-roam file if:
 
 (defun obsidian-files ()
   "Lists all Obsidian Notes files that are not in trash."
-  (when obsidian--vault-cache
-    (hash-table-keys obsidian--vault-cache)))
+  (when obsidian-vault-cache
+    (hash-table-keys obsidian-vault-cache)))
 
 (defun obsidian-cached-file-p (file)
   "Retrun true if FILE exists in files cache."
@@ -395,26 +398,47 @@ FILE is an Org-roam file if:
   (->> (directory-files-recursively obsidian-directory "" t)
        (-filter #'obsidian-user-directory-p)))
 
-(defun obsidian--process-front-matter-tags (front-matter)
-  "FRONT-MATTER is the hashmap from obsidian--find-yaml-front-matter-in-string.
+(defun obsidian--process-front-matter-tags (front-matter &optional filename)
+  "Retrieve a list of valid tags from FRONT-MATTER. FILENAME is used only for error messages.
 
-A list of valid tags is returned.
+FRONT-MATTER is the hashmap from obsidian--find-yaml-front-matter-in-string.
 
 This function filters invalid tags (eg tags that are not in a list, or tags
 that already have hashtags as these are not allowed in front matter, or
 values of :null as may be returned by the YAML parser), trims whitespace,
-and concatenates a hashtag to the beginning of each valid tag."
+and concatenates a hashtag to the beginning of each valid tag.
+
+Further work could be done to attempt to extract tags from improperly
+formatted front matter; however, Obsidian Notes would treat this as
+improper front matter, so it is treatly similarly here while sending
+a message regarding the formatting issue."
   (when front-matter
     (let* ((tags (gethash 'tags front-matter)))
-      ;; tags in front matter should be specified as a list
-      (when (and tags (not (equal 'string (type-of tags))))
-        (if (equal tags :null)
-            nil
-          (->> tags
-               ;; spaces are not allowed in tags; use commas between tags
-               (seq-remove (lambda (tag) (s-contains-p " " tag)))
-               ;; tags in front matter can't start with a hashtag
-               (seq-remove (lambda (tag) (s-starts-with-p "#" tag)))))))))
+      (when tags
+        ;; tags in front matter should be specified as a list, not as a single string
+        (if (equal 'string (type-of tags))
+            (progn
+              (if filename
+                  (message "Tags in front matter must be in a list; unable to parse tags for file %s" filename)
+                (message "Tags in front matter must be in a list"))
+              nil)  ;; return a value of nil instead of message text
+          ;; :null is returned by yaml-parse-string if a key has no value
+          (if (equal tags :null)
+              (progn
+                (if filename
+                    (message "The key 'tags:' cannot have an empty value in front matter for file %s" filename)
+                  (message "The key 'tags:' cannot have an empty value in front matter"))
+                nil)  ;; return a value of nil instead of message text
+            (let ((resp (->> tags
+                             ;; spaces are not allowed in tags; use commas between tags
+                             (seq-remove (lambda (tag) (s-contains-p " " tag)))
+                             ;; tags in front matter can't start with a hashtag
+                             (seq-remove (lambda (tag) (s-starts-with-p "#" tag))))))
+              (when (not (= (length tags) (length resp)))
+                (if filename
+                    (message "Found invalid tags in file %s" filename)
+                  (message "Invalid tags found when parsing file")))
+              resp)))))))
 
 (defun obsidian--process-body-tags (tags)
   "Return list of TAGS with leading whitespace and hashtag removed."
@@ -423,27 +447,40 @@ and concatenates a hashtag to the beginning of each valid tag."
          (seq-map #'string-trim-left)
          (seq-map (lambda (tag) (s-replace-regexp "^#" "" tag))))))
 
-(defun obsidian--find-tags-in-string (s)
-  "Retrieve list of #tags from string S.
+(defun obsidian--find-tags-in-string (s &optional filename)
+  "Retrieve list of #tags from string S. FILENAME is used only for error messages.
 
 First searches for front matter to find tags there, then searches through
 the entire string."
-  (let* ((front-matter (obsidian--find-yaml-front-matter-in-string s))
-         (fm-tags (obsidian--process-front-matter-tags front-matter))
-         (body-tags-raw (-flatten (s-match-strings-all obsidian--tag-regex s)))
-         (body-tags (obsidian--process-body-tags body-tags-raw)))
-    (-flatten (append fm-tags body-tags))))
+  (condition-case nil
+      (let* ((front-matter (obsidian--find-yaml-front-matter-in-string s))
+             (fm-tags (obsidian--process-front-matter-tags front-matter filename))
+             (body-tags-raw (-flatten (s-match-strings-all obsidian--tag-regex s)))
+             (body-tags (obsidian--process-body-tags body-tags-raw)))
+        (-flatten (append fm-tags body-tags)))
+    (error
+     (progn
+       (if filename
+           (message "Error parsing front matter yaml for tags for file %s" filename)
+         (message "Error parsing front matter yaml for tags"))
+       nil))))  ;; return a value of nil instead of the message text
 
-(defun obsidian--find-aliases-in-string (s)
-  "Retrieve list of aliases from string S."
-  (when-let ((dict (obsidian--find-yaml-front-matter-in-string s)))
-    (let* ((aliases-val (gethash 'aliases dict))
-           ;; yaml parser can return a value of :null
-           (aliases (when (not (equal :null aliases-val)) aliases-val))
-           (alias (gethash 'alias dict))
-           (all-aliases (append aliases (list alias))))
-      (seq-map #'obsidian--stringify (-distinct (-filter #'identity all-aliases))))))
-
+(defun obsidian--find-aliases-in-string (s &optional filename)
+  "Retrieve list of aliases from string S. FILENAME is used only for error messages."
+  (condition-case nil
+      (when-let ((front-matter (obsidian--find-yaml-front-matter-in-string s)))
+        (let* ((aliases-val (gethash 'aliases front-matter))
+               ;; yaml parser can return a value of :null
+               (aliases (when (not (equal :null aliases-val)) aliases-val))
+               (alias (gethash 'alias front-matter))
+               (all-aliases (append aliases (list alias))))
+          (seq-map #'obsidian--stringify (-distinct (-filter #'identity all-aliases)))))
+    (error
+     (progn
+       (if filename
+           (message "Error parsing front matter yaml for aliases for file %s" filename)
+         (message "Error parsing front matter yaml for aliases"))
+       nil))))  ;; return a value of nil instead of the message text
 (defun obsidian--find-links ()
   "Retrieve hashtable of links in current buffer.
 
@@ -473,15 +510,13 @@ markdown-link-at-pos:
       (let* ((split (s-split-up-to "---" s 2))
              (looks-like-yaml-p (eq (length split) 3)))
         (if looks-like-yaml-p
-            (condition-case nil
-                (yaml-parse-string (nth 1 split))
-              (error
-               (message "Warning: erorr parsing YAML front matter")
-               nil))))))
+            ;; This will throw and exception if, for example, a tag in the
+            ;; front matter tag list starts with a hashtag
+            (yaml-parse-string (nth 1 split))))))
 
 (defun obsidian-tags-ht ()
   "Hashtable with each tags as the keys and list of file path as the values."
-  (when obsidian--vault-cache
+  (when obsidian-vault-cache
 
     (let ((obsidian--tags-map (make-hash-table :test 'equal)))
       ;; loop through files cache to get file/tag list for each file
@@ -499,7 +534,7 @@ markdown-link-at-pos:
                                   (puthash tag (list (obsidian-file-relative-name file))
                                            obsidian--tags-map))))
                             (gethash 'tags obsidian--file-metadata))))
-               obsidian--vault-cache)
+               obsidian-vault-cache)
       (maphash (lambda (k v)
                  (puthash k (-sort 'string-lessp (-distinct v)) obsidian--tags-map))
                obsidian--tags-map)
@@ -508,19 +543,20 @@ markdown-link-at-pos:
 (defun obsidian-tags ()
   "List of Obsidian Notes tags generated by obsidian.el.
 Tags in the list will NOT have a leading hashtag (#)."
-  (when obsidian--vault-cache
+  (when obsidian-vault-cache
     (-distinct
      (remove nil
              (-mapcat (lambda (val-map)
                         (gethash 'tags val-map))
-                      (hash-table-values obsidian--vault-cache))))))
+                      (hash-table-values obsidian-vault-cache))))))
 
 (defun obsidian--buffer-metadata ()
   "Find the tags, aliases, and links in the current buffer and return as hashtable."
   (save-excursion
-    (let* ((buf (buffer-substring-no-properties (point-min) (point-max)))
-           (tags (obsidian--find-tags-in-string buf))
-           (aliases (obsidian--find-aliases-in-string buf))
+    (let* ((bufname (buffer-file-name))
+           (bufstr (buffer-substring-no-properties (point-min) (point-max)))
+           (tags (obsidian--find-tags-in-string bufstr bufname))
+           (aliases (obsidian--find-aliases-in-string bufstr bufname))
            (links (obsidian--find-links))
            (meta (make-hash-table :test 'equal :size 3)))
       (puthash 'tags tags meta)
@@ -565,14 +601,14 @@ If file is not specified, the current buffer will be used."
 
 If you need to run this manually, please report this as an issue on Github."
   (interactive)
-  (setq obsidian--vault-cache nil))
+  (setq obsidian-vault-cache nil))
 
 (defun obsidian-populate-cache ()
   "Create an empty cache and populate cache with files, tags, aliases, and links."
   (interactive)
   (-let* ((obs-files (obsidian--find-all-files))
           (file-count (length obs-files)))
-    (setq obsidian--vault-cache (make-hash-table :test 'equal :size file-count))
+    (setq obsidian-vault-cache (make-hash-table :test 'equal :size file-count))
     (dolist-with-progress-reporter
         (i obs-files)
         (format "Adding %d files to vault cache... " file-count)
@@ -600,7 +636,7 @@ that was triggered by the `after-save-hook'.  We have no way to distinguish
 this from a file modified outside of obsidian.el, so we'll re-process
 them all just in case."
   (interactive)
-  (if (or (not (boundp 'obsidian--vault-cache)) (not obsidian--vault-cache))
+  (if (or (not (boundp 'obsidian-vault-cache)) (not obsidian-vault-cache))
       (obsidian-populate-cache)
     (-let* ((cached (obsidian-files))
             (ondisk (obsidian--find-all-files))
@@ -825,14 +861,14 @@ Note is created in the `obsidian-daily-notes-directory' if set, or in
 
 (defun obsidian--add-file (file)
   "Add a FILE to the files cache and update tags and aliases for the file."
-  (when (not (gethash file obsidian--vault-cache))
-    (puthash file (make-hash-table :test 'equal :size 3) obsidian--vault-cache))
+  (when (not (gethash file obsidian-vault-cache))
+    (puthash file (make-hash-table :test 'equal :size 3) obsidian-vault-cache))
   (obsidian--update-file-metadata file))
 
 (defun obsidian--remove-file (file)
   "Remove FILE from the files cache and update tags and aliases accordingly."
   (-map #'obsidian--remove-alias (obsidian--mapped-aliases file))
-  (remhash file obsidian--vault-cache))
+  (remhash file obsidian-vault-cache))
 
 (defun obsidian--update-on-save ()
   "Used as a hook to update the vault cache when a file is saved."
@@ -1071,7 +1107,7 @@ The files cache has the following structure:
             (when (equal link targ)
               (puthash host info resp)))
           links-map)))
-     obsidian--vault-cache)
+     obsidian-vault-cache)
     resp))
 
 (defun obsidian-apply-template (template-filename)
