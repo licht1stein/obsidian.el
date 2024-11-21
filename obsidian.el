@@ -398,6 +398,15 @@ FILE is an Org-roam file if:
   (->> (directory-files-recursively obsidian-directory "" t)
        (-filter #'obsidian-user-directory-p)))
 
+(defun obsidian-remove-front-matter-from-string (s)
+  "Return S with any front matter removed, returning only th body."
+  (if (s-starts-with-p "---" s)
+      (let ((splits (s-split-up-to "---" s 2)))
+        (if (eq (length splits) 3)
+            (string-trim-left (nth 2 splits))
+          s))
+    s))
+
 (defun obsidian--process-front-matter-tags (front-matter &optional filename)
   "Retrieve a list of valid tags from FRONT-MATTER. FILENAME is used only for error messages.
 
@@ -455,7 +464,8 @@ the entire string."
   (condition-case nil
       (let* ((front-matter (obsidian--find-yaml-front-matter-in-string s))
              (fm-tags (obsidian--process-front-matter-tags front-matter filename))
-             (body-tags-raw (-flatten (s-match-strings-all obsidian--tag-regex s)))
+             (s-body (obsidian-remove-front-matter-from-string s))
+             (body-tags-raw (-flatten (s-match-strings-all obsidian--tag-regex s-body)))
              (body-tags (obsidian--process-body-tags body-tags-raw)))
         (-flatten (append fm-tags body-tags)))
     (error

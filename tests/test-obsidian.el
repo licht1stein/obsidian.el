@@ -31,10 +31,29 @@
     (call-interactively #'obsidian-jump)))
 
 (describe "check path setting"
-  (before-all (obsidian-change-vault obsidian--test-dir))
-  (after-all (obsidian-change-vault obsidian--test--original-dir))
+  (before-all (progn
+                (setq obsidian-include-hidden-files t)
+                (obsidian-change-vault obsidian--test-dir)))
+  (after-all (progn
+               (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)
+               (obsidian-change-vault obsidian--test--original-dir)))
   (it "set to current"
-    (expect obsidian-directory :to-equal (expand-file-name obsidian--test-dir))))
+      (expect obsidian-directory :to-equal (expand-file-name obsidian--test-dir))
+      (expect (length (ht-keys obsidian-vault-cache))
+              :to-equal obsidian--test-number-of-notes)
+      ;; Use empty directory as vault and verify change
+      (let ((tmp-dir (make-temp-file "obs" t)))
+        (obsidian-change-vault tmp-dir)
+        (expect obsidian-directory :to-equal tmp-dir)
+        (expect (length (ht-keys obsidian-vault-cache)) :to-equal 0))
+      ;; Change vault to a non-existent directory
+      (expect (obsidian-change-vault "/path/that/does/not/exist")
+              :to-throw 'user-error)
+      ;; Change vault path to test-dir and verify change
+      (obsidian-change-vault obsidian--test-dir)
+      (expect obsidian-directory :to-equal obsidian--test-dir)
+      (expect (length (ht-keys obsidian-vault-cache))
+              :to-equal obsidian--test-number-of-notes)))
 
 (describe "obsidian-file-p"
   (before-all (obsidian-change-vault obsidian--test-dir))
@@ -49,39 +68,37 @@
 
 (describe "obsidian list all visible files"
    (before-all (progn
-                 (obsidian-change-vault obsidian--test-dir)
                  (setq obsidian-include-hidden-files nil)
-                 (obsidian-populate-cache)))
+                 (obsidian-change-vault obsidian--test-dir)))
    (after-all (progn
-                (obsidian-change-vault obsidian--test--original-dir)
-                (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)))
+                (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)
+                (obsidian-change-vault obsidian--test--original-dir)))
 
   (it "check visible file count"
     (expect (length (obsidian-files)) :to-equal obsidian--test-number-of-visible-notes)))
 
 (describe "obsidian list all files including hidden files"
    (before-all (progn
-                 (obsidian-change-vault obsidian--test-dir)
                  (setq obsidian-include-hidden-files t)
-                 (obsidian-populate-cache)))
+                 (obsidian-change-vault obsidian--test-dir)))
    (after-all (progn
-                (obsidian-change-vault obsidian--test--original-dir)
-                (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)))
+                (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)
+                (obsidian-change-vault obsidian--test--original-dir)))
 
   (it "check all files count"
     (expect (length (obsidian-files)) :to-equal obsidian--test-number-of-notes)))
 
 (describe "obsidian-directories"
    (before-all (progn
-                 (obsidian-change-vault obsidian--test-dir)
                  (setq obsidian-include-hidden-files nil)
-                 (obsidian-populate-cache)))
+                 (obsidian-change-vault obsidian--test-dir)))
    (after-all (progn
-                (obsidian-change-vault obsidian--test--original-dir)
-                (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)))
+                (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)
+                (obsidian-change-vault obsidian--test--original-dir)))
 
   (it "check directory count"
-    (expect (length (obsidian-directories)) :to-equal obsidian--test-number-of-visible-directories)))
+    (expect (length (obsidian-directories)) :to-equal
+            obsidian--test-number-of-visible-directories)))
 
 (describe "obsidian--find-tags-in-string"
   (before-all (obsidian-change-vault obsidian--test-dir))
@@ -90,28 +107,50 @@
   (it "find tags in string"
     (expect (length (obsidian--find-tags-in-string
                      "#foo bar #spam #bar-spam #spam_bar #foo+spam #foo=bar not tags #123 #+invalidtag"))
-            :to-equal 6)))
+            :to-equal 6)
+    (expect (obsidian--find-tags-in-string "---\ntags: \n---") :to-equal nil)
+    (expect (obsidian--find-tags-in-string "---\ntags: one\n---") :to-equal nil)
+    (expect (obsidian--find-tags-in-string "---\ntags: one two three\n---") :to-equal nil)
+    (expect (obsidian--find-tags-in-string "---\ntags: one, two, three\n---") :to-equal nil)
+    (expect (obsidian--find-tags-in-string "---\ntags: [one two three]\n---") :to-equal nil)
+    (expect (obsidian--find-tags-in-string "---\ntags: [one #two three]\n---") :to-equal nil)
+    (expect (obsidian--find-tags-in-string "---\ntags: one, #two, three---\n") :to-equal nil)
+    (expect (obsidian--find-tags-in-string "---\ntags: [one, two, three]\n---")
+            :to-equal '("one" "two" "three"))
+    (expect (obsidian--find-tags-in-string "---\ntags:\n- one\n- two\n- three\n---\n")
+            :to-equal '("one" "two" "three"))))
+
+(describe "obsidian--find-aliases-in-string"
+  (before-all (obsidian-change-vault obsidian--test-dir))
+  (after-all (obsidian-change-vault obsidian--test--original-dir))
+  (it "find aliases in string"
+    (expect (obsidian--find-aliases-in-string "---\naliases: \n---")
+            :to-equal nil)
+    (expect (obsidian--find-aliases-in-string "---\naliases: [file1]\n---")
+            :to-equal '("file1"))
+    (expect (obsidian--find-aliases-in-string "---\naliases: [file1, file2]\n---")
+            :to-equal '("file1" "file2"))
+    (expect (obsidian--find-aliases-in-string "---\naliases:\n- file1\n- file2\n---")
+            :to-equal '("file1" "file2"))))
 
 (describe "obsidian-list-visible-tags"
   (before-all (progn
-                (obsidian-change-vault obsidian--test-dir)
                 (setq obsidian-include-hidden-files nil)
-                (obsidian-populate-cache)))
+                (obsidian-change-vault obsidian--test-dir)))
   (after-all (progn
-               (obsidian-change-vault obsidian--test--original-dir)
-               (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)))
+               (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)
+               (obsidian-change-vault obsidian--test--original-dir)))
 
   (it "find all tags in the vault"
     (expect (length (obsidian-tags)) :to-equal obsidian--test-number-of-visible-tags)))
 
 (describe "obsidian list all tags including hidden tags"
   (before-all (progn
-                (obsidian-change-vault obsidian--test-dir)
                 (setq obsidian-include-hidden-files t)
-                (obsidian-populate-cache)))
+                (obsidian-change-vault obsidian--test-dir)))
   (after-all (progn
-               (obsidian-change-vault obsidian--test--original-dir)
-               (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)))
+               (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)
+               (obsidian-change-vault obsidian--test--original-dir)))
 
   (it "find all tags in the vault"
     (expect (length (obsidian-tags)) :to-equal obsidian--test-number-of-tags)))
@@ -143,11 +182,8 @@ key4:
   (s-concat "# Header\n" obsidian--test-correct-front-matter))
 
 (describe "obsidian-aliases"
-  (before-all (progn
-		(obsidian-change-vault obsidian--test-dir)
-                (obsidian-populate-cache)))
-  (after-all (progn
-	       (obsidian-change-vault obsidian--test--original-dir)))
+  (before-all (obsidian-change-vault obsidian--test-dir))
+  (after-all (obsidian-change-vault obsidian--test--original-dir))
 
   (it "check that front-matter is found"
     (expect (->> obsidian--test-correct-front-matter
@@ -206,7 +242,7 @@ key4:
          (moved-file-name
           (expand-file-name (s-concat obsidian--test-dir "/inbox/aliases.md"))))
 
-    (it "obsidian--vault-cache is updated when a file is moved"
+    (it "obsidian-vault-cache is updated when a file is moved"
         ;; Open file and confirm that it is in the files cache
         (let* ((executing-kbd-macro t)
                (unread-command-events (listify-key-sequence "subdir/aliases.md\n")))
