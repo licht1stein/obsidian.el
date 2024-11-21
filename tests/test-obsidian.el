@@ -100,6 +100,16 @@
     (expect (length (obsidian-directories)) :to-equal
             obsidian--test-number-of-visible-directories)))
 
+(describe "obsidian-remove-front-matter-front-string"
+  (it "Remove front matter from string"
+      (expect (obsidian-remove-front-matter-from-string "---\ntags: [foo]\n---\none\ntwo")
+              :to-equal "one\ntwo"))
+  (it "Return string when front matter isn't present"
+      (expect (obsidian-remove-front-matter-from-string "---\none\ntwo")
+              :to-equal "---\none\ntwo")
+      (expect (obsidian-remove-front-matter-from-string "one\ntwo")
+              :to-equal "one\ntwo")))
+
 (describe "obsidian--find-tags-in-string"
   (before-all (obsidian-change-vault obsidian--test-dir))
   (after-all (obsidian-change-vault obsidian--test--original-dir))

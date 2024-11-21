@@ -481,7 +481,14 @@ the entire string."
       (when-let ((front-matter (obsidian--find-yaml-front-matter-in-string s)))
         (let* ((aliases-val (gethash 'aliases front-matter))
                ;; yaml parser can return a value of :null
-               (aliases (when (not (equal :null aliases-val)) aliases-val))
+               (aliases (if (equal :null aliases-val)
+                            (progn
+                              (if filename
+                                  (message "Front matter cannot have keys without values in file %s" filename)
+                                (message "Front matter cannot have keys without values"))
+                              nil)
+                          aliases-val))
+
                (alias (gethash 'alias front-matter))
                (all-aliases (append aliases (list alias))))
           (seq-map #'obsidian--stringify (-distinct (-filter #'identity all-aliases)))))

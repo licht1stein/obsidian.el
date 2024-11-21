@@ -386,10 +386,10 @@ The project uses [[https://github.com/ptaoussanis/encore/blob/master/BREAK-VERSI
 
 ** Data structures
 
-*** obsidian--vault-cache
+*** obsidian-vault-cache
 This is the main data structure used for the vault file metadata.
 
-The ~obsidian--vault-cache~ is a nested hash table where the keys are absolute file paths for the files tracked by obsidian in the vault.  The values are also hash tables with the keys tags, aliases, and links.  The tags and aliases are lists of the tags and aliases associated with that file specified by the key.  The links are all of the links within that file, and the values are the response lists from the call to ~markdown-link-at-pos~ that includes the link, the link text, and the position of the link within the file.
+The ~obsidian-vault-cache~ is a nested hash table where the keys are absolute file paths for the files tracked by obsidian in the vault.  The values are also hash tables with the keys tags, aliases, and links.  The tags and aliases are lists of the tags and aliases associated with that file specified by the key.  The links are all of the links within that file, and the values are the response lists from the call to ~markdown-link-at-pos~ that includes the link, the link text, and the position of the link within the file.
 
 #+begin_src
 {<filepath> : {'tags: (list of tags associated with file)
@@ -406,7 +406,7 @@ A simple hash table where each key is an alias, and the value is the absolute fi
 
 ** Building the cache
 *** obsidian-populate-cache
-Function that rebuilds both ~obsidian--vault-cache~ and ~obsidian--aliases-map~.
+Function that rebuilds both ~obsidian-vault-cache~ and ~obsidian--aliases-map~.
 
 This is a relatively heavy operation so ideally would only called at startup by ~after-init-hook~.  All relevant information is retrieved with a single reading of the files on disk with an associated single call to ~with-temp-buffer~.
 
@@ -437,7 +437,7 @@ File will be added to the cache if it's not already there, the tags list and ali
 One of the two main internal functions along with ~obsidian--add-file~.
 
 1. Remove aliases for file from ~obsidian--aliases-map~
-2. Remove file record from ~obsidian--vault-cache~
+2. Remove file record from ~obsidian-vault-cache~
 
 *** obsidian--update-on-save
 Function meant to be added as a hook to ~after-save-hook~.
