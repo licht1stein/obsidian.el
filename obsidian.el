@@ -976,7 +976,12 @@ If ARG is set, the file will be opened in other window."
           (concat f)))))
 
 (defun obsidian-find-wiki-links (last)
-  "Match wiki links from point to LAST."
+  "Match wiki links from point to LAST.
+
+This uses some of the logic from `markdown-match-wiki-link' but returns a
+more detailed response to recognized the different parts of a wiki link.
+The returned list is of the same format as returned by
+`markdown-match-generic-links'."
   (when (markdown-match-inline-generic markdown-regex-wiki-link last)
     (let* ((begin (match-beginning 1))
            (end (match-end 1))
