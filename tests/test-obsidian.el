@@ -7,6 +7,8 @@
 ;; of the most recently visited file
 (defvar obsidian--test-dir (expand-file-name "./tests/test_vault"))
 (defvar obsidian--test--original-dir (or obsidian-directory obsidian--test-dir))
+(defvar obsidian--test--original-wiki-link-alias-first obsidian-wiki-link-alias-first)
+(defvar obsidian--test--original-enable-wiki-links markdown-enable-wiki-links)
 (defvar obsidian--test-number-of-tags 9)
 (defvar obsidian--test-number-of-visible-tags 6)
 (defvar obsidian--test-number-of-notes 11)
@@ -165,7 +167,7 @@
   (it "find all tags in the vault"
     (expect (length (obsidian-tags)) :to-equal obsidian--test-number-of-tags)))
 
-(describe "obsidian-populate-cache"
+(describe "obsidian-repopulate-cache"
   (before-all (progn
 		(obsidian-change-vault obsidian--test-dir)
 		(obsidian-clear-cache)))
@@ -175,7 +177,7 @@
     (expect (obsidian-tags) :to-be nil))
   (it "check tags are filled out after populate-cache"
     (expect (progn
-	      (obsidian-populate-cache)
+	      (obsidian-repopulate-cache)
 	      (length (obsidian-tags))) :to-equal obsidian--test-number-of-tags)))
 
 
@@ -226,6 +228,55 @@ key4:
   (it "markdown link"
     (expect (obsidian--link-p "[foo](bar)") :to-equal t)
     (expect (obsidian--link-p "[foo](bar.md)") :to-equal t)))
+
+(describe "obsidian unique links count including wiki links"
+   (before-all (progn
+                 (setq markdown-enable-wiki-links t)
+                 (setq obsidian-wiki-link-alias-first nil)
+                 (obsidian-change-vault obsidian--test-dir)))
+   (after-all (progn
+                (setq markdown-enable-wiki-links obsidian--test--original-enable-wiki-links)
+                (setq obsidian-wiki-link-alias-first
+                      obsidian--test--original-wik-link-alias-first)
+                (obsidian-change-vault obsidian--test--original-dir)))
+
+   (it "1.md unique link count"
+     (let* ((file (obsidian-expand-file-name "1.md"))
+            (links (ht-get (ht-get obsidian-vault-cache file) 'links)))
+       (expect (length (ht-keys links)) :to-equal 3)))
+
+   (it "subdir/1.md unique link count"
+     (let* ((file (obsidian-expand-file-name "subdir/1.md"))
+            (links (ht-get (ht-get obsidian-vault-cache file) 'links)))
+       (expect (length (ht-keys links)) :to-equal 1)))
+
+   (it "2.md unique link count"
+     (let* ((file (obsidian-expand-file-name "2.md"))
+            (links (ht-get (ht-get obsidian-vault-cache file) 'links)))
+       (expect (length (ht-keys links)) :to-equal 11))))
+
+(describe "obsidian unique links with wiki links disabled"
+   (before-all (progn
+                 (setq markdown-enable-wiki-links nil)
+                 (obsidian-change-vault obsidian--test-dir)))
+   (after-all (progn
+                (setq markdown-enable-wiki-links obsidian--test--original-enable-wiki-links)
+                (obsidian-change-vault obsidian--test--original-dir)))
+
+   (it "1.md unique link count"
+     (let* ((file (obsidian-expand-file-name "1.md"))
+            (links (ht-get (ht-get obsidian-vault-cache file) 'links)))
+       (expect (length (ht-keys links)) :to-equal 3)))
+
+   (it "subdir/1.md unique link count"
+     (let* ((file (obsidian-expand-file-name "subdir/1.md"))
+            (links (ht-get (ht-get obsidian-vault-cache file) 'links)))
+       (expect (length (ht-keys links)) :to-equal 0)))
+
+   (it "2.md unique link count"
+     (let* ((file (obsidian-expand-file-name "2.md"))
+            (links (ht-get (ht-get obsidian-vault-cache file) 'links)))
+       (expect (length (ht-keys links)) :to-equal 6))))
 
 (describe "obsidian-file-backlinks"
   (before-all (obsidian-change-vault obsidian--test-dir))

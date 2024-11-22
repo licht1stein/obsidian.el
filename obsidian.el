@@ -186,9 +186,8 @@ You most likely want to run `obsidian-change-vault'."
   "Set vault directory to PATH and repopulate vault cache.
 When run interactively asks user to specify the path."
   (interactive)
-  (obsidian-clear-cache)
   (obsidian-specify-path path)
-  (obsidian-populate-cache))
+  (obsidian-repopulate-cache))
 
 (define-minor-mode obsidian-mode
   "Toggle minor `obsidian-mode' on and off.
@@ -204,6 +203,13 @@ the mode, `toggle' toggles the state."
   :keymap (make-sparse-keymap))
 
 (defvar obsidian--debug-messages nil "Additional messages will be displayed for debugging.")
+
+(defun obsidian--message (msg &optional file)
+  "Send MSG to the message buffer specifying the optional FILE and return nil."
+  (if file
+      (message "%s for file %s" msg file)
+    (message "%s" msg))
+  nil)
 
 (defvar obsidian--tag-regex
   "\\(?:\\`\\|[[:space:]]\\)\\#\\(?:[A-Za-z_/][-A-Za-z0-9_/]*[A-Za-z_/][-A-Za-z0-9_/]*\\)"
@@ -396,6 +402,7 @@ FILE is an Org-roam file if:
 (defun obsidian-directories ()
   "Lists all Obsidian sub folders."
   (->> (directory-files-recursively obsidian-directory "" t)
+       (-map #'expand-file-name)
        (-filter #'obsidian-user-directory-p)))
 
 (defun obsidian-remove-front-matter-from-string (s)
@@ -426,27 +433,16 @@ a message regarding the formatting issue."
       (when tags
         ;; tags in front matter should be specified as a list, not as a single string
         (if (equal 'string (type-of tags))
-            (progn
-              (if filename
-                  (message "Tags in front matter must be in a list; unable to parse tags for file %s" filename)
-                (message "Tags in front matter must be in a list"))
-              nil)  ;; return a value of nil instead of message text
-          ;; :null is returned by yaml-parse-string if a key has no value
+            (obsidian--message "Tags in front matter must be a list" filename)
           (if (equal tags :null)
-              (progn
-                (if filename
-                    (message "The key 'tags:' cannot have an empty value in front matter for file %s" filename)
-                  (message "The key 'tags:' cannot have an empty value in front matter"))
-                nil)  ;; return a value of nil instead of message text
+              (obsidian--message "The key 'tags' cannot have an empty value in front matter" filename)
             (let ((resp (->> tags
                              ;; spaces are not allowed in tags; use commas between tags
                              (seq-remove (lambda (tag) (s-contains-p " " tag)))
                              ;; tags in front matter can't start with a hashtag
                              (seq-remove (lambda (tag) (s-starts-with-p "#" tag))))))
               (when (not (= (length tags) (length resp)))
-                (if filename
-                    (message "Found invalid tags in file %s" filename)
-                  (message "Invalid tags found when parsing file")))
+                (obsidian--message "Found invalid tags in front matter" filename))
               resp)))))))
 
 (defun obsidian--process-body-tags (tags)
@@ -469,11 +465,7 @@ the entire string."
              (body-tags (obsidian--process-body-tags body-tags-raw)))
         (-flatten (append fm-tags body-tags)))
     (error
-     (progn
-       (if filename
-           (message "Error parsing front matter yaml for tags for file %s" filename)
-         (message "Error parsing front matter yaml for tags"))
-       nil))))  ;; return a value of nil instead of the message text
+     (obsidian--message "Error parsing front matter yaml for tags" filename))))
 
 (defun obsidian--find-aliases-in-string (s &optional filename)
   "Retrieve list of aliases from string S. FILENAME is used only for error messages."
@@ -482,24 +474,16 @@ the entire string."
         (let* ((aliases-val (gethash 'aliases front-matter))
                ;; yaml parser can return a value of :null
                (aliases (if (equal :null aliases-val)
-                            (progn
-                              (if filename
-                                  (message "Front matter cannot have keys without values in file %s" filename)
-                                (message "Front matter cannot have keys without values"))
-                              nil)
+                            (obsidian--message "Front matter cannot have keys without values" filename)
                           aliases-val))
-
                (alias (gethash 'alias front-matter))
                (all-aliases (append aliases (list alias))))
           (seq-map #'obsidian--stringify (-distinct (-filter #'identity all-aliases)))))
     (error
-     (progn
-       (if filename
-           (message "Error parsing front matter yaml for aliases for file %s" filename)
-         (message "Error parsing front matter yaml for aliases"))
-       nil))))  ;; return a value of nil instead of the message text
+     (obsidian--message "Error parsing front matter yaml for aliases" filename))))
+
 (defun obsidian--find-links ()
-  "Retrieve hashtable of links in current buffer.
+  "Retrieve hashtable of inline links and wiki links in current buffer.
 
 Values of hashtabale are lists with values that matche those returned by
 markdown-link-at-pos:
@@ -511,6 +495,7 @@ markdown-link-at-pos:
   5. title text
   6. bang (nil or \"!\")"
   (let ((dict (make-hash-table :test 'equal)))
+    ;; Find markdown inline links
     (goto-char (point-min))
     ;; If you search to point-max, you'll get into an infinit loop if there's
     ;; a link a the end of the file, hence (- (point-max 4))
@@ -518,6 +503,13 @@ markdown-link-at-pos:
       (let ((link-info (markdown-link-at-pos (point))))
         (obsidian--strip-props (nth 2 link-info))
         (obsidian--strip-props (nth 3 link-info))
+        (puthash (nth 3 link-info) link-info dict)))
+    ;; Find wiki links
+    (when markdown-enable-wiki-links
+      (goto-char (point-min))
+      ;; If you search to point-max, you'll get into an infinit loop if there's
+      ;; a link a the end of the file, hence (- (point-max 4))
+      (while-let ((link-info (obsidian-find-wiki-links (- (point-max) 4))))
         (puthash (nth 3 link-info) link-info dict)))
     dict))
 
@@ -567,10 +559,11 @@ Tags in the list will NOT have a leading hashtag (#)."
                         (gethash 'tags val-map))
                       (hash-table-values obsidian-vault-cache))))))
 
-(defun obsidian--buffer-metadata ()
-  "Find the tags, aliases, and links in the current buffer and return as hashtable."
+(defun obsidian--buffer-metadata (&optional parent-file)
+  "Find the tags, aliases, and links in the current buffer and return as hashtable.
+PARENT-FILE is only used for error messages."
   (save-excursion
-    (let* ((bufname (buffer-file-name))
+    (let* ((bufname (or (buffer-file-name) parent-file))
            (bufstr (buffer-substring-no-properties (point-min) (point-max)))
            (tags (obsidian--find-tags-in-string bufstr bufname))
            (aliases (obsidian--find-aliases-in-string bufstr bufname))
@@ -585,12 +578,11 @@ Tags in the list will NOT have a leading hashtag (#)."
   "Find the tags, aliases, and links in FILE and return as hashtable.
 
 Uses current buffer if file is not specified"
-  ;; (message "Processing metadata for file %s" file)
   (if (and file (file-exists-p file))
       (with-temp-buffer
         (insert-file-contents file)
-        (obsidian--buffer-metadata))
-    (obsidian--buffer-metadata)))
+        (obsidian--buffer-metadata file))
+    (obsidian--buffer-metadata (buffer-file-name))))
 
 (defun obsidian--update-file-metadata (&optional file)
   "Update the metadata for the file FILE.
@@ -610,8 +602,9 @@ If file is not specified, the current buffer will be used."
 
 (defun obsidian--find-all-files()
   "Return a list of all obsidian files in the vault."
-  (let ((all-files (directory-files-recursively obsidian-directory "\.*$")))
-    (-filter #'obsidian-file-p all-files)))
+  (let* ((all-files (directory-files-recursively obsidian-directory "\.*$"))
+         (file-paths (-map #'expand-file-name all-files)))
+    (-filter #'obsidian-file-p file-paths)))
 
 (defun obsidian-clear-cache ()
   "Clears the obsidian.el cache.
@@ -620,11 +613,11 @@ If you need to run this manually, please report this as an issue on Github."
   (interactive)
   (setq obsidian-vault-cache nil))
 
-(defun obsidian-populate-cache ()
+(defun obsidian-repopulate-cache ()
   "Create an empty cache and populate cache with files, tags, aliases, and links."
   (interactive)
-  (-let* ((obs-files (obsidian--find-all-files))
-          (file-count (length obs-files)))
+  (let* ((obs-files (obsidian--find-all-files))
+         (file-count (length obs-files)))
     (setq obsidian-vault-cache (make-hash-table :test 'equal :size file-count))
     (dolist-with-progress-reporter
         (i obs-files)
@@ -654,7 +647,7 @@ this from a file modified outside of obsidian.el, so we'll re-process
 them all just in case."
   (interactive)
   (if (or (not (boundp 'obsidian-vault-cache)) (not obsidian-vault-cache))
-      (obsidian-populate-cache)
+      (obsidian-repopulate-cache)
     (-let* ((cached (obsidian-files))
             (ondisk (obsidian--find-all-files))
             (new-files (-difference ondisk cached))
@@ -878,14 +871,16 @@ Note is created in the `obsidian-daily-notes-directory' if set, or in
 
 (defun obsidian--add-file (file)
   "Add a FILE to the files cache and update tags and aliases for the file."
-  (when (not (gethash file obsidian-vault-cache))
-    (puthash file (make-hash-table :test 'equal :size 3) obsidian-vault-cache))
-  (obsidian--update-file-metadata file))
+  (let ((file (expand-file-name file)))
+    (when (not (gethash file obsidian-vault-cache))
+      (puthash file (make-hash-table :test 'equal :size 3) obsidian-vault-cache))
+    (obsidian--update-file-metadata file)))
 
 (defun obsidian--remove-file (file)
   "Remove FILE from the files cache and update tags and aliases accordingly."
-  (-map #'obsidian--remove-alias (obsidian--mapped-aliases file))
-  (remhash file obsidian-vault-cache))
+  (let ((file (expand-file-name file)))
+    (-map #'obsidian--remove-alias (obsidian--mapped-aliases file))
+    (remhash file obsidian-vault-cache)))
 
 (defun obsidian--update-on-save ()
   "Used as a hook to update the vault cache when a file is saved."
@@ -979,6 +974,31 @@ If ARG is set, the file will be opened in other window."
           file-name-directory
           obsidian-file-relative-name
           (concat f)))))
+
+(defun obsidian-find-wiki-links (last)
+  "Match wiki links from point to LAST."
+  (when (markdown-match-inline-generic markdown-regex-wiki-link last)
+    (let* ((begin (match-beginning 1))
+           (end (match-end 1))
+           (all   (match-string-no-properties 0))
+           (part1 (match-string-no-properties 3))
+           (part2 (match-string-no-properties 5))
+           (aliasp (string-equal (match-string-no-properties 4) "|"))
+           (filename (if (and aliasp markdown-wiki-link-alias-first)
+                         (markdown-convert-wiki-link-to-filename part2)
+                       (markdown-convert-wiki-link-to-filename part1)))
+           (linktext (when aliasp
+                       (if markdown-wiki-link-alias-first part1 part2))))
+      (if (or (markdown-in-comment-p begin)
+              (markdown-in-comment-p end)
+              (markdown-inline-code-at-pos-p begin)
+              (markdown-inline-code-at-pos-p end)
+              (markdown-code-block-at-pos begin))
+          (progn (goto-char (min (1+ begin) last))
+                 (when (< (point) last)
+                   (markdown-match-wiki-link last)))
+        ;; Mimics match-data set by markdown-match-generic-links
+        (list begin end linktext filename nil nil nil)))))
 
 (defun obsidian-wiki-link-p ()
   "Return non-nil if `point' is at a true wiki link.

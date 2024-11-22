@@ -170,6 +170,8 @@ You can create a daily note using the command ~obsidian-daily-note~. If set, thi
 
 There are two commands to insert links: ~obsidian-insert-link~ and ~obsidian-insert-wikilink~.  You can choose one depending on your preferred link format.
 
+If you'll be using wiki links, it's recommended to have ~markdown-enable-wiki-links~ set to ~t~.
+
 When inserting links, two different formats can be used to specify the file: the filename alone, or the path to the file within the Obsidian vault.  The default is to only use the filename, but this behavior can be changed by setting the variable ~obsidian-links-use-vault-path~ to ~t~.  Alternately, using the prefix argument before the call to insert a link will toggle this behavior, inserting a link with the format opposite of this variable.
 
 When inserting links for files that don't exist, an empty file will be created.  The location of this new file depends upon the variable ~obsidian-create-unfound-files-in-inbox~.  For a non-nil value, the files will be created in the directory specified by ~obsidian-inbox-directory~ if that value is set, or in the ~obsidian-directory~ otherwise.  If ~obsidian-create-unfound-files-in-inbox~ is nil, new files will be created in the same directory into which the link is inserted.
@@ -189,11 +191,13 @@ Note, that when you insert a link to file that has spaces in it's name, like "fa
 Obsidian.el follows this convention and does the same when inserting markdown links. ~obsidian-follow-link-at-point~ handles this correctly.
 
 *** Insert a link in wikilink format
-Example: ~[[path/fo/file.md|Link description]]~
+If you'll be using wiki links, it's recommended to have ~markdown-enable-wiki-links~ set to ~t~.
 
 #+begin_src
   M-x obsidian-insert-wikilink RET
 #+end_src
+
+Here's an example wiki link: ~[[path/fo/file.md|Link description]]~
 
 There is a variable ~obsidian-wiki-link-alias-first~ that will flip the order of a wiki link, putting the description first and the link second.  This setting will override the related setting from the ~markdown-mode~ package, ~markdown-wiki-link-alias-first~.
 
@@ -405,7 +409,7 @@ A simple hash table where each key is an alias, and the value is the absolute fi
 #+end_src
 
 ** Building the cache
-*** obsidian-populate-cache
+*** obsidian-repopulate-cache
 Function that rebuilds both ~obsidian-vault-cache~ and ~obsidian--aliases-map~.
 
 This is a relatively heavy operation so ideally would only called at startup by ~after-init-hook~.  All relevant information is retrieved with a single reading of the files on disk with an associated single call to ~with-temp-buffer~.
@@ -421,7 +425,7 @@ The rough pseudo-code for this function looks like this:
 *** obsidian-update
 Compares the list of currently cached files against the files on disk, removing any files from cache that no longer exist and adding files that exist on disk but not in the cache.
 
-Will call ~obsidian-populate-cache~ if that function has not yet been run, but it should be run on startup.
+Will call ~obsidian-repopulate-cache~ if that function has not yet been run, but it should be run on startup.
 
 *** obsidian--add-file
 One of the two main internal functions along with ~obsidian--remove-file~.
