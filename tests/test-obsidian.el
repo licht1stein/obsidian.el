@@ -235,7 +235,8 @@ key4:
                  (setq obsidian-wiki-link-alias-first nil)
                  (obsidian-change-vault obsidian--test-dir)))
    (after-all (progn
-                (setq markdown-enable-wiki-links obsidian--test--original-enable-wiki-links)
+                (setq markdown-enable-wiki-links
+                      obsidian--test--original-enable-wiki-links)
                 (setq obsidian-wiki-link-alias-first
                       obsidian--test--original-wik-link-alias-first)
                 (obsidian-change-vault obsidian--test--original-dir)))
@@ -260,7 +261,8 @@ key4:
                  (setq markdown-enable-wiki-links nil)
                  (obsidian-change-vault obsidian--test-dir)))
    (after-all (progn
-                (setq markdown-enable-wiki-links obsidian--test--original-enable-wiki-links)
+                (setq markdown-enable-wiki-links
+                      obsidian--test--original-enable-wiki-links)
                 (obsidian-change-vault obsidian--test--original-dir)))
 
    (it "1.md unique link count"

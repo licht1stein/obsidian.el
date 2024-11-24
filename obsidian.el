@@ -268,7 +268,7 @@ Each link list contains the following as returned by markdown-link-at-pos:
 
 (defvar obsidian--update-timer nil "Timer to periodically update the cache.")
 
-(defvar obsidian--updated-time nil
+(defvar obsidian--updated-time 0.0
   "Time of last cache update as a float number of seconds since the epoch.")
 
 (defun obsidian--stringify (obj)
@@ -509,8 +509,10 @@ markdown-link-at-pos:
       (goto-char (point-min))
       ;; If you search to point-max, you'll get into an infinit loop if there's
       ;; a link a the end of the file, hence (- (point-max 4))
-      (while-let ((link-info (obsidian-find-wiki-links (- (point-max) 4))))
-        (puthash (nth 3 link-info) link-info dict)))
+      (while
+          (if-let (link-info (and (> (- (point-max) 4) 0)
+                                  (obsidian-find-wiki-links (- (point-max) 4))))
+                 (puthash (nth 3 link-info) link-info dict))))
     dict))
 
 (defun obsidian--find-yaml-front-matter-in-string (s)
@@ -1001,7 +1003,7 @@ The returned list is of the same format as returned by
               (markdown-code-block-at-pos begin))
           (progn (goto-char (min (1+ begin) last))
                  (when (< (point) last)
-                   (markdown-match-wiki-link last)))
+                   (obsidian-find-wiki-links last)))
         ;; Mimics match-data set by markdown-match-generic-links
         (list begin end linktext filename nil nil nil)))))
 
