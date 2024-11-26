@@ -373,7 +373,9 @@ FILE is an Org-roam file if:
 - Is not a dot file or, if `obsidian-include-hidden-files' is t, then:
   - It is not in .trash
   - It is not an Emacs temp file"
-  (-when-let* ((path (or file (buffer-file-name (buffer-base-buffer))))
+  (-when-let* ((path (expand-file-name
+                      (or file (buffer-file-name (buffer-base-buffer)))))
+               (in-vault (s-starts-with-p (expand-file-name obsidian-directory) path))
                (md-ext (s-ends-with-p ".md" path))
                (not-dot-file (or obsidian-include-hidden-files
                                  (not (obsidian-dot-file-p path))))
@@ -729,9 +731,9 @@ the current link insertion."
          (no-ext (file-name-sans-extension filename))
          (link (if (and description (not (s-ends-with-p description no-ext)))
                    (if obsidian-wiki-link-alias-first
-                       (s-concat "[[" description "|" no-ext "]]")
-                     (s-concat "[[" no-ext "|" description"]]"))
-                 (s-concat "[[" no-ext "]]"))))
+                       (format "[[%s|%s]]" description no-ext)
+                     (format "[[%s|%s]]" no-ext description))
+                 (format "[[%s]]" no-ext))))
     (insert link)))
 
 ;;;###autoload
