@@ -514,7 +514,8 @@ markdown-link-at-pos:
         (while
             (if-let (link-info (obsidian-find-wiki-links (point-max)))
                 (obsidian--update-file-links-dict
-                 (obsidian-file-to-absolute-path (nth 3 link-info)) link-info dict)))))
+                 (obsidian-file-to-absolute-path (concat (nth 3 link-info) ".md"))
+                 link-info dict)))))
     dict))
 
 (defun obsidian--find-yaml-front-matter-in-string (s)
@@ -609,6 +610,13 @@ If file is not specified, the current buffer will be used."
   (let* ((all-files (directory-files-recursively obsidian-directory "\.*$"))
          (file-paths (-map #'expand-file-name all-files)))
     (-filter #'obsidian-file-p file-paths)))
+
+(defun obsidian-rescan-buffer ()
+  "Update vault metadata for current buffer."
+  (interactive)
+  (let ((file (buffer-file-name)))
+    (when (obsidian-file-p file)
+      (obsidian--add-file file))))
 
 (defun obsidian-rescan-cache ()
   "Create an empty cache and populate with files, tags, aliases, and links."

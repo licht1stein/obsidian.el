@@ -14,15 +14,11 @@ wiki link: [[subdir/2-sub with spaces and буквы|2-sub with spaces and бу�
 
 [[subdir/2-sub with spaces and буквы]] foo bar spam
 
-[1](subdir/1-sub.md)
+[md link to 1-sub](subdir/1-sub.md)
 
 [[subdir/1-sub]]
 
 #nested/tag
 
-[[subdir/2-sub with spaces and буквы]]
-
-File ends with markdown links
-[2-sub with spaces and буквы](subdir/2-sub%20with%20spaces%20and%20буквы.md)
-
+File ends with markdown link
 [2-sub md link](subdir/2-sub.md)
