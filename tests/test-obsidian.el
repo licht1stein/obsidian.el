@@ -246,8 +246,8 @@ key4:
             (links (ht-get (ht-get obsidian-vault-cache file) 'links)))
        (expect (length (ht-keys links)) :to-equal 3)))
 
-   (it "subdir/1.md unique link count"
-     (let* ((file (obsidian-expand-file-name "subdir/1.md"))
+   (it "subdir/1-sub.md unique link count"
+     (let* ((file (obsidian-expand-file-name "subdir/1-sub.md"))
             (links (ht-get (ht-get obsidian-vault-cache file) 'links)))
        (expect (length (ht-keys links)) :to-equal 1)))
 
@@ -277,8 +277,8 @@ key4:
             (links (ht-get (ht-get obsidian-vault-cache file) 'links)))
        (expect (length (ht-keys links)) :to-equal 3)))
 
-   (it "subdir/1.md unique link count"
-     (let* ((file (obsidian-expand-file-name "subdir/1.md"))
+   (it "subdir/1-sub.md unique link count"
+     (let* ((file (obsidian-expand-file-name "subdir/1-sub.md"))
             (links (ht-get (ht-get obsidian-vault-cache file) 'links)))
        (expect (length (ht-keys links)) :to-equal 0)))
 
