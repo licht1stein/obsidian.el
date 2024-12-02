@@ -167,7 +167,7 @@
   (it "find all tags in the vault"
     (expect (length (obsidian-tags)) :to-equal obsidian--test-number-of-tags)))
 
-(describe "obsidian-repopulate-cache"
+(describe "obsidian-rescan-cache"
   (before-all (progn
 		(obsidian-change-vault obsidian--test-dir)
 		(obsidian-clear-cache)))
@@ -177,7 +177,7 @@
     (expect (obsidian-tags) :to-be nil))
   (it "check tags are filled out after populate-cache"
     (expect (progn
-	      (obsidian-repopulate-cache)
+	      (obsidian-rescan-cache)
 	      (length (obsidian-tags))) :to-equal obsidian--test-number-of-tags)))
 
 

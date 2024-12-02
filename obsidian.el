@@ -179,7 +179,7 @@ You most likely want to run `obsidian-change-vault'."
 When run interactively asks user to specify the path."
   (interactive)
   (obsidian-specify-path path)
-  (obsidian-repopulate-cache))
+  (obsidian-rescan-cache))
 
 (define-minor-mode obsidian-mode
   "Toggle minor `obsidian-mode' on and off.
@@ -610,15 +610,8 @@ If file is not specified, the current buffer will be used."
          (file-paths (-map #'expand-file-name all-files)))
     (-filter #'obsidian-file-p file-paths)))
 
-(defun obsidian-clear-cache ()
-  "Clears the obsidian.el cache.
-
-If you need to run this manually, please report this as an issue on Github."
-  (interactive)
-  (setq obsidian-vault-cache nil))
-
-(defun obsidian-repopulate-cache ()
-  "Create an empty cache and populate cache with files, tags, aliases, and links."
+(defun obsidian-rescan-cache ()
+  "Create an empty cache and populate with files, tags, aliases, and links."
   (interactive)
   (let* ((obs-files (obsidian--find-all-files))
          (file-count (length obs-files)))
@@ -651,7 +644,7 @@ this from a file modified outside of obsidian.el, so we'll re-process
 them all just in case."
   (interactive)
   (if (or (not (boundp 'obsidian-vault-cache)) (not obsidian-vault-cache))
-      (obsidian-repopulate-cache)
+      (obsidian-rescan-cache)
     (-let* ((cached (obsidian-files))
             (ondisk (obsidian--find-all-files))
             (new-files (-difference ondisk cached))
@@ -1004,8 +997,9 @@ The returned list is of the same format as returned by
            (filename (if (and aliasp markdown-wiki-link-alias-first)
                          (markdown-convert-wiki-link-to-filename part2)
                        (markdown-convert-wiki-link-to-filename part1)))
-           (linktext (when aliasp
-                       (if markdown-wiki-link-alias-first part1 part2))))
+           (linktext (if aliasp
+                         (if markdown-wiki-link-alias-first part1 part2)
+                       filename)))
       (if (or (markdown-in-comment-p begin)
               (markdown-in-comment-p end)
               (markdown-inline-code-at-pos-p begin)

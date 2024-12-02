@@ -315,11 +315,10 @@ However, if you believe that the metadata is not currently in sync with the vaul
   M-x obsidian-update RET
 #+end_src
 
-If this still doesn't seem to fix the issue, the entire vault can be re-scanned by first clearing out the old vault cache, and then repopulating it with the following set of commands:
+If this still doesn't seem to fix the issue, the entire vault can be re-scanned and repopulated by calling:
 
 #+begin_src
-  M-x obsidian-clear-cache RET
-  M-x obsidian-obsidian-update RET
+  M-x obsidian-rescan-cache RET
 #+end_src
 
 ** Changing active vault
@@ -411,7 +410,7 @@ A simple hash table where each key is an alias, and the value is the absolute fi
 #+end_src
 
 ** Building the cache
-*** obsidian-repopulate-cache
+*** obsidian-rescan-cache
 Function that rebuilds both ~obsidian-vault-cache~ and ~obsidian--aliases-map~.
 
 This is a relatively heavy operation so ideally would only called at startup by ~after-init-hook~.  All relevant information is retrieved with a single reading of the files on disk with an associated single call to ~with-temp-buffer~.
@@ -427,7 +426,7 @@ The rough pseudo-code for this function looks like this:
 *** obsidian-update
 Compares the list of currently cached files against the files on disk, removing any files from cache that no longer exist and adding files that exist on disk but not in the cache.
 
-Will call ~obsidian-repopulate-cache~ if that function has not yet been run, but it should be run on startup.
+Will call ~obsidian-rescan-cache~ if that function has not yet been run, but it should be run on startup.
 
 *** obsidian--add-file
 One of the two main internal functions along with ~obsidian--remove-file~.
