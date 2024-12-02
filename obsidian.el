@@ -1183,11 +1183,14 @@ Template vars: {{title}}, {{date}}, and {{time}}"
     (goto-char m)))
 
 (defun obsidian--backlinks-completion-fn (hmap)
-  "Completion function to show file path and link text from HMAP."
-  (let* ((obsidian--backlinks-alist
-          (ht-map (lambda (k v)
-                    (cons (obsidian-file-relative-name k) (nth 2 v)))
-                  hmap)))
+  "Completion function to show file path and link text from hashmap HMAP."
+  (let ((obsidian--backlinks-alist
+         (-flatten
+          (ht-map (lambda (k1 v1)
+                    (seq-map (lambda (v2)
+                               (cons (obsidian-file-relative-name k1) (nth 2 v2)))
+                             v1))
+                  hmap))))
     (completing-read
      "Backlinks: "
      (lambda (str pred flag)
@@ -1210,8 +1213,7 @@ Template vars: {{title}}, {{date}}, and {{time}}"
         (let* ((choice (obsidian--backlinks-completion-fn linkmap))
                (target (obsidian-expand-file-name choice))
                (link-info (gethash target linkmap)))
-          (find-file target)
-          (goto-char (car link-info)))
+          (find-file target))
       (message "No backlinks found."))))
 
 ;;;###autoload
