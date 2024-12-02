@@ -11,8 +11,8 @@
 (defvar obsidian--test--original-enable-wiki-links markdown-enable-wiki-links)
 (defvar obsidian--test-number-of-tags 9)
 (defvar obsidian--test-number-of-visible-tags 6)
-(defvar obsidian--test-number-of-notes 11)
-(defvar obsidian--test-number-of-visible-notes 9)
+(defvar obsidian--test-number-of-notes 12)
+(defvar obsidian--test-number-of-visible-notes 10)
 (defvar obsidian--test-number-of-visible-directories 2)
 (defvar obsidian--test-visibility-cfg obsidian-include-hidden-files)
 
@@ -253,8 +253,15 @@ key4:
 
    (it "2.md unique link count"
      (let* ((file (obsidian-expand-file-name "2.md"))
-            (links (ht-get (ht-get obsidian-vault-cache file) 'links)))
-       (expect (length (ht-keys links)) :to-equal 11))))
+            (links (ht-get (ht-get obsidian-vault-cache file) 'links))
+            (count (seq-reduce #'+ (ht-map (lambda (k v) (length v)) links) 0)))
+       (expect count :to-equal 8)))
+
+   (it "2-vault-paths.md unique link count"
+       (let* ((file (obsidian-expand-file-name "2-vault-paths.md"))
+              (links (ht-get (ht-get obsidian-vault-cache file) 'links))
+              (count (seq-reduce #'+ (ht-map (lambda (k v) (length v)) links) 0)))
+         (expect count :to-equal 12))))
 
 (describe "obsidian unique links with wiki links disabled"
    (before-all (progn
@@ -276,9 +283,16 @@ key4:
        (expect (length (ht-keys links)) :to-equal 0)))
 
    (it "2.md unique link count"
-     (let* ((file (obsidian-expand-file-name "2.md"))
-            (links (ht-get (ht-get obsidian-vault-cache file) 'links)))
-       (expect (length (ht-keys links)) :to-equal 6))))
+       (let* ((file (obsidian-expand-file-name "2.md"))
+              (links (ht-get (ht-get obsidian-vault-cache file) 'links))
+              (count (seq-reduce #'+ (ht-map (lambda (k v) (length v)) links) 0)))
+         (expect count :to-equal 4)))
+
+   (it "2-vault-paths.md unique link count"
+       (let* ((file (obsidian-expand-file-name "2-vault-paths.md"))
+              (links (ht-get (ht-get obsidian-vault-cache file) 'links))
+              (count (seq-reduce #'+ (ht-map (lambda (k v) (length v)) links) 0)))
+         (expect count :to-equal 6))))
 
 (describe "obsidian-file-backlinks"
   (before-all (obsidian-change-vault obsidian--test-dir))

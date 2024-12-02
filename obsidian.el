@@ -484,6 +484,15 @@ the entire string."
     (error
      (obsidian--message "Error parsing front matter yaml for aliases" filename))))
 
+(defun obsidian--update-file-links-dict (filepath link-info dict)
+  "Add LINK-INFO to value of DICT for key FILEPATH.
+The value will be a nested list that contains link-info. The nested list
+will be created if necessary."
+  (if-let (links-list (ht-get dict filepath))
+      (ht-set dict filepath (append links-list (list link-info)))
+    (ht-set dict filepath (list link-info)))
+  dict)
+
 (defun obsidian--find-links ()
   "Retrieve hashtable of inline links and wiki links in current buffer.
 
@@ -499,22 +508,17 @@ markdown-link-at-pos:
   (let ((dict (make-hash-table :test 'equal)))
     ;; Find markdown inline links
     (goto-char (point-min))
-    ;; If you search to point-max, you'll get into an infinit loop if there's
-    ;; a link a the end of the file, hence (- (point-max 4))
-    (while (markdown-match-generic-links (- (point-max) 4) nil)
+    (while (markdown-match-generic-links (point-max) nil)
       (let ((link-info (markdown-link-at-pos (point))))
         (obsidian--strip-props (nth 2 link-info))
         (obsidian--strip-props (nth 3 link-info))
-        (puthash (nth 3 link-info) link-info dict)))
+        (obsidian--update-file-links-dict (nth 3 link-info) link-info dict)))
     ;; Find wiki links
     (when markdown-enable-wiki-links
       (goto-char (point-min))
-      ;; If you search to point-max, you'll get into an infinit loop if there's
-      ;; a link a the end of the file, hence (- (point-max 4))
       (while
-          (if-let (link-info (and (> (- (point-max) 4) 0)
-                                  (obsidian-find-wiki-links (- (point-max) 4))))
-                 (puthash (nth 3 link-info) link-info dict))))
+          (if-let (link-info (obsidian-find-wiki-links (- (point-max) 0)))
+              (obsidian--update-file-links-dict (nth 3 link-info) link-info dict))))
     dict))
 
 (defun obsidian--find-yaml-front-matter-in-string (s)

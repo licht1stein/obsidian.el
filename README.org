@@ -398,7 +398,9 @@ The ~obsidian-vault-cache~ is a nested hash table where the keys are absolute fi
 #+begin_src
 {<filepath> : {'tags: (list of tags associated with file)
                'aliases: (list of aliases associated with file)
-               'links: {<linked-file-name: (response from markdown-link-at-pos)}}}
+               'links: {<linked-file-name: ((list of info for link 1)
+                                            (list of info for link 2)
+                                            (list of info for link 3))}}}
 #+end_src
 
 *** obsidian--aliases-map
