@@ -149,6 +149,7 @@ In addition to the settings show in the example configurations above, some other
 - obsidian-create-unfound-files-in-inbox :: whether to create files for unfound links in inbox or in same directory as file
 - obsidian-backlinks-panel-position :: which side of the window to host backlinks panel: 'left or 'right
 - obsidian-backlinks-panel-width :: width of the backlinks panel in characters
+- obsidian-backlinks-show-vault-path :: show backlink files as only file name or full vault path
 
 * Usage
 

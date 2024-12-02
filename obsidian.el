@@ -114,14 +114,6 @@ Valid values are:
   :type 'integer
   :group 'backlinks-window)
 
-(defcustom obsidian-backlinks-filename-proportion 1.0
-  "Proportion of space to be used to display the file.
-The remainder will be used to display the link text.
-Setting a value of 1.0+ will cause 2 lines to be used per backlink with
-the filename on the first line and the link text on the line below."
-  :type 'float
-  :group 'backlinks-window)
-
 (defcustom obsidian-backlinks-show-vault-path t
   "If t, show path relative to Obsidian vault, otherwise only show file name."
   :type 'boolean
@@ -373,8 +365,8 @@ FILE is an Org-roam file if:
 - Is not a dot file or, if `obsidian-include-hidden-files' is t, then:
   - It is not in .trash
   - It is not an Emacs temp file"
-  (-when-let* ((path (expand-file-name
-                      (or file (buffer-file-name (buffer-base-buffer)))))
+  (-when-let* ((raw-path (or file (buffer-file-name (buffer-base-buffer))))
+               (path (expand-file-name raw-path))
                (in-vault (f-ancestor-of? obsidian-directory path))
                (md-ext (s-ends-with-p ".md" path))
                (not-dot-file (or obsidian-include-hidden-files
@@ -506,19 +498,23 @@ markdown-link-at-pos:
   5. title text
   6. bang (nil or \"!\")"
   (let ((dict (make-hash-table :test 'equal)))
-    ;; Find markdown inline links
-    (goto-char (point-min))
-    (while (markdown-match-generic-links (point-max) nil)
-      (let ((link-info (markdown-link-at-pos (point))))
-        (obsidian--strip-props (nth 2 link-info))
-        (obsidian--strip-props (nth 3 link-info))
-        (obsidian--update-file-links-dict (nth 3 link-info) link-info dict)))
-    ;; Find wiki links
-    (when markdown-enable-wiki-links
+    ;; Don't search for links in a near-empty file
+    (when (> (point-max) 5)
+      ;; Find markdown inline links
       (goto-char (point-min))
-      (while
-          (if-let (link-info (obsidian-find-wiki-links (- (point-max) 0)))
-              (obsidian--update-file-links-dict (nth 3 link-info) link-info dict))))
+      (while (markdown-match-generic-links (point-max) nil)
+        (let ((link-info (markdown-link-at-pos (point))))
+          (obsidian--strip-props (nth 2 link-info))
+          (obsidian--strip-props (nth 3 link-info))
+          (obsidian--update-file-links-dict
+           (obsidian-file-to-absolute-path (nth 3 link-info)) link-info dict)))
+      ;; Find wiki links
+      (when markdown-enable-wiki-links
+        (goto-char (point-min))
+        (while
+            (if-let (link-info (obsidian-find-wiki-links (point-max)))
+                (obsidian--update-file-links-dict
+                 (obsidian-file-to-absolute-path (nth 3 link-info)) link-info dict)))))
     dict))
 
 (defun obsidian--find-yaml-front-matter-in-string (s)
@@ -949,6 +945,14 @@ If the file include directories in its path, we create the file relative to
       (obsidian--add-file cleaned))
     cleaned))
 
+(defun obsidian-file-to-absolute-path (file)
+  "Return a full file path for FILE."
+  (let* ((all-files (->> (obsidian-files) (-map #'obsidian-file-relative-name)))
+         (matches (obsidian--match-files file all-files)))
+    (if matches
+        (obsidian-expand-file-name (car matches))
+      file)))
+
 (defun obsidian-find-file (f &optional arg)
   "Open file F, offering a choice if multiple files match F.
 
@@ -1133,15 +1137,15 @@ See `markdown-follow-link-at-point' and `markdown-follow-wiki-link-at-point'."
         (s-matches-p obsidian--basic-markdown-link-regex s))))
 
 (defun obsidian-file-backlinks (file)
-  "Return a hashtable of backlinks to FILE.
+  "Return a hashtable of backlinks to absolute file path FILE.
 
 The variables used for retrieving links are as follows:
-  host - host file; the one that includes the link.  full path filename
-  targ - target file being pointed to by the host link, name and extension only
-  meta - metadata hashtable
+  host - host file; the one that includes the links.  full path filename
+  targ - target file being pointed to by the host link, full file path and extension
+  meta - metadata hashtable that includes links, tags, and aliases
   lmap - hashmap of links from meta
   link - link target from links hashmap
-  info - info list for target link from links hashmap
+  info - nested list of link info lists for target link
 
 The files cache has the following structure:
   {filepath: {tags:    (tag list)
@@ -1151,12 +1155,12 @@ The files cache has the following structure:
          (resp (make-hash-table :test 'equal)))
     (maphash
      (lambda (host meta)
-       (when-let ((links-map (gethash 'links meta)))
+       (when-let ((lmap (gethash 'links meta)))
          (maphash
           (lambda (link info)
             (when (equal link targ)
               (puthash host info resp)))
-          links-map)))
+          lmap)))
      obsidian-vault-cache)
     resp))
 
@@ -1194,10 +1198,8 @@ Template vars: {{title}}, {{date}}, and {{time}}"
 
 (defun obsidian-backlinks (&optional file)
   "Return a backlinks hashmap for FILE."
-  (let* ((filepath (or file (buffer-file-name)))
-         (filename (file-name-nondirectory filepath))
-         (linkmap (obsidian-file-backlinks filename)))
-    linkmap))
+  (let ((filepath (or file (buffer-file-name))))
+    (obsidian-file-backlinks filepath)))
 
 ;;;###autoload
 (defun obsidian-backlink-jump (&optional file)
@@ -1225,7 +1227,7 @@ Template vars: {{title}}, {{date}}, and {{time}}"
             (progn
               (push (point-marker) obsidian--jump-list)
               (pop-to-buffer bakbuf))
-          (obsidian--populate-backlinks-buffer)))
+          (obsidian-populate-backlinks-buffer)))
     (obsidian-backlink-jump)))
 
 ;;;###autoload
@@ -1288,14 +1290,6 @@ _s_earch by expr.   _u_pdate tags/alises etc.
   "Stop the background process that periodically refreshes the cache."
   (interactive)
   (cancel-timer obsidian--update-timer))
-
-(defun obsidian--backlinks-format ()
-  "Return a format string based on current `obsidian-backlinks-panel-width'."
-  (if (< obsidian-backlinks-filename-proportion 1.0)
-      (format "%%-%ds%%s\n"
-              (ceiling (* obsidian-backlinks-panel-width
-                          obsidian-backlinks-filename-proportion)))
-    "%s\n - %s\n"))
 
 (defun obsidian--get-local-backlinks-window (&optional frame)
   "Return window if backlinks window is visible in FRAME, nil otherwise.
@@ -1387,14 +1381,19 @@ Returns t if a panel was created, nil if closed."
 K is the file name that contains the link.
 V is the list object associated with the link as returned
 by `markdown-link-at-pos'."
-  (let* ((rel-file (obsidian-file-relative-name k))
-         (link-txt (nth 2 v))
-         (ptxt (propertize
-                (format (obsidian--backlinks-format)
-                        (propertize rel-file 'face 'markdown-metadata-key-face)
-                        (propertize link-txt 'face 'markdown-metadata-value-face))
-                'obsidian--file k 'obsidian--position (nth 0 v))))
-    (insert ptxt)))
+  (let ((filename (if obsidian-backlinks-show-vault-path
+                      (obsidian-file-relative-name k)
+                   (file-name-nondirectory k))))
+    (insert (propertize (format "%s\n" filename)
+                        'face 'markdown-metadata-key-face 'obsidian--file k))
+
+    (mapcar
+     (lambda (info)
+       (insert (propertize (format "- %s\n" (nth 2 info))
+                           'face 'markdown-metadata-value-face
+                           'obsidian--file k
+                           'obsidian--position (nth 0 info))))
+     v)))
 
 (defun obsidian-file-backlinks-displayed-p (&optional file)
   "Return t if the backlinks panel is showing the backlinks for FILE, else nil.
@@ -1411,10 +1410,10 @@ FILE is the full path to an obsidian file."
 The backlinks buffer will not be updated if it's already showing the
 backlinks for the current buffer unless FORCE is non-nil."
   (unless (and (obsidian-file-backlinks-displayed-p) (not force))
-    (when (and obsidian-mode (obsidian-file-p) (obsidian--get-local-backlinks-window))
+    (when (and obsidian-mode (obsidian--get-local-backlinks-window) (obsidian-file-p))
       (let* ((file-path (buffer-file-name))
              (vault-path (obsidian-file-relative-name file-path))
-             (backlinks (obsidian-backlinks))
+             (backlinks (obsidian-backlinks file-path))
              (file-str (if obsidian-backlinks-show-vault-path
                            vault-path
                          (file-name-base file-path))))
