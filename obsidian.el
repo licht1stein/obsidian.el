@@ -1138,34 +1138,6 @@ See `markdown-follow-link-at-point' and `markdown-follow-wiki-link-at-point'."
     (or (s-matches-p obsidian--basic-wikilink-regex s)
         (s-matches-p obsidian--basic-markdown-link-regex s))))
 
-(defun obsidian-file-backlinks (file)
-  "Return a hashtable of backlinks to absolute file path FILE.
-
-The variables used for retrieving links are as follows:
-  host - host file; the one that includes the links.  full path filename
-  targ - target file being pointed to by the host link, full file path and extension
-  meta - metadata hashtable that includes links, tags, and aliases
-  lmap - hashmap of links from meta
-  link - link target from links hashmap
-  info - nested list of link info lists for target link
-
-The files cache has the following structure:
-  {filepath: {tags:    (tag list)
-              aliases: (alias list)
-              links:   {linkname: (link info list)}}}"
-  (let* ((targ file)
-         (resp (make-hash-table :test 'equal)))
-    (maphash
-     (lambda (host meta)
-       (when-let ((lmap (gethash 'links meta)))
-         (maphash
-          (lambda (link info)
-            (when (equal link targ)
-              (puthash host info resp)))
-          lmap)))
-     obsidian-vault-cache)
-    resp))
-
 (defun obsidian-apply-template (template-filename)
   "Apply the template from TEMPLATE-FILENAME for the current buffer.
 Template vars: {{title}}, {{date}}, and {{time}}"
@@ -1202,9 +1174,32 @@ Template vars: {{title}}, {{date}}, and {{time}}"
          (all-completions str (mapcar #'car obsidian--backlinks-alist) pred))))))
 
 (defun obsidian-backlinks (&optional file)
-  "Return a backlinks hashmap for FILE."
-  (let ((filepath (or file (buffer-file-name))))
-    (obsidian-file-backlinks filepath)))
+  "Return a hashtable of backlinks to absolute file path FILE.
+
+The variables used for retrieving links are as follows:
+  host - host file; the one that includes the links.  full path filename
+  targ - target file being pointed to by the host link, full file path and extension
+  meta - metadata hashtable that includes links, tags, and aliases
+  lmap - hashmap of links from meta
+  link - link target from links hashmap
+  info - nested list of link info lists for target link
+
+The files cache has the following structure:
+  {filepath: {tags:    (tag list)
+              aliases: (alias list)
+              links:   {linkname: (link info list)}}}"
+  (let* ((targ (or file (buffer-file-name)))
+         (resp (make-hash-table :test 'equal)))
+    (maphash
+     (lambda (host meta)
+       (when-let ((lmap (gethash 'links meta)))
+         (maphash
+          (lambda (link info)
+            (when (equal link targ)
+              (puthash host info resp)))
+          lmap)))
+     obsidian-vault-cache)
+    resp))
 
 ;;;###autoload
 (defun obsidian-backlink-jump (&optional file)

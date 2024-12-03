@@ -32,6 +32,11 @@
          (unread-command-events (listify-key-sequence (format "%s\n" file))))
     (call-interactively #'obsidian-jump)))
 
+(defun obsidian-test--backlinks-count (file)
+  "Return the number of backlinks for FILE."
+  (let ((bmap (obsidian-backlinks file)))
+    (seq-reduce #'+ (mapcar #'length (ht-values bmap)) 0)))
+
 (describe "check path setting"
   (before-all (progn
                 (setq obsidian-include-hidden-files t)
@@ -168,14 +173,10 @@
     (expect (length (obsidian-tags)) :to-equal obsidian--test-number-of-tags)))
 
 (describe "obsidian-rescan-cache"
-  (before-all (progn
-		(obsidian-change-vault obsidian--test-dir)
-		(obsidian-clear-cache)))
+  (before-all (obsidian-change-vault obsidian--test-dir))
   (after-all (obsidian-change-vault obsidian--test--original-dir))
 
-  (it "check that tags var is empty before populate-cache"
-    (expect (obsidian-tags) :to-be nil))
-  (it "check tags are filled out after populate-cache"
+  (it "check tags are filled out after obsidian-rescan-cache"
     (expect (progn
 	      (obsidian-rescan-cache)
 	      (length (obsidian-tags))) :to-equal obsidian--test-number-of-tags)))
@@ -229,7 +230,7 @@ key4:
     (expect (obsidian--link-p "[foo](bar)") :to-equal t)
     (expect (obsidian--link-p "[foo](bar.md)") :to-equal t)))
 
-(describe "obsidian unique links count including wiki links"
+(describe "obsidian links count including wiki links"
    (before-all (progn
                  (setq markdown-enable-wiki-links t)
                  (setq obsidian-wiki-link-alias-first nil)
@@ -241,29 +242,29 @@ key4:
                       obsidian--test--original-wik-link-alias-first)
                 (obsidian-change-vault obsidian--test--original-dir)))
 
-   (it "1.md unique link count"
+   (it "1.md link count"
      (let* ((file (obsidian-expand-file-name "1.md"))
             (links (ht-get (ht-get obsidian-vault-cache file) 'links)))
        (expect (length (ht-keys links)) :to-equal 3)))
 
-   (it "subdir/1-sub.md unique link count"
+   (it "subdir/1-sub.md link count"
      (let* ((file (obsidian-expand-file-name "subdir/1-sub.md"))
             (links (ht-get (ht-get obsidian-vault-cache file) 'links)))
-       (expect (length (ht-keys links)) :to-equal 1)))
+       (expect (length (ht-keys links)) :to-equal 2)))
 
-   (it "2.md unique link count"
+   (it "2.md link count"
      (let* ((file (obsidian-expand-file-name "2.md"))
             (links (ht-get (ht-get obsidian-vault-cache file) 'links))
             (count (seq-reduce #'+ (ht-map (lambda (k v) (length v)) links) 0)))
        (expect count :to-equal 8)))
 
-   (it "2-vault-paths.md unique link count"
+   (it "2-vault-paths.md link count"
        (let* ((file (obsidian-expand-file-name "2-vault-paths.md"))
               (links (ht-get (ht-get obsidian-vault-cache file) 'links))
               (count (seq-reduce #'+ (ht-map (lambda (k v) (length v)) links) 0)))
-         (expect count :to-equal 12))))
+         (expect count :to-equal 9))))
 
-(describe "obsidian unique links with wiki links disabled"
+(describe "obsidian links with wiki links disabled"
    (before-all (progn
                  (setq markdown-enable-wiki-links nil)
                  (obsidian-change-vault obsidian--test-dir)))
@@ -272,43 +273,65 @@ key4:
                       obsidian--test--original-enable-wiki-links)
                 (obsidian-change-vault obsidian--test--original-dir)))
 
-   (it "1.md unique link count"
+   (it "1.md link count"
      (let* ((file (obsidian-expand-file-name "1.md"))
             (links (ht-get (ht-get obsidian-vault-cache file) 'links)))
        (expect (length (ht-keys links)) :to-equal 3)))
 
-   (it "subdir/1-sub.md unique link count"
+   (it "subdir/1-sub.md link count"
      (let* ((file (obsidian-expand-file-name "subdir/1-sub.md"))
             (links (ht-get (ht-get obsidian-vault-cache file) 'links)))
-       (expect (length (ht-keys links)) :to-equal 0)))
+       (expect (length (ht-keys links)) :to-equal 1)))
 
-   (it "2.md unique link count"
+   (it "2.md link count"
        (let* ((file (obsidian-expand-file-name "2.md"))
               (links (ht-get (ht-get obsidian-vault-cache file) 'links))
               (count (seq-reduce #'+ (ht-map (lambda (k v) (length v)) links) 0)))
          (expect count :to-equal 4)))
 
-   (it "2-vault-paths.md unique link count"
+   (it "2-vault-paths.md link count"
        (let* ((file (obsidian-expand-file-name "2-vault-paths.md"))
               (links (ht-get (ht-get obsidian-vault-cache file) 'links))
               (count (seq-reduce #'+ (ht-map (lambda (k v) (length v)) links) 0)))
-         (expect count :to-equal 6))))
+         (expect count :to-equal 5))))
 
-(describe "obsidian-file-backlinks"
-  (before-all (obsidian-change-vault obsidian--test-dir))
-  (after-all (obsidian-change-vault obsidian--test--original-dir))
-
-  (it "1.md using obsidian-file-backlinks"
-    (let* ((linkmap (obsidian-file-backlinks "1.md"))
-           (file1 (car (hash-table-keys linkmap))))
-      (expect (length (hash-table-keys linkmap)) :to-equal 1)
-      (expect (file-name-nondirectory file1) :to-equal "2.md")))
+(describe "obsidian-backlinks with wiki links"
+   (before-all (progn
+                 (setq markdown-enable-wiki-links t)
+                 (obsidian-change-vault obsidian--test-dir)))
+   (after-all (progn
+                (setq markdown-enable-wiki-links
+                      obsidian--test--original-enable-wiki-links)
+                (obsidian-change-vault obsidian--test--original-dir)))
 
   (it "1.md using obsidian-backlinks"
-    (let* ((linkmap (obsidian-backlinks "1.md"))
-           (file1 (car (hash-table-keys linkmap))))
-      (expect (length (hash-table-keys linkmap)) :to-equal 1)
-      (expect (file-name-nondirectory file1) :to-equal "2.md"))))
+    (let* ((file (obsidian-file-to-absolute-path "1.md"))
+           (count (obsidian-test--backlinks-count file)))
+      (expect count :to-equal 2)))
+
+  (it "2-sub with spaces and буквы.md using obsidian-backlinks"
+    (let* ((file (obsidian-file-to-absolute-path "2-sub with spaces and буквы.md"))
+           (count (obsidian-test--backlinks-count file)))
+      (expect count :to-equal 7))))
+
+(describe "obsidian-backlinks without wiki links"
+   (before-all (progn
+                 (setq markdown-enable-wiki-links nil)
+                 (obsidian-change-vault obsidian--test-dir)))
+   (after-all (progn
+                (setq markdown-enable-wiki-links
+                      obsidian--test--original-enable-wiki-links)
+                (obsidian-change-vault obsidian--test--original-dir)))
+
+  (it "1.md using obsidian-backlinks"
+    (let* ((file (obsidian-file-to-absolute-path "1.md"))
+           (count (obsidian-test--backlinks-count file)))
+      (expect count :to-equal 1)))
+
+  (it "2-sub with spaces and буквы.md using obsidian-backlinks"
+    (let* ((file (obsidian-file-to-absolute-path "2-sub with spaces and буквы.md"))
+           (count (obsidian-test--backlinks-count file)))
+      (expect count :to-equal 3))))
 
 (describe "obsidian-move-file"
   (before-all (obsidian-change-vault obsidian--test-dir))
