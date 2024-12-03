@@ -46,22 +46,16 @@
 (require 'elgrep)
 (require 'yaml)
 
-;; Inspired by RamdaJS's tap function
-(defun obsidian-tap (a f)
-  "Evaluate (F A) for its side-effects but return A."
-  (funcall f a)
-  a)
-
-;; Clojure style comment
-(defmacro obsidian-comment (&rest _)
-  "Ignore body, yield nil."
-  nil)
-
 (defgroup obsidian nil "Obsidian Notes group." :group 'text)
 
 (defcustom obsidian-directory nil
   "Path to Obsidian Notes vault."
-  :type 'directory)
+  :type 'directory
+  :initialize #'custom-initialize-reset
+  :set (lambda (symbol value)
+         (let ((full-path (expand-file-name value)))
+           (message "Setting %s to %s" symbol full-path)
+           (set-default symbol full-path))))
 
 (defcustom obsidian-inbox-directory nil
   "Subdir to create notes using `obsidian-capture'."
@@ -75,13 +69,29 @@
   "If true, files beginning with a period are considered valid Obsidian files."
   :type 'boolean)
 
-;; This was included because `markdown-wiki-link-alias-first' defaults
-;; to t, which is the opposite of most (all?) wiki link specifications.
 (defcustom obsidian-wiki-link-alias-first nil
   "When non-nil, treat aliased wiki links like [[alias text|PageName]].
-Otherwise, they will be treated as [[PageName|alias text]]."
-  :type 'boolean)
-(customize-set-value 'markdown-wiki-link-alias-first obsidian-wiki-link-alias-first)
+Otherwise, they will be treated as [[PageName|alias text]].
+Maps to `markdown-wiki-link-alias-first'. Included here because the default
+for `obsidian.el' is different than that of `markdown-mode'."
+  :type 'boolean
+  :initialize #'custom-initialize-reset
+  :set (lambda (symbol value)
+         (set-default symbol value)
+         (customize-set-value 'markdown-wiki-link-alias-first value)))
+
+(defcustom obsidian-link-space-sub-char " "
+  "Character to use instead of spaces when mapping wiki links to filenames.
+Maps to `markdown-link-space-sub-char'. Included here because the default
+for `obsidian.el' is different than that of `markdown-mode'."
+  ;; :initialize (lambda (s v) (customize-set-value 'markdown-link-space-sub-char v))
+  :initialize #'custom-initialize-reset
+  :set (lambda (symbol value)
+         (set-default symbol value)
+         (customize-set-value 'markdown-link-space-sub-char value)))
+
+;; (customize-set-value 'markdown-wiki-link-alias-first obsidian-wiki-link-alias-first)
+;; (customize-set-value 'markdown-link-space-sub-char " ")
 
 (defcustom obsidian-create-unfound-files-in-inbox t
   "Where to create a file when target file is missing.
@@ -367,7 +377,7 @@ FILE is an Org-roam file if:
   - It is not an Emacs temp file"
   (-when-let* ((raw-path (or file (buffer-file-name (buffer-base-buffer))))
                (path (expand-file-name raw-path))
-               (in-vault (f-ancestor-of? obsidian-directory path))
+               (in-vault (s-starts-with-p obsidian-directory path))
                (md-ext (s-ends-with-p ".md" path))
                (not-dot-file (or obsidian-include-hidden-files
                                  (not (obsidian-dot-file-p path))))
@@ -396,7 +406,6 @@ FILE is an Org-roam file if:
 (defun obsidian-directories ()
   "Lists all Obsidian sub folders."
   (->> (directory-files-recursively obsidian-directory "" t)
-       (-map #'expand-file-name)
        (-filter #'obsidian-user-directory-p)))
 
 (defun obsidian-remove-front-matter-from-string (s)
@@ -607,8 +616,7 @@ If file is not specified, the current buffer will be used."
 
 (defun obsidian--find-all-files()
   "Return a list of all obsidian files in the vault."
-  (let* ((all-files (directory-files-recursively obsidian-directory "\.*$"))
-         (file-paths (-map #'expand-file-name all-files)))
+  (let ((file-paths (directory-files-recursively obsidian-directory "\.*$")))
     (-filter #'obsidian-file-p file-paths)))
 
 (defun obsidian-rescan-buffer ()
@@ -892,7 +900,7 @@ Note is created in the `obsidian-daily-notes-directory' if set, or in
   (when (obsidian-file-p (buffer-file-name))
     (obsidian--add-file (buffer-file-name))))
 
-(defun obsidian--vault-directories ()
+(defun obsidian-vault-directories ()
   "Provide a list of the directories in the Obsidian vault."
   (let* ((dict (make-hash-table :test 'equal))
          (_ (-map (lambda (d)
@@ -907,7 +915,7 @@ Note is created in the `obsidian-daily-notes-directory' if set, or in
   (when (not (obsidian-file-p (buffer-file-name)))
     (user-error "Current file is not an obsidian-file"))
   (let* ((old-file-path (buffer-file-name))
-         (dict (obsidian--vault-directories))
+         (dict (obsidian-vault-directories))
          (choice (completing-read "Move to: " (hash-table-keys dict)))
          (new-file-directory (file-name-as-directory (gethash choice dict)))
          (new-file-path (expand-file-name (file-name-nondirectory old-file-path) new-file-directory)))

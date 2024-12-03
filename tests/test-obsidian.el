@@ -18,12 +18,12 @@
 
 (defun obsidian-test--delete-all-test-files ()
   "Function to delete all files potentially left behind by tests."
-  (delete-file (concat obsidian-directory "/foo.md"))
-  (delete-file (concat obsidian-directory "/bar.md"))
-  (delete-file (concat obsidian-directory "/inbox/foo.md"))
-  (delete-file (concat obsidian-directory "/inbox/bar.md"))
-  (delete-file (concat obsidian-directory "/subdir/foo.md"))
-  (delete-file (concat obsidian-directory "/subdir/bar.md")))
+  (delete-file (concat obsidian--test-dir "/foo.md"))
+  (delete-file (concat obsidian--test-dir "/bar.md"))
+  (delete-file (concat obsidian--test-dir "/inbox/foo.md"))
+  (delete-file (concat obsidian--test-dir "/inbox/bar.md"))
+  (delete-file (concat obsidian--test-dir "/subdir/foo.md"))
+  (delete-file (concat obsidian--test-dir "/subdir/bar.md")))
 
 (defun obsidian-test--jump-to-file (file)
   "FILE is a path relative to the obsidian vault."
