@@ -48,7 +48,7 @@
 
 (defgroup obsidian nil "Obsidian Notes group." :group 'text)
 
-(defcustom obsidian-directory nil
+(defcustom obsidian-directory ""
   "Path to Obsidian Notes vault."
   :type 'directory
   :initialize #'custom-initialize-reset
@@ -84,7 +84,6 @@ for `obsidian.el' is different than that of `markdown-mode'."
   "Character to use instead of spaces when mapping wiki links to filenames.
 Maps to `markdown-link-space-sub-char'. Included here because the default
 for `obsidian.el' is different than that of `markdown-mode'."
-  ;; :initialize (lambda (s v) (customize-set-value 'markdown-link-space-sub-char v))
   :initialize #'custom-initialize-reset
   :set (lambda (symbol value)
          (set-default symbol value)
