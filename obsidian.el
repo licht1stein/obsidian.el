@@ -257,7 +257,7 @@ Each link list contains the following as returned by markdown-link-at-pos:
   5. title text
   6. bang (nil or \"!\")")
 
-(defvar obsidian--tags-map "Hash table with tags as keys and list of files as values.")
+(defvar obsidian--tags-map nil "Hash table with tags as keys and list of files as values.")
 
 (defvar obsidian--file-metadata nil "Hash table with file metadata (tags, aliases, links.")
 
@@ -630,7 +630,12 @@ If file is not specified, the current buffer will be used."
   (interactive)
   (let* ((obs-files (obsidian--find-all-files))
          (file-count (length obs-files)))
+    ;; Clear existing metadata
+    (setq obsidian--aliases-map (make-hash-table :test 'equal))
+    (setq obsidian--backlinks-alist (make-hash-table :test 'equal))
+    (setq obsidian--jump-list nil)
     (setq obsidian-vault-cache (make-hash-table :test 'equal :size file-count))
+    ;; Repopulate metadata
     (dolist-with-progress-reporter
         (i obs-files)
         (format "Adding %d files to vault cache... " file-count)
