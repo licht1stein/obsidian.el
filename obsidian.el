@@ -1391,12 +1391,11 @@ by `markdown-link-at-pos'."
                       (obsidian-file-relative-name k)
                    (file-name-nondirectory k))))
     (insert (propertize (format "%s\n" filename)
-                        'face 'markdown-metadata-key-face 'obsidian--file k))
+                        'face 'markdown-url-face 'obsidian--file k))
 
     (mapcar
      (lambda (info)
        (insert (propertize (format "- %s\n" (nth 2 info))
-                           'face 'markdown-metadata-value-face
                            'obsidian--file k
                            'obsidian--position (nth 0 info))))
      v)))

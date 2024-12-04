@@ -78,16 +78,16 @@ Obsidian.el is available from [[https://melpa.org][MELPA]] or [[https://stable.m
 
 You'll then want to enable ~obsidian-mode~ as well as the optional ~obsidian-backlinks-mode~ if you'd like to use the backlinks panel.
 
-Below is an example configuration that can be used in your ~init.el~ file:
+Below is an example configuration that can be used in your ~init.el~ file. Note the use of ~setopt~ (as opposed to ~setq~)for setting these values. This ensures that all required initialization will occur after these values are set.
 
 #+begin_src elisp
 (require 'obsidian)
 ;; Location of obsidian vault
-(setq obsidian-path "~/MY_OBSIDIAN_FOLDER")
+(setopt obsidian-directory "~/MY_OBSIDIAN_FOLDER")
 ;; Default location for new notes from `obsidian-capture'
-(setq obsidian-inbox-directory "Inbox")
+(setopt obsidian-inbox-directory "Inbox")
 ;; Useful if you're going to be using wiki links
-(setq markdown-enable-wiki-links t)
+(setopt markdown-enable-wiki-links t)
 
 ;; These bindings are only suggestions; it's okay to use other bindings
 ;; Create note
@@ -116,7 +116,7 @@ or using [[https://github.com/jwiegley/use-package][use-package]]:
   (obsidian-backlinks-mode t)
   :custom
   ;; location of obsidian vault
-  (obsidian-path "~/MY_OBSIDIAN_FOLDER")
+  (obsidian-directory "~/MY_OBSIDIAN_FOLDER")
   ;; Default location for new notes from `obsidian-capture'
   (obsidian-inbox-directory "Inbox")
   ;; Useful if you're going to be using wiki links
@@ -270,6 +270,8 @@ The backlinks panel can be toggled open and closed using ~obsidian-toggle-backli
 #+begin_src
 M-x obsidian-toggle-backlinks-panel RET
 #+end_src
+
+[[./resources/backlinks-panel.png]]
 
 ** Move note to another location
 Use ~obsidian-move-file~ to move the current note to another folder.
