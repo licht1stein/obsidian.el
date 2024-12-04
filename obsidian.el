@@ -84,13 +84,11 @@ for `obsidian.el' is different than that of `markdown-mode'."
   "Character to use instead of spaces when mapping wiki links to filenames.
 Maps to `markdown-link-space-sub-char'. Included here because the default
 for `obsidian.el' is different than that of `markdown-mode'."
+  :type 'char
   :initialize #'custom-initialize-reset
   :set (lambda (symbol value)
          (set-default symbol value)
          (customize-set-value 'markdown-link-space-sub-char value)))
-
-;; (customize-set-value 'markdown-wiki-link-alias-first obsidian-wiki-link-alias-first)
-;; (customize-set-value 'markdown-link-space-sub-char " ")
 
 (defcustom obsidian-create-unfound-files-in-inbox t
   "Where to create a file when target file is missing.
@@ -416,8 +414,8 @@ FILE is an Org-roam file if:
           s))
     s))
 
-(defun obsidian--process-front-matter-tags (front-matter &optional filename)
-  "Retrieve a list of valid tags from FRONT-MATTER. FILENAME is used only for error messages.
+(defun obsidian--process-front-matter-tags (front-matter &optional file)
+  "Retrun list of tags from FRONT-MATTER. FILE is used only for error messages.
 
 FRONT-MATTER is the hashmap from obsidian--find-yaml-front-matter-in-string.
 
@@ -435,16 +433,16 @@ a message regarding the formatting issue."
       (when tags
         ;; tags in front matter should be specified as a list, not as a single string
         (if (equal 'string (type-of tags))
-            (obsidian--message "Tags in front matter must be a list" filename)
+            (obsidian--message "Tags in front matter must be a list" file)
           (if (equal tags :null)
-              (obsidian--message "The key 'tags' cannot have an empty value in front matter" filename)
+              (obsidian--message "The key 'tags' cannot have an empty value in front matter" file)
             (let ((resp (->> tags
                              ;; spaces are not allowed in tags; use commas between tags
                              (seq-remove (lambda (tag) (s-contains-p " " tag)))
                              ;; tags in front matter can't start with a hashtag
                              (seq-remove (lambda (tag) (s-starts-with-p "#" tag))))))
               (when (not (= (length tags) (length resp)))
-                (obsidian--message "Found invalid tags in front matter" filename))
+                (obsidian--message "Found invalid tags in front matter" file))
               resp)))))))
 
 (defun obsidian--process-body-tags (tags)
@@ -489,7 +487,7 @@ the entire string."
 The value will be a nested list that contains link-info. The nested list
 will be created if necessary."
   (if-let (links-list (ht-get dict filepath))
-      (ht-set dict filepath (append links-list (list link-info)))
+      (ht-set dict filepath (nconc links-list (list link-info)))
     (ht-set dict filepath (list link-info)))
   dict)
 
@@ -628,6 +626,8 @@ If file is not specified, the current buffer will be used."
 (defun obsidian-rescan-cache ()
   "Create an empty cache and populate with files, tags, aliases, and links."
   (interactive)
+  ;; This is used to ensure that obsidian-directory was properly initialized
+  (customize-set-value 'obsidian-directory obsidian-directory)
   (let* ((obs-files (obsidian--find-all-files))
          (file-count (length obs-files)))
     ;; Clear existing metadata
@@ -680,7 +680,7 @@ them all just in case."
         (message "Obsidian cache updated at %s" (format-time-string "%H:%M:%S"))))))
 
 (defun obsidian-format-link (file-path &optional toggle)
-  "Return FILE-PATH in form to use as link based on `obsidian-links-use-vault-path'.
+  "Return FILE-PATH in as link based on `obsidian-links-use-vault-path'.
 
 Will format FILE-PATH based on `obsidian-links-use-vault-path' and an optional
 prefix argument TOGGLE. If link contains a colon (:), it is assumed to not be an
@@ -801,7 +801,7 @@ Optional argument ARG word to complete."
   (cl-case command
     (prefix (and (eq major-mode 'markdown-mode)
                  (-contains-p local-minor-modes 'obsidian-mode)
-                 (fboundp company-grab-symbol)
+                 (fboundp 'company-grab-symbol)
                  (company-grab-symbol)))
     (candidates (->> (obsidian-tags)
                      obsidian-prepare-tags-list
@@ -1010,7 +1010,6 @@ The returned list is of the same format as returned by
   (when (markdown-match-inline-generic markdown-regex-wiki-link last)
     (let* ((begin (match-beginning 1))
            (end (match-end 1))
-           (all   (match-string-no-properties 0))
            (part1 (match-string-no-properties 3))
            (part2 (match-string-no-properties 5))
            (aliasp (string-equal (match-string-no-properties 4) "|"))
@@ -1190,7 +1189,7 @@ Template vars: {{title}}, {{date}}, and {{time}}"
 
 The variables used for retrieving links are as follows:
   host - host file; the one that includes the links.  full path filename
-  targ - target file being pointed to by the host link, full file path and extension
+  targ - file being pointed to by the host link, full path and extension
   meta - metadata hashtable that includes links, tags, and aliases
   lmap - hashmap of links from meta
   link - link target from links hashmap
@@ -1219,10 +1218,8 @@ The files cache has the following structure:
   (interactive)
   (let ((linkmap (obsidian-backlinks file)))
     (if (> (length (hash-table-keys linkmap)) 0)
-        (let* ((choice (obsidian--backlinks-completion-fn linkmap))
-               (target (obsidian-expand-file-name choice))
-               (link-info (gethash target linkmap)))
-          (find-file target))
+        (let ((choice (obsidian--backlinks-completion-fn linkmap)))
+          (find-file (obsidian-expand-file-name choice)))
       (message "No backlinks found."))))
 
 ;;;###autoload
@@ -1394,7 +1391,7 @@ V is the list object associated with the link as returned
 by `markdown-link-at-pos'."
   (let ((filename (if obsidian-backlinks-show-vault-path
                       (obsidian-file-relative-name k)
-                   (file-name-nondirectory k))))
+                    (file-name-nondirectory k))))
     (insert (propertize (format "%s\n" filename)
                         'face 'markdown-url-face 'obsidian--file k))
 
