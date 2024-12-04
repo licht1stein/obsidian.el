@@ -52,7 +52,8 @@
       (let ((tmp-dir (make-temp-file "obs" t)))
         (obsidian-change-vault tmp-dir)
         (expect obsidian-directory :to-equal tmp-dir)
-        (expect (length (ht-keys obsidian-vault-cache)) :to-equal 0))
+        (expect (length (ht-keys obsidian-vault-cache)) :to-equal 0)
+        (delete-directory tmp-dir t))
       ;; Change vault to a non-existent directory
       (expect (obsidian-change-vault "/path/that/does/not/exist")
               :to-throw 'user-error)

@@ -630,7 +630,7 @@ If file is not specified, the current buffer will be used."
   "Create an empty cache and populate with files, tags, aliases, and links."
   (interactive)
   ;; This is used to ensure that obsidian-directory was properly initialized
-  (customize-set-value 'obsidian-directory obsidian-directory)
+  (customize-set-variable 'obsidian-directory obsidian-directory)
   (let* ((obs-files (obsidian--find-all-files))
          (file-count (length obs-files)))
     ;; Clear existing metadata
