@@ -54,8 +54,11 @@
   :initialize #'custom-initialize-reset
   :set (lambda (symbol value)
          (let ((full-path (expand-file-name value)))
-           (message "Setting %s to %s" symbol full-path)
-           (set-default symbol full-path))))
+           (if (file-exists-p full-path)
+               (progn
+                 (message "Setting %s to %s" symbol full-path)
+                 (set-default symbol full-path))
+             (user-error (format "Directory %s doesn't exist" full-path))))))
 
 (defcustom obsidian-inbox-directory nil
   "Subdir to create notes using `obsidian-capture'."
@@ -178,7 +181,7 @@ You most likely want to run `obsidian-change-vault'."
         (progn
           (customize-set-value 'obsidian-directory final-path)
           (message "Obsidian vault set to: %s" obsidian-directory))
-      (user-error (format "File %s doesn't exist" final-path)))))
+      (user-error (format "Directory %s doesn't exist" final-path)))))
 
 ;;;###autoload
 (defun obsidian-change-vault (&optional path)
