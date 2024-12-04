@@ -56,7 +56,10 @@
       ;; Change vault to a non-existent directory
       (expect (obsidian-change-vault "/path/that/does/not/exist")
               :to-throw 'user-error)
-      (expect (setopt obsidian-directory "/path/that/does/not/exist")
+      (if (> emacs-major-version 29)
+          (expect (setopt obsidian-directory "/path/that/does/not/exist")
+                  :to-throw 'user-error))
+      (expect (customize-set-variable 'obsidian-directory "/path/that/does/not/exist")
               :to-throw 'user-error)
       ;; Change vault path to test-dir and verify change
       (obsidian-change-vault obsidian--test-dir)
