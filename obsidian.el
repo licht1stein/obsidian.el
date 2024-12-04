@@ -777,7 +777,7 @@ replaced by the link."
          (let ((link (markdown-link-at-pos (point))))
            (delete-region (nth 0 link) (nth 1 link))
            (insert (or (nth 2 link) (nth 3 link)))))
-        ((obsidian-wiki-link-p)
+        ((markdown-wiki-link-p)
          (markdown-kill-thing-at-point)
          (yank))))
 
@@ -1033,19 +1033,6 @@ The returned list is of the same format as returned by
         ;; Mimics match-data set by markdown-match-generic-links
         (list begin end linktext filename nil nil nil)))))
 
-(defun obsidian-wiki-link-p ()
-  "Return non-nil if `point' is at a true wiki link.
-A true wiki link name matches `markdown-regex-wiki-link' but does
-not match the current file name after conversion.  This modifies
-the data returned by `match-data'.  Note that the potential wiki
-link name must be available via `match-string'."
-  (let ((case-fold-search nil))
-    (and (thing-at-point-looking-at markdown-regex-wiki-link)
-         (not (markdown-code-block-at-point-p))
-         (or (not buffer-file-name)
-             (not (string-equal (buffer-file-name)
-                                (markdown-wiki-link-link)))))))
-
 (defsubst obsidian--remove-section (s)
   "Remove section S from file path.
 From `filename#section' keep only the `filename'."
@@ -1131,7 +1118,7 @@ See `markdown-follow-link-at-point' and `markdown-follow-wiki-link-at-point'."
          (obsidian-follow-toc-link-at-point))
         ((markdown-link-p)
          (obsidian-follow-markdown-link-at-point arg))
-        ((obsidian-wiki-link-p)
+        ((markdown-wiki-link-p)
          (obsidian-follow-wiki-link-at-point arg))
         ((obsidian-backlink-p)
          (obsidian-follow-backlink-at-point))
