@@ -37,6 +37,10 @@
   (let ((bmap (obsidian-backlinks file)))
     (seq-reduce #'+ (mapcar #'length (ht-values bmap)) 0)))
 
+(defun obsidian-test--cached-file-p (file)
+  "Return t if FILE exists in vault cache."
+  (if (ht-get obsidian-vault-cache file) t))
+
 (describe "check path setting"
   (before-all (progn
                 (setq obsidian-include-hidden-files t)
@@ -123,37 +127,37 @@
       (expect (obsidian-remove-front-matter-from-string "one\ntwo")
               :to-equal "one\ntwo")))
 
-(describe "obsidian--find-tags-in-string"
+(describe "obsidian-find-tags-in-string"
   (before-all (obsidian-change-vault obsidian--test-dir))
   (after-all (obsidian-change-vault obsidian--test--original-dir))
 
   (it "find tags in string"
-    (expect (length (obsidian--find-tags-in-string
+    (expect (length (obsidian-find-tags-in-string
                      "#foo bar #spam #bar-spam #spam_bar #foo+spam #foo=bar not tags #123 #+invalidtag"))
             :to-equal 6)
-    (expect (obsidian--find-tags-in-string "---\ntags: \n---") :to-equal nil)
-    (expect (obsidian--find-tags-in-string "---\ntags: one\n---") :to-equal nil)
-    (expect (obsidian--find-tags-in-string "---\ntags: one two three\n---") :to-equal nil)
-    (expect (obsidian--find-tags-in-string "---\ntags: one, two, three\n---") :to-equal nil)
-    (expect (obsidian--find-tags-in-string "---\ntags: [one two three]\n---") :to-equal nil)
-    (expect (obsidian--find-tags-in-string "---\ntags: [one #two three]\n---") :to-equal nil)
-    (expect (obsidian--find-tags-in-string "---\ntags: one, #two, three---\n") :to-equal nil)
-    (expect (obsidian--find-tags-in-string "---\ntags: [one, two, three]\n---")
+    (expect (obsidian-find-tags-in-string "---\ntags: \n---") :to-equal nil)
+    (expect (obsidian-find-tags-in-string "---\ntags: one\n---") :to-equal nil)
+    (expect (obsidian-find-tags-in-string "---\ntags: one two three\n---") :to-equal nil)
+    (expect (obsidian-find-tags-in-string "---\ntags: one, two, three\n---") :to-equal nil)
+    (expect (obsidian-find-tags-in-string "---\ntags: [one two three]\n---") :to-equal nil)
+    (expect (obsidian-find-tags-in-string "---\ntags: [one #two three]\n---") :to-equal nil)
+    (expect (obsidian-find-tags-in-string "---\ntags: one, #two, three---\n") :to-equal nil)
+    (expect (obsidian-find-tags-in-string "---\ntags: [one, two, three]\n---")
             :to-equal '("one" "two" "three"))
-    (expect (obsidian--find-tags-in-string "---\ntags:\n- one\n- two\n- three\n---\n")
+    (expect (obsidian-find-tags-in-string "---\ntags:\n- one\n- two\n- three\n---\n")
             :to-equal '("one" "two" "three"))))
 
-(describe "obsidian--find-aliases-in-string"
+(describe "obsidian-find-aliases-in-string"
   (before-all (obsidian-change-vault obsidian--test-dir))
   (after-all (obsidian-change-vault obsidian--test--original-dir))
   (it "find aliases in string"
-    (expect (obsidian--find-aliases-in-string "---\naliases: \n---")
+    (expect (obsidian-find-aliases-in-string "---\naliases: \n---")
             :to-equal nil)
-    (expect (obsidian--find-aliases-in-string "---\naliases: [file1]\n---")
+    (expect (obsidian-find-aliases-in-string "---\naliases: [file1]\n---")
             :to-equal '("file1"))
-    (expect (obsidian--find-aliases-in-string "---\naliases: [file1, file2]\n---")
+    (expect (obsidian-find-aliases-in-string "---\naliases: [file1, file2]\n---")
             :to-equal '("file1" "file2"))
-    (expect (obsidian--find-aliases-in-string "---\naliases:\n- file1\n- file2\n---")
+    (expect (obsidian-find-aliases-in-string "---\naliases:\n- file1\n- file2\n---")
             :to-equal '("file1" "file2"))))
 
 (describe "obsidian-list-visible-tags"
@@ -206,11 +210,11 @@ key4:
 
   (it "check that front-matter is found"
     (expect (->> obsidian--test-correct-front-matter
-                 obsidian--find-yaml-front-matter-in-string
+                 obsidian-find-yaml-front-matter-in-string
                  (gethash 'aliases)) :to-equal ["AI" "Artificial Intelligence"]))
 
   (it "check that front-matter is ignored if not at the top of file"
-    (expect (obsidian--find-yaml-front-matter-in-string
+    (expect (obsidian-find-yaml-front-matter-in-string
              obsidian--test-incorrect-front-matter--not-start-of-file) :to-equal nil))
 
   (it "check that front-matter in vault is correct"
@@ -353,24 +357,24 @@ key4:
         (let* ((executing-kbd-macro t)
                (unread-command-events (listify-key-sequence "subdir/aliases.md\n")))
           (call-interactively #'obsidian-jump))
-        (expect (obsidian-cached-file-p orig-file-name)  :to-equal t)
-        (expect (obsidian-cached-file-p moved-file-name) :to-equal nil)
+        (expect (obsidian-test--cached-file-p orig-file-name)  :to-equal t)
+        (expect (obsidian-test--cached-file-p moved-file-name) :to-equal nil)
 
         ;; Move the file and confirm that new path is in cache and old path is not
         (let* ((make-backup-files nil)
                (executing-kbd-macro t)
                (unread-command-events (listify-key-sequence "inbox\n")))
           (call-interactively #'obsidian-move-file))
-        (expect (obsidian-cached-file-p orig-file-name)  :to-equal nil)
-        (expect (obsidian-cached-file-p moved-file-name) :to-equal t)
+        (expect (obsidian-test--cached-file-p orig-file-name)  :to-equal nil)
+        (expect (obsidian-test--cached-file-p moved-file-name) :to-equal t)
 
         ;; Return file and confirm that the cache was again updated
         (let* ((make-backup-files nil)
                (executing-kbd-macro t)
                (unread-command-events (listify-key-sequence "subdir\n")))
           (call-interactively #'obsidian-move-file))
-        (expect (obsidian-cached-file-p orig-file-name)  :to-equal t)
-        (expect (obsidian-cached-file-p moved-file-name) :to-equal nil))))
+        (expect (obsidian-test--cached-file-p orig-file-name)  :to-equal t)
+        (expect (obsidian-test--cached-file-p moved-file-name) :to-equal nil))))
 
 (describe
  "Insert links for files that don't exist"

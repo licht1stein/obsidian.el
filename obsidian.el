@@ -50,6 +50,7 @@
 
 (defcustom obsidian-directory ""
   "Path to Obsidian Notes vault."
+  :group 'obsidian
   :type 'directory
   :initialize #'custom-initialize-reset
   :set (lambda (symbol value)
@@ -64,42 +65,6 @@
   "Subdir to create notes using `obsidian-capture'."
   :type 'directory)
 
-(defcustom obsidian-links-use-vault-path nil
-  "If true, use the full vault path for a link instead of just the filename."
-  :type 'boolean)
-
-(defcustom obsidian-include-hidden-files t
-  "If true, files beginning with a period are considered valid Obsidian files."
-  :type 'boolean)
-
-(defcustom obsidian-wiki-link-alias-first nil
-  "When non-nil, treat aliased wiki links like [[alias text|PageName]].
-Otherwise, they will be treated as [[PageName|alias text]].
-Maps to `markdown-wiki-link-alias-first'. Included here because the default
-for `obsidian.el' is different than that of `markdown-mode'."
-  :type 'boolean
-  :initialize #'custom-initialize-reset
-  :set (lambda (symbol value)
-         (set-default symbol value)
-         (customize-set-value 'markdown-wiki-link-alias-first value)))
-
-(defcustom obsidian-link-space-sub-char " "
-  "Character to use instead of spaces when mapping wiki links to filenames.
-Maps to `markdown-link-space-sub-char'. Included here because the default
-for `obsidian.el' is different than that of `markdown-mode'."
-  :type 'char
-  :initialize #'custom-initialize-reset
-  :set (lambda (symbol value)
-         (set-default symbol value)
-         (customize-set-value 'markdown-link-space-sub-char value)))
-
-(defcustom obsidian-create-unfound-files-in-inbox t
-  "Where to create a file when target file is missing.
-
-Controls where to create a new file when visiting a link when the target is
-missing. If true, create in inbox, otherwise next to the current buffer."
-  :type 'boolean)
-
 (defcustom obsidian-daily-notes-directory obsidian-inbox-directory
   "Subdir to create daily notes with `obsidian-daily-note'.
 
@@ -110,49 +75,49 @@ Default is the inbox directory"
   "Subdirectory containing templates."
   :type 'directory)
 
-(defcustom obsidian-backlinks-panel-position 'right
-  "Position of backlinks buffer in frame.
-Valid values are:
- * `right',
- * `left'."
-  :type '(choice (const right)
-                 (const left))
-  :group 'backlinks-window)
-
-(defcustom obsidian-backlinks-panel-width 75
-  "Width of the backlinks window."
-  :type 'integer
-  :group 'backlinks-window)
-
-(defcustom obsidian-backlinks-show-vault-path t
-  "If t, show path relative to Obsidian vault, otherwise only show file name."
-  :type 'boolean
-  :group 'backlinks-window)
-
-(defcustom obsidian-backlinks-buffer-name "*backlinks*"
-  "Name to use for the obsidian backlinks buffer."
-  :type 'string
-  :group 'backlinks-window)
-
 (defcustom obsidian-daily-note-template nil
   "Daily notes' template filename in templates directory."
   :type 'file)
 
-(defcustom obsidian-use-update-timer t
-  "Determines whether a polling cache update will be used.
-If it is true, a timer will be created using the values of
-`obsidian-cache-expiry' and `obsidian-update-idle-wait'."
+(defcustom obsidian-include-hidden-files t
+  "If true, files beginning with a period are considered valid Obsidian files."
   :type 'boolean)
 
-(defcustom obsidian-cache-expiry (* 60 5)
-  "The number of seconds before the Obsidian cache will update."
-  :type 'integer
-  :group 'obsidian)
+(defcustom obsidian-create-unfound-files-in-inbox t
+  "Where to create a file when target file is missing.
 
-(defcustom obsidian-update-idle-wait 5
-  "Seconds to wait after cache expiry for Emacs to be idle before running update."
-  :type 'integer
-  :group 'obsidian)
+Controls where to create a new file when visiting a link when the target is
+missing.  If true, create in inbox, otherwise next to the current buffer."
+  :type 'boolean)
+
+(defcustom obsidian-links-use-vault-path nil
+  "If true, use the full vault path for a link instead of just the filename."
+  :type 'boolean)
+
+(defcustom obsidian-wiki-link-alias-first nil
+  "When non-nil, treat aliased wiki links like [[alias text|PageName]].
+Otherwise, they will be treated as [[PageName|alias text]].
+Maps to `markdown-wiki-link-alias-first'.  Included here because the default
+for `obsidian.el' is different than that of `markdown-mode'."
+  :type 'boolean
+  :initialize #'custom-initialize-reset
+  :set (lambda (symbol value)
+         (set-default symbol value)
+         (customize-set-value 'markdown-wiki-link-alias-first value)))
+
+(defcustom obsidian-wiki-link-space-sub-char " "
+  "Character to use instead of spaces when mapping wiki links to filenames.
+Maps to `markdown-link-space-sub-char'.  Included here because the default
+for `obsidian.el' is different than that of `markdown-mode'."
+  :type 'char
+  :initialize #'custom-initialize-reset
+  :set (lambda (symbol value)
+         (set-default symbol value)
+         (customize-set-value 'markdown-link-space-sub-char value)))
+
+(defcustom obsidian-debug-messages nil
+  "If enabled, additional messages will be displayed for debugging."
+  :type 'boolean)
 
 (eval-when-compile (defvar local-minor-modes))
 
@@ -171,25 +136,20 @@ of `dirctory-files'."
 (if (< emacs-major-version 28)
     (advice-add 'directory-files :around #'obsidian--directory-files-pre28))
 
-(defun obsidian-specify-path (&optional path)
-  "Set `obsidian-directory' to PATH or user-selected directory.
-You most likely want to run `obsidian-change-vault'."
+;;;###autoload
+(defun obsidian-change-vault (&optional path)
+  "Set vault directory to PATH and repopulate vault cache.
+When run interactively asks user to specify the path."
+  (interactive)
   (let* ((raw-path (or path
                        (read-directory-name "Specify path to Obsidian vault: ")))
          (final-path (expand-file-name raw-path)))
     (if (file-exists-p final-path)
         (progn
           (customize-set-value 'obsidian-directory final-path)
-          (message "Obsidian vault set to: %s" obsidian-directory))
+          (message "Obsidian vault set to: %s" obsidian-directory)
+          (obsidian-rescan-cache))
       (user-error (format "Directory %s doesn't exist" final-path)))))
-
-;;;###autoload
-(defun obsidian-change-vault (&optional path)
-  "Set vault directory to PATH and repopulate vault cache.
-When run interactively asks user to specify the path."
-  (interactive)
-  (obsidian-specify-path path)
-  (obsidian-rescan-cache))
 
 (define-minor-mode obsidian-mode
   "Toggle minor `obsidian-mode' on and off.
@@ -204,8 +164,6 @@ the mode, `toggle' toggles the state."
   :after-hook (obsidian-update)
   :keymap (make-sparse-keymap))
 
-(defvar obsidian--debug-messages nil "Additional messages will be displayed for debugging.")
-
 (defun obsidian--message (msg &optional file)
   "Send MSG to the message buffer specifying the optional FILE and return nil."
   (if file
@@ -213,7 +171,7 @@ the mode, `toggle' toggles the state."
     (message "%s" msg))
   nil)
 
-(defvar obsidian--tag-regex
+(defconst obsidian--tag-regex
   "\\(?:\\`\\|[[:space:]]\\)\\#\\(?:[A-Za-z_/][-A-Za-z0-9_/]*[A-Za-z_/][-A-Za-z0-9_/]*\\)"
   "Regex pattern used to find tags in Obsidian files.
 
@@ -235,10 +193,10 @@ characters of a tag.
 
 - `[#)]`: Ends the capturing group for the whole tag that starts with a `#`.")
 
-(defvar obsidian--basic-wikilink-regex "\\[\\[[[:graph:][:blank:]]*\\]\\]"
+(defconst obsidian-wiki-link-regex "\\[\\[[[:graph:][:blank:]]*\\]\\]"
   "Regex pattern used to find wikilinks.")
 
-(defvar obsidian--basic-markdown-link-regex "\\[[[:graph:][:blank:]]+\\]\([[:graph:][:blank:]]*\)"
+(defconst obsidian-markdown-link-regex "\\[[[:graph:][:blank:]]+\\]\([[:graph:][:blank:]]*\)"
   "Regex pattern used to find markdown links.")
 
 (defvar obsidian-vault-cache nil
@@ -272,33 +230,6 @@ Each link list contains the following as returned by markdown-link-at-pos:
 
 (defvar obsidian--updated-time 0.0
   "Time of last cache update as a float number of seconds since the epoch.")
-
-(defun obsidian--stringify (obj)
-  "Return OBJ as a string regardless of input type."
-  (format "%s" obj))
-
-(defun obsidian--strip-props (s)
-  "Remove all text properties from string S."
-  (set-text-properties 0 (length s) nil s)
-  s)
-
-(defun obsidian--sort-map-by-values (mm)
-  "Return the hashmap MM sorted by the values.
-
-The function is taken from xahlee:
-- http://xahlee.info/emacs/emacs/elisp_sort_hash_table.html"
-  (let* ((resp (make-hash-table :test 'equal
-                                :size (length (hash-table-keys mm))))
-         (xlist (let ((yy nil))
-                  (maphash
-                   (lambda (k v)
-                     (push (list k v) yy))
-                   mm)
-                  yy))
-         (xlist (sort xlist (lambda (a b) (string< (car a) (car b)))))
-         (xlist (sort xlist (lambda (a b) (< (nth 1 a) (nth 1 b))))))
-    (seq-map (lambda (ii) (puthash (nth 0 ii) (nth 1 ii) resp)) xlist)
-    resp))
 
 (defun obsidian--set-tags (file tag-list)
   "Set list TAG-LIST to FILE in files cache."
@@ -339,9 +270,9 @@ The function is taken from xahlee:
   "Remove ALIAS as key to `obsidian--aliases-map'."
   (remhash alias obsidian--aliases-map))
 
-(defun obsidian--get-alias (alias &optional dflt)
-  "Find ALIAS in `obsidian--aliases-map' with optional DFLT."
-  (gethash alias obsidian--aliases-map dflt))
+(defun obsidian--get-alias (alias &optional default)
+  "Find ALIAS in `obsidian--aliases-map' with optional DEFAULT."
+  (gethash alias obsidian--aliases-map default))
 
 (defun obsidian-aliases ()
   "Return all existing aliases (without values)."
@@ -399,10 +330,6 @@ FILE is an Org-roam file if:
   (when obsidian-vault-cache
     (hash-table-keys obsidian-vault-cache)))
 
-(defun obsidian-cached-file-p (file)
-  "Retrun true if FILE exists in files cache."
-  (seq-contains-p (obsidian-files) file))
-
 (defun obsidian-directories ()
   "Lists all Obsidian sub folders."
   (->> (directory-files-recursively obsidian-directory "" t)
@@ -418,9 +345,9 @@ FILE is an Org-roam file if:
     s))
 
 (defun obsidian--process-front-matter-tags (front-matter &optional file)
-  "Retrun list of tags from FRONT-MATTER. FILE is used only for error messages.
+  "Retrun list of tags from FRONT-MATTER.  FILE is used only for error messages.
 
-FRONT-MATTER is the hashmap from obsidian--find-yaml-front-matter-in-string.
+FRONT-MATTER is the hashmap from `obsidian-find-yaml-front-matter-in-string'.
 
 This function filters invalid tags (eg tags that are not in a list, or tags
 that already have hashtags as these are not allowed in front matter, or
@@ -455,13 +382,13 @@ a message regarding the formatting issue."
          (seq-map #'string-trim-left)
          (seq-map (lambda (tag) (s-replace-regexp "^#" "" tag))))))
 
-(defun obsidian--find-tags-in-string (s &optional filename)
+(defun obsidian-find-tags-in-string (s &optional filename)
   "Retrieve list of #tags from string S. FILENAME is used only for error messages.
 
 First searches for front matter to find tags there, then searches through
 the entire string."
   (condition-case nil
-      (let* ((front-matter (obsidian--find-yaml-front-matter-in-string s))
+      (let* ((front-matter (obsidian-find-yaml-front-matter-in-string s))
              (fm-tags (obsidian--process-front-matter-tags front-matter filename))
              (s-body (obsidian-remove-front-matter-from-string s))
              (body-tags-raw (-flatten (s-match-strings-all obsidian--tag-regex s-body)))
@@ -470,10 +397,10 @@ the entire string."
     (error
      (obsidian--message "Error parsing front matter yaml for tags" filename))))
 
-(defun obsidian--find-aliases-in-string (s &optional filename)
+(defun obsidian-find-aliases-in-string (s &optional filename)
   "Retrieve list of aliases from string S. FILENAME is used only for error messages."
   (condition-case nil
-      (when-let ((front-matter (obsidian--find-yaml-front-matter-in-string s)))
+      (when-let ((front-matter (obsidian-find-yaml-front-matter-in-string s)))
         (let* ((aliases-val (gethash 'aliases front-matter))
                ;; yaml parser can return a value of :null
                (aliases (if (equal :null aliases-val)
@@ -481,20 +408,20 @@ the entire string."
                           aliases-val))
                (alias (gethash 'alias front-matter))
                (all-aliases (append aliases (list alias))))
-          (seq-map #'obsidian--stringify (-distinct (-filter #'identity all-aliases)))))
+          (seq-map (lambda (a) (prin1-to-string a t)) (-distinct (-filter #'identity all-aliases)))))
     (error
      (obsidian--message "Error parsing front matter yaml for aliases" filename))))
 
 (defun obsidian--update-file-links-dict (filepath link-info dict)
   "Add LINK-INFO to value of DICT for key FILEPATH.
-The value will be a nested list that contains link-info. The nested list
+The value will be a nested list that contains link-info.  The nested list
 will be created if necessary."
   (if-let (links-list (ht-get dict filepath))
       (ht-set dict filepath (nconc links-list (list link-info)))
     (ht-set dict filepath (list link-info)))
   dict)
 
-(defun obsidian--find-links ()
+(defun obsidian-find-links ()
   "Retrieve hashtable of inline links and wiki links in current buffer.
 
 Values of hashtabale are lists with values that matche those returned by
@@ -513,8 +440,8 @@ markdown-link-at-pos:
       (goto-char (point-min))
       (while (markdown-match-generic-links (point-max) nil)
         (let ((link-info (markdown-link-at-pos (point))))
-          (obsidian--strip-props (nth 2 link-info))
-          (obsidian--strip-props (nth 3 link-info))
+          (substring-no-properties (nth 2 link-info))
+          (substring-no-properties (nth 3 link-info))
           (obsidian--update-file-links-dict
            (obsidian-file-to-absolute-path (nth 3 link-info)) link-info dict)))
       ;; Find wiki links
@@ -523,11 +450,11 @@ markdown-link-at-pos:
         (while
             (if-let (link-info (obsidian-find-wiki-links (point-max)))
                 (obsidian--update-file-links-dict
-                 (obsidian-file-to-absolute-path (concat (nth 3 link-info) ".md"))
+                 (obsidian-file-to-absolute-path (obsidian--extension (nth 3 link-info)))
                  link-info dict)))))
     dict))
 
-(defun obsidian--find-yaml-front-matter-in-string (s)
+(defun obsidian-find-yaml-front-matter-in-string (s)
   "Return YAML front matter if it exists in string section S."
   (if (s-starts-with-p "---" s)
       (let* ((split (s-split-up-to "---" s 2))
@@ -537,7 +464,7 @@ markdown-link-at-pos:
             ;; front matter tag list starts with a hashtag
             (yaml-parse-string (nth 1 split))))))
 
-(defun obsidian-tags-ht ()
+(defun obsidian-tags-hashtable ()
   "Hashtable with each tags as the keys and list of file path as the values."
   (when obsidian-vault-cache
 
@@ -579,9 +506,9 @@ PARENT-FILE is only used for error messages."
   (save-excursion
     (let* ((bufname (or (buffer-file-name) parent-file))
            (bufstr (buffer-substring-no-properties (point-min) (point-max)))
-           (tags (obsidian--find-tags-in-string bufstr bufname))
-           (aliases (obsidian--find-aliases-in-string bufstr bufname))
-           (links (obsidian--find-links))
+           (tags (obsidian-find-tags-in-string bufstr bufname))
+           (aliases (obsidian-find-aliases-in-string bufstr bufname))
+           (links (obsidian-find-links))
            (meta (make-hash-table :test 'equal :size 3)))
       (puthash 'tags tags meta)
       (puthash 'aliases aliases meta)
@@ -598,7 +525,7 @@ Uses current buffer if file is not specified"
         (obsidian--buffer-metadata file))
     (obsidian--buffer-metadata (buffer-file-name))))
 
-(defun obsidian--update-file-metadata (&optional file)
+(defun obsidian-update-file-metadata (&optional file)
   "Update the metadata for the file FILE.
 
 If file is not specified, the current buffer will be used."
@@ -614,8 +541,8 @@ If file is not specified, the current buffer will be used."
        (obsidian-file-p)
        (obsidian-mode t)))
 
-(defun obsidian--find-all-files()
-  "Return a list of all obsidian files in the vault."
+(defun obsidian--files-on-disk()
+  "Return a list of all obsidian files in the vault directory."
   (let ((file-paths (directory-files-recursively obsidian-directory "\.*$")))
     (-filter #'obsidian-file-p file-paths)))
 
@@ -624,14 +551,14 @@ If file is not specified, the current buffer will be used."
   (interactive)
   (let ((file (buffer-file-name)))
     (when (obsidian-file-p file)
-      (obsidian--add-file file))))
+      (obsidian-add-file file))))
 
 (defun obsidian-rescan-cache ()
   "Create an empty cache and populate with files, tags, aliases, and links."
   (interactive)
   ;; This is used to ensure that obsidian-directory was properly initialized
   (customize-set-variable 'obsidian-directory obsidian-directory)
-  (let* ((obs-files (obsidian--find-all-files))
+  (let* ((obs-files (obsidian--files-on-disk))
          (file-count (length obs-files)))
     ;; Clear existing metadata
     (setq obsidian--aliases-map (make-hash-table :test 'equal))
@@ -645,7 +572,7 @@ If file is not specified, the current buffer will be used."
     (dolist-with-progress-reporter
         (i obs-files)
         (format "Adding %d files to vault cache... " file-count)
-      (obsidian--add-file i))
+      (obsidian-add-file i))
     (message "Obsidian cache populated at %s with %d files"
              (format-time-string "%H:%M:%S") file-count)
     (setq obsidian--updated-time (float-time))
@@ -663,7 +590,7 @@ If file is not specified, the current buffer will be used."
 
 If a file has been modified more recently than `obsidian--updated-time',
 we assume it may have been modified outside of obsidian.el so we call
-`obsidian--add-file'.  Note that files modified by obsidian.el would also
+`obsidian-add-file'.  Note that files modified by obsidian.el would also
 show more recent modified times if they called `obsidian--update-on-save'
 that was triggered by the `after-save-hook'.  We have no way to distinguish
 this from a file modified outside of obsidian.el, so we'll re-process
@@ -672,15 +599,15 @@ them all just in case."
   (if (or (not (boundp 'obsidian-vault-cache)) (not obsidian-vault-cache))
       (obsidian-rescan-cache)
     (-let* ((cached (obsidian-files))
-            (ondisk (obsidian--find-all-files))
+            (ondisk (obsidian--files-on-disk))
             (new-files (-difference ondisk cached))
             (old-files (-difference cached ondisk))
             (to-reprocess (seq-filter #'obsidian--updated-externally-p ondisk)))
-      (seq-map #'obsidian--add-file new-files)
-      (seq-map #'obsidian--remove-file old-files)
-      (seq-map #'obsidian--add-file to-reprocess)
+      (seq-map #'obsidian-add-file new-files)
+      (seq-map #'obsidian-remove-file old-files)
+      (seq-map #'obsidian-add-file to-reprocess)
       (setq obsidian--updated-time (float-time))
-      (when obsidian--debug-messages
+      (when obsidian-debug-messages
         (when to-reprocess
           (message "Reprocesed the following files:\n%s" (pp to-reprocess)))
         (message "Obsidian cache updated at %s" (format-time-string "%H:%M:%S"))))))
@@ -689,8 +616,8 @@ them all just in case."
   "Return FILE-PATH in as link based on `obsidian-links-use-vault-path'.
 
 Will format FILE-PATH based on `obsidian-links-use-vault-path' and an optional
-prefix argument TOGGLE. If link contains a colon (:), it is assumed to not be an
-Obsidian link and is returned unmodified."
+prefix argument TOGGLE.  If link contains a colon (:), it is assumed to not be
+an Obsidian link and is returned unmodified."
   (if (s-contains-p ":" file-path)
       file-path
     (if obsidian-links-use-vault-path
@@ -703,9 +630,8 @@ Obsidian link and is returned unmodified."
 Returns a file path relative to the obsidian vault."
   (if (s-contains-p ":" f)
       f
-    (let* ((obs-path (obsidian-expand-file-name f))
-           (exists (obsidian-cached-file-p obs-path)))
-      (if (not exists)
+    (let* ((obs-path (obsidian-expand-file-name f)))
+      (if (not (ht-get obsidian-vault-cache obs-path))
           (if obsidian-create-unfound-files-in-inbox
               (-> f
                   obsidian-prepare-new-file-from-rel-path
@@ -718,7 +644,7 @@ Returns a file path relative to the obsidian vault."
                 obsidian-file-relative-name))
         f))))
 
-(defun obsidian-request-link (&optional toggle-path)
+(defun obsidian--request-link (&optional toggle-path)
   "Service function to request user for link input.
 
 TOGGLE-PATH is a boolean that will toggle the behavior of
@@ -744,7 +670,7 @@ TOGGLE-PATH is a boolean that will toggle the behavior of
 If ARG is set, the value of `obsidian-links-use-vault-path' will be toggled for
 the current link insertion."
   (interactive "P")
-  (let* ((file (obsidian-request-link arg))
+  (let* ((file (obsidian--request-link arg))
          (filename (plist-get file :file))
          (description (plist-get file :description))
          (no-ext (file-name-sans-extension filename))
@@ -760,10 +686,10 @@ the current link insertion."
   "Insert a link to file in markdown format.
 
 If ARG is set, the value of `obsidian-links-use-vault-path' will be toggled for
-this link insertion. If text is highlighted, the highlighted text will be
+this link insertion.  If text is highlighted, the highlighted text will be
 replaced by the link."
   (interactive "P")
-  (let* ((file-plist (obsidian-request-link arg))
+  (let* ((file-plist (obsidian--request-link arg))
          (file-raw (plist-get file-plist :file))
          (file (s-replace " " "%20" file-raw))
          (description (plist-get file-plist :description))
@@ -784,7 +710,7 @@ replaced by the link."
          (markdown-kill-thing-at-point)
          (yank))))
 
-(defun obsidian-prepare-tags-list (tags)
+(defun obsidian--prepare-tags-list (tags)
   "Prepare a list of TAGS with both lower-case and capitalized versions.
 
 Obsidian Notes tags are case-independent and are therefore considered to be
@@ -796,13 +722,13 @@ allows completion with both lower and upper case versions of the tags."
          (merged (-concat tags lower-case capitalized)))
     (-distinct merged)))
 
-(defun obsidian-tags-backend (command &rest arg)
+(defun obsidian--tags-backend (command &rest arg)
   "Completion backend for company used by obsidian.el.
 Argument COMMAND company command.
 Optional argument ARG word to complete."
   (interactive (if (and (featurep 'company)
                         (fboundp 'company-begin-backend))
-                   (company-begin-backend 'obsidian-tags-backend)
+                   (company-begin-backend 'obsidian--tags-backend)
                  (error "Company not installed")))
   (cl-case command
     (prefix (and (eq major-mode 'markdown-mode)
@@ -810,7 +736,7 @@ Optional argument ARG word to complete."
                  (fboundp 'company-grab-symbol)
                  (company-grab-symbol)))
     (candidates (->> (obsidian-tags)
-                     obsidian-prepare-tags-list
+                     obsidian--prepare-tags-list
                      (-filter (lambda (s) (s-starts-with-p (car arg) s)))))))
 
 (defun obsidian-point-in-front-matter-p (&optional point)
@@ -884,7 +810,7 @@ Note is created in the `obsidian-daily-notes-directory' if set, or in
       (user-error "Note not found: %s" choice))))
 
 (defun obsidian--mapped-aliases (file)
-  "Return list of aliases mapped to FILE in obsidian--aliases-map."
+  "Return list of aliases mapped to FILE in `obsidian--aliases-map'."
   (let ((aliases '()))
     (maphash (lambda (k v)
                (when (equal file v)
@@ -892,14 +818,14 @@ Note is created in the `obsidian-daily-notes-directory' if set, or in
              obsidian--aliases-map )
     aliases))
 
-(defun obsidian--add-file (file)
+(defun obsidian-add-file (file)
   "Add a FILE to the files cache and update tags and aliases for the file."
   (let ((file (expand-file-name file)))
     (when (not (gethash file obsidian-vault-cache))
       (puthash file (make-hash-table :test 'equal :size 3) obsidian-vault-cache))
-    (obsidian--update-file-metadata file)))
+    (obsidian-update-file-metadata file)))
 
-(defun obsidian--remove-file (file)
+(defun obsidian-remove-file (file)
   "Remove FILE from the files cache and update tags and aliases accordingly."
   (let ((file (expand-file-name file)))
     (-map #'obsidian--remove-alias (obsidian--mapped-aliases file))
@@ -908,7 +834,7 @@ Note is created in the `obsidian-daily-notes-directory' if set, or in
 (defun obsidian--update-on-save ()
   "Used as a hook to update the vault cache when a file is saved."
   (when (obsidian-file-p (buffer-file-name))
-    (obsidian--add-file (buffer-file-name))))
+    (obsidian-add-file (buffer-file-name))))
 
 (defun obsidian-vault-directories ()
   "Provide a list of the directories in the Obsidian vault."
@@ -933,14 +859,8 @@ Note is created in the `obsidian-daily-notes-directory' if set, or in
       (user-error "File already exists at that location"))
     (rename-file old-file-path new-file-directory)
     (write-file new-file-path)
-    (obsidian--remove-file old-file-path)
+    (obsidian-remove-file old-file-path)
     (message "Moved to %s" new-file-path)))
-
-(defun obsidian-prepare-file-path (s)
-  "Replace %20 with spaces in file path.
-Argument S relative file name to clean and convert to absolute."
-  (let* ((cleaned-name (s-replace "%20" " " s)))
-    cleaned-name))
 
 (defun obsidian--match-files (f all-files)
   "Filter ALL-FILES to return list with same name as F."
@@ -950,9 +870,9 @@ Argument S relative file name to clean and convert to absolute."
   "Create file if it doesn't exist and return full system path for relative path P.
 
 If the file include directories in its path, we create the file relative to
-`obsidian-directory'. If there are no paths, we create the new file in
+`obsidian-directory'.  If there are no paths, we create the new file in
 `obsidian-inbox-directory' if set, otherwise in `obsidian-directory'."
-  (let* ((f (if (not (file-name-extension p)) (s-concat p ".md") p))
+  (let* ((f (obsidian--extension p))
          (filename (if (s-contains-p "/" f)
                        (s-concat obsidian-directory "/" f)
                      (s-concat obsidian-directory "/"
@@ -961,11 +881,14 @@ If the file include directories in its path, we create the file relative to
     (when (not (f-exists-p cleaned))
       (f-mkdir-full-path (f-dirname cleaned))
       (f-touch cleaned)
-      (obsidian--add-file cleaned))
+      (obsidian-add-file cleaned))
     cleaned))
 
 (defun obsidian-file-to-absolute-path (file)
-  "Return a full file path for FILE."
+  "Return a full file path for FILE.
+The full file path is determined by finding a file with the same name in the
+vault cache.  If there are multiple files with the same name, the first one
+found is returned.  If no matches are found, the original FILE is returned."
   (let* ((all-files (->> (obsidian-files) (-map #'obsidian-file-relative-name)))
          (matches (obsidian--match-files file all-files)))
     (if matches
@@ -1041,14 +964,14 @@ The returned list is of the same format as returned by
 From `filename#section' keep only the `filename'."
   (replace-regexp-in-string "#.*$" "" s))
 
-(defun obsidian-wiki->normal (f)
+(defun obsidian--extension (f)
   "Add extension to wiki link F if none."
   (if (file-name-extension f)
       f
     (s-concat (obsidian--remove-section f) ".md")))
 
 (defun obsidian-follow-wiki-link-at-point (&optional arg)
-  "Find Wiki Link at point. Opens wiki links in other window if ARG is non-nil."
+  "Find Wiki Link at point.  Opens wiki links in other window if ARG is non-nil."
   (interactive "P")
   (thing-at-point-looking-at markdown-regex-wiki-link)
   (let* ((url (s-trim (if obsidian-wiki-link-alias-first
@@ -1057,9 +980,7 @@ From `filename#section' keep only the `filename'."
                         (match-string-no-properties 3)))))
     (if (s-contains-p ":" url)
         (browse-url url)
-      (let ((prepped-path (-> url
-                              obsidian-prepare-file-path
-                              obsidian-wiki->normal)))
+      (let ((prepped-path (obsidian--extension (s-replace "%20" " " url))))
         (push (point-marker) obsidian--jump-list)
         (obsidian-find-point-in-file prepped-path 0 arg)))))
 
@@ -1070,15 +991,15 @@ Opens markdown links in other window if ARG is non-nil.."
   (let ((normalized (s-replace "%20" " " (markdown-link-url))))
     (if (s-contains-p ":" normalized)
         (browse-url normalized)
-      (let ((prepped-path (obsidian-prepare-file-path normalized)))
+      (progn
         (push (point-marker) obsidian--jump-list)
-        (obsidian-find-point-in-file prepped-path 0 arg )))))
+        (obsidian-find-point-in-file normalized 0 arg )))))
 
 (defun obsidian-follow-backlink-at-point ()
   "Open the file pointed to by the backlink and move to the linked location."
   (let* ((fil (get-text-property (point) 'obsidian--file))
          (pos (get-text-property (point) 'obsidian--position)))
-    (when obsidian--debug-messages
+    (when obsidian-debug-messages
       (message "Visiting file %s at position %s" fil pos))
     (find-file-other-window fil)
     (goto-char pos)))
@@ -1087,18 +1008,6 @@ Opens markdown links in other window if ARG is non-nil.."
   "Check if thing at point represents a backlink."
   (and (get-text-property (point) 'obsidian--file)
        (get-text-property (point) 'obsidian--position)))
-
-(defun obsidian-follow-toc-link-at-point ()
-  "Move point to section of note pointed to by table of contents links."
-  (when (functionp 'markdown-toc-follow-link-at-point)
-    (push (point-marker) obsidian--jump-list)
-    (markdown-toc-follow-link-at-point)))
-
-(defun obsidian-toc-link-p ()
-  "Check if thing at point represent a table of contents."
-  (and (functionp 'markdown-toc-follow-link-at-point)
-       (markdown-link-p)
-       (s-starts-with-p "#" (markdown-link-url))))
 
 ;;;###autoload
 (defun obsidian-jump-back ()
@@ -1117,9 +1026,7 @@ Opens inline and reference links in a browser.  Opens wiki links
 to other files in the current window, or another window if ARG is non-nil.
 See `markdown-follow-link-at-point' and `markdown-follow-wiki-link-at-point'."
   (interactive "P")
-  (cond ((obsidian-toc-link-p)
-         (obsidian-follow-toc-link-at-point))
-        ((markdown-link-p)
+  (cond ((markdown-link-p)
          (obsidian-follow-markdown-link-at-point arg))
         ((markdown-wiki-link-p)
          (obsidian-follow-wiki-link-at-point arg))
@@ -1139,8 +1046,8 @@ See `markdown-follow-link-at-point' and `markdown-follow-wiki-link-at-point'."
 (defun obsidian--link-p (s)
   "Check if S matches any of the link regexes."
   (when s
-    (or (s-matches-p obsidian--basic-wikilink-regex s)
-        (s-matches-p obsidian--basic-markdown-link-regex s))))
+    (or (s-matches-p obsidian-wiki-link-regex s)
+        (s-matches-p obsidian-markdown-link-regex s))))
 
 (defun obsidian-apply-template (template-filename)
   "Apply the template from TEMPLATE-FILENAME for the current buffer.
@@ -1228,7 +1135,7 @@ The files cache has the following structure:
             (progn
               (push (point-marker) obsidian--jump-list)
               (pop-to-buffer bakbuf))
-          (obsidian-populate-backlinks-buffer)))
+          (obsidian--populate-backlinks-buffer)))
     (obsidian-backlink-jump)))
 
 ;;;###autoload
@@ -1245,52 +1152,92 @@ The files cache has the following structure:
 (defun obsidian-find-tag ()
   "Find all notes with a tag."
   (interactive)
-  (let* ((taghash (obsidian-tags-ht))
+  (let* ((taghash (obsidian-tags-hashtable))
          (tag (completing-read "Select tag: " (->> (hash-table-keys taghash)
                                                    (-sort 'string-lessp))))
          (results (gethash tag taghash))
          (choice (completing-read "Select file: " results)))
     (obsidian-find-point-in-file choice 0)))
 
-(when (eval-when-compile (require 'hydra nil t))
-  (defhydra obsidian-hydra (:hint nil)
-    "
-Obsidian
-_f_ollow at point   insert _w_ikilink          _q_uit
-_j_ump to note      insert _l_ink              capture daily _n_ote
-_t_ag find          _c_apture new note
-_s_earch by expr.   _u_pdate tags/alises etc.
-"
-    ("c" obsidian-capture)
-    ("n" obsidian-daily-note)
-    ("f" obsidian-follow-link-at-point)
-    ("j" obsidian-jump)
-    ("l" obsidian-insert-link :color blue)
-    ("q" nil :color blue)
-    ("s" obsidian-search)
-    ("t" obsidian-find-tag)
-    ("u" obsidian-update)
-    ("w" obsidian-insert-wikilink :color blue)))
+;;
+;; Vault cache update timer
+;;
 
-;;;###autoload
-(define-globalized-minor-mode global-obsidian-mode obsidian-mode obsidian-enable-minor-mode)
-
-(add-hook 'after-save-hook #'obsidian--update-on-save)
-
-(defun obsidian-idle-timer ()
+(defun obsidian--idle-timer ()
   "Wait until Emacs is idle to call update."
-  (when obsidian--debug-messages
-    (message "Update timer triggered at %s" (format-time-string "%H:%M:%S")))
-  (run-with-idle-timer obsidian-update-idle-wait nil #'obsidian-update))
+  (when (and (boundp 'obsidian-update-idle-wait))
+    (when obsidian-debug-messages
+      (message "Update timer triggered at %s" (format-time-string "%H:%M:%S")))
+    (run-with-idle-timer obsidian-update-idle-wait nil #'obsidian-update)))
 
-(when obsidian-use-update-timer
-  (setq obsidian--update-timer
-        (run-with-timer 0 obsidian-cache-expiry 'obsidian-idle-timer)))
+(defun obsidian-start-update-timer ()
+  "Start the background process to periodically refresh the vault cache."
+  (interactive)
+  (when (boundp 'obsidian-cache-expiry)
+    (message "Starting obsidian update timer")
+    (setq obsidian--update-timer
+          (run-with-timer 0 obsidian-cache-expiry 'obsidian--idle-timer))))
 
 (defun obsidian-stop-update-timer ()
-  "Stop the background process that periodically refreshes the cache."
+  "Stop the background process that periodically refreshes the vault cache."
   (interactive)
-  (cancel-timer obsidian--update-timer))
+  (when (and (boundp 'obsidian--update-timer) obsidian--update-timer)
+    (message "Stopping obsidian update timer")
+    (cancel-timer obsidian--update-timer)))
+
+(defcustom obsidian-use-update-timer t
+  "Determines whether a polling cache update will be used.
+If it is true, a timer will be created using the values of
+`obsidian-cache-expiry' and `obsidian-update-idle-wait'."
+  :type 'boolean
+  :initialize #'custom-initialize-reset
+  :set (lambda (symbol value)
+         (set-default symbol value)
+         (if value
+             (obsidian-start-update-timer)
+           (obsidian-stop-update-timer))))
+
+(defcustom obsidian-cache-expiry (* 60 5)
+  "The number of seconds before the Obsidian cache will update."
+  :type 'integer
+  :initialize #'custom-initialize-reset
+  :set (lambda (symbol value)
+         (set-default symbol value)
+         (obsidian-stop-update-timer)
+         (obsidian-start-update-timer)))
+
+(defcustom obsidian-update-idle-wait 5
+  "Seconds to wait after cache expiry for Emacs to be idle before running update."
+  :type 'integer
+  :initialize #'custom-initialize-reset
+  :set (lambda (symbol value)
+         (set-default symbol value)
+         (obsidian-stop-update-timer)
+         (obsidian-start-update-timer)))
+
+;;
+;; Backlinks Panel
+;;
+
+(defcustom obsidian-backlinks-panel-position 'right
+  "Position of backlinks buffer in frame.
+Valid values are:
+ * `right',
+ * `left'."
+  :type '(choice (const right)
+                 (const left)))
+
+(defcustom obsidian-backlinks-panel-width 75
+  "Width of the backlinks window."
+  :type 'integer)
+
+(defcustom obsidian-backlinks-show-vault-path t
+  "If t, show path relative to Obsidian vault, otherwise only show file name."
+  :type 'boolean)
+
+(defcustom obsidian-backlinks-buffer-name "*backlinks*"
+  "Name to use for the obsidian backlinks buffer."
+  :type 'string)
 
 (defun obsidian--get-local-backlinks-window (&optional frame)
   "Return window if backlinks window is visible in FRAME, nil otherwise.
@@ -1322,7 +1269,7 @@ For an interactive version, see `obsidian-backlinks-set-panel-width'."
                  (- new-width win-width) (window-width win) win-width new-width)
         (setq window-size-fixed 'width))
       (setq obsidian-backlinks-panel-width new-width)
-      (obsidian-populate-backlinks-buffer 'force))))
+      (obsidian--populate-backlinks-buffer 'force))))
 
 (defun obsidian-backlinks-set-panel-width (&optional arg)
   "Select a new value for `obsidian-backlinks-panel-width'.
@@ -1338,7 +1285,7 @@ With a prefix ARG simply reset the width of the treemacs window."
 (defun obsidian-open-backlinks-panel ()
   "Create a dedicated panel to display the backlinks buffer.
 
-Inspired by treemacs. See `treemacs--popup-window' in `treemacs-core-utils.el'
+Inspired by treemacs.  See `treemacs--popup-window' in `treemacs-core-utils.el'
 for an example of using `display-buffer-in-side-window'."
   (interactive)
   (let ((bakbuf (get-buffer-create obsidian-backlinks-buffer-name)))
@@ -1404,7 +1351,7 @@ FILE is the full path to an obsidian file."
          (file-prop (get-text-property 1 'obsidian-mru-file bakbuf)))
     (equal file-path file-prop)))
 
-(defun obsidian-populate-backlinks-buffer (&optional force)
+(defun obsidian--populate-backlinks-buffer (&optional force)
   "Populate backlinks buffer with backlinks for current Obsidian file.
 
 The backlinks buffer will not be updated if it's already showing the
@@ -1420,12 +1367,15 @@ backlinks for the current buffer unless FORCE is non-nil."
         (with-current-buffer (get-buffer obsidian-backlinks-buffer-name)
           (erase-buffer)
           (visual-line-mode t)
+          ;; Insert filename
           (insert (propertize (format "# %s\n" file-str)
                               'face 'markdown-header-face
                               'obsidian-mru-file file-path))
+          ;; Insert separator
           (insert (propertize
                    (format "%s\n" (make-string (- obsidian-backlinks-panel-width 2) ?-))
                    'face 'markdown-hr-face))
+          ;; Insert backlinks
           (maphash 'obsidian--link-with-props backlinks)
           ;; Allows for using keybindings for obsidian-open-link
           (obsidian-mode t)
@@ -1435,6 +1385,35 @@ backlinks for the current buffer unless FORCE is non-nil."
           (set-window-point
            (get-buffer-window obsidian-backlinks-buffer-name)
            (point)))))))
+
+;;
+;; Mode Configuration
+;;
+
+(when (eval-when-compile (require 'hydra nil t))
+  (defhydra obsidian-hydra (:hint nil)
+    "
+Obsidian
+_f_ollow at point   insert _w_ikilink          _q_uit
+_j_ump to note      insert _l_ink              capture daily _n_ote
+_t_ag find          _c_apture new note
+_s_earch by expr.   _u_pdate tags/alises etc.
+"
+    ("c" obsidian-capture)
+    ("n" obsidian-daily-note)
+    ("f" obsidian-follow-link-at-point)
+    ("j" obsidian-jump)
+    ("l" obsidian-insert-link :color blue)
+    ("q" nil :color blue)
+    ("s" obsidian-search)
+    ("t" obsidian-find-tag)
+    ("u" obsidian-update)
+    ("w" obsidian-insert-wikilink :color blue)))
+
+;;;###autoload
+(define-globalized-minor-mode global-obsidian-mode obsidian-mode obsidian-enable-minor-mode)
+
+(add-hook 'after-save-hook #'obsidian--update-on-save)
 
 ;;;###autoload
 (define-minor-mode obsidian-backlinks-mode
@@ -1451,13 +1430,13 @@ in the linked file."
    (obsidian-backlinks-mode
     ;; mode was turned on
     (obsidian-open-backlinks-panel)
-    (obsidian-populate-backlinks-buffer)
-    (add-hook 'buffer-list-update-hook #'obsidian-populate-backlinks-buffer)
+    (obsidian--populate-backlinks-buffer)
+    (add-hook 'buffer-list-update-hook #'obsidian--populate-backlinks-buffer)
     (if (boundp 'eyebrowse-post-window-switch-hook)
         (remove-hook 'eyebrowse-post-window-switch-hook #'obsidian-close-all-backlinks-panels)))
    (t
     ;; mode was turned off (or we refused to turn it on)
-    (remove-hook 'buffer-list-update-hook #'obsidian-populate-backlinks-buffer)
+    (remove-hook 'buffer-list-update-hook #'obsidian--populate-backlinks-buffer)
     (obsidian-close-all-backlinks-panels)
     (if (boundp 'eyebrowse-post-window-switch-hook)
         (add-hook 'eyebrowse-post-window-switch-hook
