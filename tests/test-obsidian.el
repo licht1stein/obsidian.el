@@ -313,12 +313,12 @@ key4:
   (it "1.md using obsidian-backlinks"
     (let* ((file (obsidian-file-to-absolute-path "1.md"))
            (count (obsidian-test--backlinks-count file)))
-      (expect count :to-equal 2)))
+      (expect count :to-equal 3)))
 
   (it "2-sub with spaces and буквы.md using obsidian-backlinks"
     (let* ((file (obsidian-file-to-absolute-path "2-sub with spaces and буквы.md"))
            (count (obsidian-test--backlinks-count file)))
-      (expect count :to-equal 7))))
+      (expect count :to-equal 8))))
 
 (describe "obsidian-backlinks without wiki links"
    (before-all (progn
@@ -332,7 +332,7 @@ key4:
   (it "1.md using obsidian-backlinks"
     (let* ((file (obsidian-file-to-absolute-path "1.md"))
            (count (obsidian-test--backlinks-count file)))
-      (expect count :to-equal 1)))
+      (expect count :to-equal 2)))
 
   (it "2-sub with spaces and буквы.md using obsidian-backlinks"
     (let* ((file (obsidian-file-to-absolute-path "2-sub with spaces and буквы.md"))
