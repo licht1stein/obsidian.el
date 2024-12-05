@@ -638,6 +638,9 @@ If file is not specified, the current buffer will be used."
     (setq obsidian--backlinks-alist (make-hash-table :test 'equal))
     (setq obsidian--jump-list nil)
     (setq obsidian-vault-cache (make-hash-table :test 'equal :size file-count))
+    (seq-map (lambda (file)
+               (ht-set obsidian-vault-cache file (make-hash-table :test 'equal :size 3)))
+             obs-files)
     ;; Repopulate metadata
     (dolist-with-progress-reporter
         (i obs-files)
