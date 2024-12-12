@@ -72,6 +72,38 @@
       (expect (length (ht-keys obsidian-vault-cache))
               :to-equal obsidian--test-number-of-notes)))
 
+(describe "check ignore directories function"
+  (after-all (setq obsidian-excluded-directories nil))
+  (it "obsidian-not-in-excluded-directory-p with a list of directories"
+      (let ((file (concat obsidian--test-dir "/inbox/2022-07-24.md")))
+        (expect (file-exists-p file) :to-equal t)
+        (expect (obsidian-not-in-excluded-directory-p file) :to-equal t)
+        (setq obsidian-excluded-directories
+              (cons (concat obsidian--test-dir "/subdir") obsidian-excluded-directories))
+        (expect (obsidian-not-in-excluded-directory-p file) :to-equal t)
+        (setq obsidian-excluded-directories
+              (cons (concat obsidian--test-dir "/inbox") obsidian-excluded-directories))
+        (expect (obsidian-not-in-excluded-directory-p file) :to-equal nil))))
+
+(describe "check obsidian-file-p with ignored directories"
+  (before-all (progn
+                (setq obsidian-excluded-directories (list (concat obsidian--test-dir "/inbox")))
+                (setq obsidian-include-hidden-files nil)
+                (obsidian-change-vault obsidian--test-dir)))
+  (after-all (progn
+               (setq obsidian-excluded-directories nil)
+               (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)
+               (obsidian-change-vault obsidian--test--original-dir)))
+
+  (it "inbox file(s) are not in vault cache"
+      (expect obsidian-directory :to-equal obsidian--test-dir)
+      (expect (length (ht-keys obsidian-vault-cache))
+              :not :to-equal obsidian--test-number-of-visible-notes)
+      (expect (length (ht-keys obsidian-vault-cache))
+              :to-equal (1- obsidian--test-number-of-visible-notes))
+      (expect (length (obsidian-directories)) :not :to-equal 2)
+      (expect (length (obsidian-directories)) :to-equal 1)))
+
 (describe "obsidian-file-p"
   (before-all (obsidian-change-vault obsidian--test-dir))
   (after-all (obsidian-change-vault obsidian--test--original-dir))
@@ -84,12 +116,12 @@
     (expect (obsidian-file-p "./tests/test_vault/.trash/trash.md") :to-be nil)))
 
 (describe "obsidian list all visible files"
-   (before-all (progn
-                 (setq obsidian-include-hidden-files nil)
-                 (obsidian-change-vault obsidian--test-dir)))
-   (after-all (progn
-                (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)
-                (obsidian-change-vault obsidian--test--original-dir)))
+  (before-all (progn
+                (setq obsidian-include-hidden-files nil)
+                (obsidian-change-vault obsidian--test-dir)))
+  (after-all (progn
+               (setq obsidian-include-hidden-files obsidian--test-visibility-cfg)
+               (obsidian-change-vault obsidian--test--original-dir)))
 
   (it "check visible file count"
     (expect (length (obsidian-files)) :to-equal obsidian--test-number-of-visible-notes)))

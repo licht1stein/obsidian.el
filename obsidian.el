@@ -83,6 +83,11 @@ Default is the inbox directory"
   "If true, files beginning with a period are considered valid Obsidian files."
   :type 'boolean)
 
+(defcustom obsidian-excluded-directories nil
+  "List of directories to exclude from Obsidian file searches.
+Each directory should be a full path relative to `obsidian-directory`."
+  :type '(repeat directory))
+
 (defcustom obsidian-create-unfound-files-in-inbox t
   "Where to create a file when target file is missing.
 
@@ -141,7 +146,7 @@ of `dirctory-files'."
   "Set vault directory to PATH and repopulate vault cache.
 When run interactively asks user to specify the path."
   (interactive)
-  (let* ((raw-path (or path
+  (let* ((raw-path (or (and path (expand-file-name path))
                        (read-directory-name "Specify path to Obsidian vault: ")))
          (final-path (expand-file-name raw-path)))
     (if (file-exists-p final-path)
@@ -282,7 +287,8 @@ Each link list contains the following as returned by markdown-link-at-pos:
   "Return t if FILE is a user defined directory inside `obsidian-directory'."
   (and (file-directory-p file)
        (obsidian-not-dot-obsidian-p file)
-       (obsidian-not-trash-p file)))
+       (obsidian-not-trash-p file)
+       (obsidian-not-in-excluded-directory-p file)))
 
 (defun obsidian-dot-file-p (p)
   "Return t if path P points to a dot file."
@@ -295,6 +301,14 @@ Each link list contains the following as returned by markdown-link-at-pos:
 (defun obsidian-not-dot-obsidian-p (file)
   "Return t if FILE is not in .obsidian dir of Obsidian."
   (not (s-contains-p "/.obsidian" file)))
+
+(defun obsidian-not-in-excluded-directory-p (file)
+  "Check if FILE is not in any of the excluded directories."
+  (not
+   (seq-some
+    (lambda (excluded-dir)
+      (s-starts-with-p (expand-file-name excluded-dir) file))
+    obsidian-excluded-directories)))
 
 (defun obsidian-file-p (&optional file)
   "Return t if FILE is an obsidian.el file, nil otherwise.
@@ -314,6 +328,7 @@ FILE is an Org-roam file if:
                                  (not (obsidian-dot-file-p path))))
                (not-node-git-p (not (string-match-p (rx (or "node_modules" ".git")) path)))
                (not-trash-p (obsidian-not-trash-p path))
+               (not-ignored-dir (obsidian-not-in-excluded-directory-p path))
                (not-dot-obsidian (obsidian-not-dot-obsidian-p path)))
     t))
 
@@ -440,10 +455,11 @@ markdown-link-at-pos:
       (goto-char (point-min))
       (while (markdown-match-generic-links (point-max) nil)
         (let ((link-info (markdown-link-at-pos (point))))
-          (substring-no-properties (nth 2 link-info))
-          (substring-no-properties (nth 3 link-info))
-          (obsidian--update-file-links-dict
-           (obsidian-file-to-absolute-path (nth 3 link-info)) link-info dict)))
+          (when (and (nth 2 link-info) (nth 3 link-info))
+            (substring-no-properties (nth 2 link-info))
+            (substring-no-properties (nth 3 link-info))
+            (obsidian--update-file-links-dict
+             (obsidian-file-to-absolute-path (nth 3 link-info)) link-info dict))))
       ;; Find wiki links
       (when markdown-enable-wiki-links
         (goto-char (point-min))
@@ -997,12 +1013,18 @@ Opens markdown links in other window if ARG is non-nil.."
 
 (defun obsidian-follow-backlink-at-point ()
   "Open the file pointed to by the backlink and move to the linked location."
-  (let* ((fil (get-text-property (point) 'obsidian--file))
+  (let* ((link (get-text-property (point) 'obsidian--file))
          (pos (get-text-property (point) 'obsidian--position)))
     (when obsidian-debug-messages
-      (message "Visiting file %s at position %s" fil pos))
-    (find-file-other-window fil)
-    (goto-char pos)))
+      (message "Processing link" link))
+    (cond ((s-contains-p ":" link)
+           (browse-url link))
+          ((s-starts-with-p "#" link)
+           (message "Doing nothing with relative link %s" link))
+          (t
+           (progn
+             (find-file-other-window link)
+             (goto-char pos))))))
 
 (defun obsidian-backlink-p ()
   "Check if thing at point represents a backlink."
@@ -1250,10 +1272,6 @@ Inspired by `treemacs-get-local-window' in `treemacs-scope.el'."
                        (buffer-name)
                        (s-starts-with? obsidian-backlinks-buffer-name))))))
 
-(defun obsidian--get-all-backlinks-windows ()
-  "Return a list of all backlinks windows from all frames."
-  (-non-nil (seq-map #'obsidian--get-local-backlinks-window (frame-list))))
-
 (defun obsidian--backlinks-set-panel-width (width)
   "Set the width of the backlinks buffer to WIDTH.
 For an interactive version, see `obsidian-backlinks-set-panel-width'."
@@ -1329,9 +1347,13 @@ Returns t if a panel was created, nil if closed."
 K is the file name that contains the link.
 V is the list object associated with the link as returned
 by `markdown-link-at-pos'."
-  (let ((filename (if obsidian-backlinks-show-vault-path
-                      (obsidian-file-relative-name k)
-                    (file-name-nondirectory k))))
+  (let ((filename (cond ((or (s-starts-with-p "#" k)
+                             (s-contains-p ":" k))
+                         k)
+                        (obsidian-backlinks-show-vault-path
+                         (obsidian-file-relative-name k))
+                        (t
+                         (file-name-nondirectory k)))))
     (insert (propertize (format "%s\n" filename)
                         'face 'markdown-url-face 'obsidian--file k))
 
