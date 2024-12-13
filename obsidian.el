@@ -679,7 +679,7 @@ Returns a file path relative to the obsidian vault."
           f
         ;; file is not being tracked; create it if necessary
         (obsidian-file-relative-name
-         (obsidian-prepare-new-file-from-rel-path f))))))
+         (obsidian--prepare-new-file-from-rel-path f))))))
 
 (defun obsidian--request-link (&optional toggle-path)
   "Service function to request user for link input.
@@ -903,7 +903,7 @@ Note is created in the `obsidian-daily-notes-directory' if set, or in
   "Filter ALL-FILES to return list with same name as F."
   (-filter (lambda (el) (or (s-equals-p f el) (s-ends-with-p (concat "/" f) el))) all-files))
 
-(defun obsidian-prepare-new-file-from-rel-path (p)
+(defun obsidian--prepare-new-file-from-rel-path (p)
   "Create file if it doesn't exist and return full system path for relative path P.
 
 If the file include directories in its path, we create the file relative to
@@ -945,8 +945,8 @@ If ARG is set, the file will be opened in other window."
   (let* ((all-files (seq-map #'obsidian-file-relative-name (obsidian-files)))
          (matches (obsidian--match-files f all-files))
          (file (cl-case (length matches)
-                 (0 (obsidian-prepare-new-file-from-rel-path
-                     (obsidian--prepare-new-file-rel-path f)))
+                 (0 (obsidian--prepare-new-file-from-rel-path
+                     (obsidian--prepare-rel-path f)))
                  (1 (car matches))
                  (t
                   (let ((choice (completing-read "Jump to: " matches)))
@@ -961,7 +961,7 @@ If ARG is set, the file will be opened in other window."
   (obsidian-find-file f arg)
   (goto-char p))
 
-(defun obsidian--prepare-new-file-rel-path (f)
+(defun obsidian--prepare-rel-path (f)
   "Return relative path for creating new file F.
 
 If `/' in F, return F. Else, if `obsidian-inbox-directory' is set and
