@@ -443,10 +443,13 @@ key4:
             (bad-path
              (concat obsidian-directory "/subdir/bar.md"))
             (good-path
-             (concat obsidian-directory "/" obsidian-inbox-directory "/bar.md")))
+             (concat obsidian-directory "/" obsidian-inbox-directory "/bar.md"))
+            (bad-path-root
+             (concat obsidian-directory "/bar.md")))
        (call-interactively #'obsidian-insert-link)
        (expect (file-exists-p bad-path) :to-equal nil)
-       (expect (file-exists-p good-path) :to-equal t))
+       (expect (file-exists-p good-path) :to-equal t)
+       (expect (file-exists-p bad-path-root) :to-equal nil))
      (kill-whole-line))
 
   (it "insert link from vault root when inbox setting is nil"
@@ -473,10 +476,13 @@ key4:
             (good-path
              (concat obsidian-directory "/subdir/bar.md"))
             (bad-path
-             (concat obsidian-directory "/" obsidian-inbox-directory "/bar.md")))
+             (concat obsidian-directory "/" obsidian-inbox-directory "/bar.md"))
+            (bad-path-root
+             (concat obsidian-directory "/bar.md")))
        (call-interactively #'obsidian-insert-link)
        (expect (file-exists-p good-path) :to-equal t)
-       (expect (file-exists-p bad-path) :to-equal nil))
+       (expect (file-exists-p bad-path) :to-equal nil)
+       (expect (file-exists-p bad-path-root) :to-equal nil))
      (kill-whole-line)))
 
 (provide 'test-obsidian)

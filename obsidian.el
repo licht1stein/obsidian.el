@@ -339,8 +339,16 @@ FILE is an Org-roam file if:
     t))
 
 (defun obsidian-file-relative-name (f)
-  "Take file name F and return relative path for `obsidian-directory'."
-  (file-relative-name f obsidian-directory))
+  "Take file name F and return relative path for `obsidian-directory'.
+
+The call to `substring' is much faster than a call to `file-relative-name',
+and as the DIRECTORY argument of `file-relative-name' is always the constant
+`obsidian-directory', the use of `substring' with the FROM argument set to the
+string length of `obsidian-directory' should be equivalent, as long as F is
+always a full absolute path."
+  (if (s-starts-with-p obsidian-directory f)
+      (substring f obsidian--relative-path-length)
+    f))
 
 (defun obsidian-expand-file-name (f)
   "Take file F relative to `obsidian-directory' and return absolute path."
@@ -657,25 +665,21 @@ an Obsidian link and is returned unmodified."
         (if toggle (file-name-nondirectory file-path) file-path)
       (if toggle file-path (file-name-nondirectory file-path)))))
 
-(defun obsidian-verify-relative-path (f)
+(defun obsidian--verify-link (f)
   "Check that relative file path F exists, and create it if it does not.
 
 Returns a file path relative to the obsidian vault."
+  ;; Assume an external link that should be returned untouched
   (if (s-contains-p ":" f)
       f
-    (let* ((obs-path (obsidian-expand-file-name f)))
-      (if (not (ht-get obsidian-vault-cache obs-path))
-          (if obsidian-create-unfound-files-in-inbox
-              (-> f
-                  obsidian-prepare-new-file-from-rel-path
-                  obsidian-file-relative-name)
-            (-> (buffer-file-name)
-                file-name-directory
-                obsidian-file-relative-name
-                (concat f)
-                obsidian-prepare-new-file-from-rel-path
-                obsidian-file-relative-name))
-        f))))
+    ;; (let* ((obs-path (obsidian-expand-file-name f)))
+    (let* ((obs-path (obsidian-file-to-absolute-path f)))
+      (if (ht-get obsidian-vault-cache obs-path)
+          ;; associated file is in cache; return relative file path f
+          f
+        ;; file is not being tracked; create it if necessary
+        (obsidian-file-relative-name
+         (obsidian-prepare-new-file-from-rel-path f))))))
 
 (defun obsidian--request-link (&optional toggle-path)
   "Service function to request user for link input.
@@ -687,7 +691,7 @@ TOGGLE-PATH is a boolean that will toggle the behavior of
          (region (when (use-region-p)
                    (buffer-substring-no-properties (region-beginning) (region-end))))
          (chosen-file (completing-read "Link: " all-files))
-         (verified-file (obsidian-verify-relative-path chosen-file))
+         (verified-file (obsidian--verify-link chosen-file))
          (default-description (-> verified-file
                                   file-name-nondirectory
                                   file-name-sans-extension))
@@ -904,12 +908,29 @@ Note is created in the `obsidian-daily-notes-directory' if set, or in
 
 If the file include directories in its path, we create the file relative to
 `obsidian-directory'.  If there are no paths, we create the new file in
-`obsidian-inbox-directory' if set, otherwise in `obsidian-directory'."
+`obsidian-inbox-directory' if `obsidian-inbox-directory' and
+`obsidian-create-unfound-files-in-inbox' are set, otherwise in
+`obsidian-directory'."
   (let* ((f (obsidian--extension p))
-         (filename (if (s-contains-p "/" f)
-                       (s-concat obsidian-directory "/" f)
+         (filename (cond
+                    ;; If relative path includes a '/', use vault root
+                    ((s-contains-p "/" f)
+                     (s-concat obsidian-directory "/" f))
+                    ;; Create file in inbox if appropriate
+                    ((and obsidian-create-unfound-files-in-inbox
+                          obsidian-inbox-directory)
                      (s-concat obsidian-directory "/"
-                               obsidian-inbox-directory "/" f)))
+                               obsidian-inbox-directory "/" f))
+                    ;; If we're in a file buffer, create new file in same directory
+                    (buffer-file-name
+                     (let ((rel-path (-> (buffer-file-name)
+                                         file-name-directory
+                                         obsidian-file-relative-name
+                                         (concat f))))
+                       (s-concat obsidian-directory "/" rel-path)))
+                    ;; Else, create in the vault root
+                    (t
+                     (s-concat obsidian-directory "/" f))))
          (cleaned (s-replace "//" "/" filename)))
     (when (not (f-exists-p cleaned))
       (f-mkdir-full-path (f-dirname cleaned))
@@ -925,7 +946,7 @@ If ARG is set, the file will be opened in other window."
          (matches (obsidian--match-files f all-files))
          (file (cl-case (length matches)
                  (0 (obsidian-prepare-new-file-from-rel-path
-                     (obsidian-prepare-rel-path f)))
+                     (obsidian--prepare-new-file-rel-path f)))
                  (1 (car matches))
                  (t
                   (let ((choice (completing-read "Jump to: " matches)))
@@ -940,12 +961,18 @@ If ARG is set, the file will be opened in other window."
   (obsidian-find-file f arg)
   (goto-char p))
 
-(defun obsidian-prepare-rel-path (f)
-  "If `/' in F, return F, otherwise with buffer, relative to the buffer."
+(defun obsidian--prepare-new-file-rel-path (f)
+  "Return relative path for creating new file F.
+
+If `/' in F, return F. Else, if `obsidian-inbox-directory' is set and
+`obsidian-create-unfound-files-in-inbox' is true, return path to in inbox.
+Otherwise, retrun path in same directory as current buffer."
   (if (s-contains-p "/" f)
       f
-    (if obsidian-create-unfound-files-in-inbox
-        f
+    ;; Return relative path of input file in input diretory
+    (if (and obsidian-create-unfound-files-in-inbox obsidian-inbox-directory)
+        (concat (file-name-directory obsidian-inbox-directory) f)
+      ;; Return relative path of input file in current directory
       (-> (buffer-file-name)
           file-name-directory
           obsidian-file-relative-name
