@@ -145,6 +145,7 @@ In addition to the settings show in the example configurations above, some other
 - obsidian-templates-directory :: location for obsidian.el to find template files
 - obsidian-daily-note-template :: name of template file to use for daily notes
 - obsidian-include-hidden-files :: configure obsidian.el to either track or ignore hidden files
+- obsidian-excluded-directories :: list of full directory paths to be excluded from obsidian vault
 - obsidian-create-unfound-files-in-inbox :: whether to create files for unfound links in inbox or in same directory as file
 - obsidian-backlinks-panel-position :: which side of the window to host backlinks panel: 'left or 'right
 - obsidian-backlinks-panel-width :: width of the backlinks panel in characters
@@ -280,10 +281,25 @@ Use ~obsidian-move-file~ to move the current note to another folder.
 #+end_src
 
 ** Searching in notes
-Use ~obsidian-search~ to look for a string or a regular expression within the notes in your vault.
+~obsidian.el~ includes the function ~obsidian-search~ to look for a string or a regular expression within the notes in your vault.  After entering a search query, the user can select from a list of files that include the search query.
 
 #+begin_src
-  M-x obsidian-search RET query RET
+  M-x obsidian-search RET query RET select-file RET
+#+end_src
+
+Alternately, the third party library [[https://sr.ht/~casouri/xeft/][xeft]] can be used for searching through the vault. This package provides search-as-you-type functionality, as well as displaying the context of the file that matches the search.
+
+Below is an example configuration to use with ~obsidian.el~:
+
+#+begin_src elisp
+(use-package xeft
+  :after obsidian
+  :bind ((:map obsidian-mode-map (("C-c C-g" . xeft))))
+  :custom
+  (xeft-directory obsidian-directory)
+  (xeft-recursive t)
+  (xeft-file-filter #'obsidian-file-p)
+  (xeft-title-function #'obsidian-file-title-function))
 #+end_src
 
 ** Inserting tags

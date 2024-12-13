@@ -48,6 +48,9 @@
 
 (defgroup obsidian nil "Obsidian Notes group." :group 'text)
 
+(defvar obsidian--relative-path-length nil
+  "Length of path of `obisidan-directory' used to calculate file relative paths.")
+
 (defcustom obsidian-directory ""
   "Path to Obsidian Notes vault."
   :group 'obsidian
@@ -58,7 +61,9 @@
            (if (file-exists-p full-path)
                (progn
                  (message "Setting %s to %s" symbol full-path)
-                 (set-default symbol full-path))
+                 (set-default symbol full-path)
+                 (setq obsidian--relative-path-length
+                       (length (file-name-as-directory full-path))))
              (user-error (format "Directory %s doesn't exist" full-path))))))
 
 (defcustom obsidian-inbox-directory nil
@@ -89,10 +94,11 @@ Each directory should be a full path relative to `obsidian-directory`."
   :type '(repeat directory))
 
 (defcustom obsidian-create-unfound-files-in-inbox t
-  "Where to create a file when target file is missing.
+  "Controls where to create a file when target file is missing.
 
 Controls where to create a new file when visiting a link when the target is
-missing.  If true, create in inbox, otherwise next to the current buffer."
+missing.  If true, create in inbox, otherwise create it in the same
+directory as the current buffer."
   :type 'boolean)
 
 (defcustom obsidian-links-use-vault-path nil
@@ -337,8 +343,19 @@ FILE is an Org-roam file if:
   (file-relative-name f obsidian-directory))
 
 (defun obsidian-expand-file-name (f)
-  "Take relative file name F and return expanded name."
+  "Take file F relative to `obsidian-directory' and return absolute path."
   (expand-file-name f obsidian-directory))
+
+(defun obsidian-file-to-absolute-path (file)
+  "Return a full file path for FILE.
+The full file path is determined by finding a file with the same name in the
+vault cache.  If there are multiple files with the same name, the first one
+found is returned.  If no matches are found, the original FILE is returned."
+  (let* ((all-files (->> (obsidian-files) (-map #'obsidian-file-relative-name)))
+         (matches (obsidian--match-files file all-files)))
+    (if matches
+        (obsidian-expand-file-name (car matches))
+      file)))
 
 (defun obsidian-files ()
   "Lists all Obsidian Notes files that are not in trash."
@@ -351,7 +368,7 @@ FILE is an Org-roam file if:
        (-filter #'obsidian-user-directory-p)))
 
 (defun obsidian-remove-front-matter-from-string (s)
-  "Return S with any front matter removed, returning only th body."
+  "Return S with any front matter removed, returning only the body."
   (if (s-starts-with-p "---" s)
       (let ((splits (s-split-up-to "---" s 2)))
         (if (eq (length splits) 3)
@@ -900,22 +917,11 @@ If the file include directories in its path, we create the file relative to
       (obsidian-add-file cleaned))
     cleaned))
 
-(defun obsidian-file-to-absolute-path (file)
-  "Return a full file path for FILE.
-The full file path is determined by finding a file with the same name in the
-vault cache.  If there are multiple files with the same name, the first one
-found is returned.  If no matches are found, the original FILE is returned."
-  (let* ((all-files (->> (obsidian-files) (-map #'obsidian-file-relative-name)))
-         (matches (obsidian--match-files file all-files)))
-    (if matches
-        (obsidian-expand-file-name (car matches))
-      file)))
-
 (defun obsidian-find-file (f &optional arg)
   "Open file F, offering a choice if multiple files match F.
 
 If ARG is set, the file will be opened in other window."
-  (let* ((all-files (->> (obsidian-files) (-map #'obsidian-file-relative-name)))
+  (let* ((all-files (seq-map #'obsidian-file-relative-name (obsidian-files)))
          (matches (obsidian--match-files f all-files))
          (file (cl-case (length matches)
                  (0 (obsidian-prepare-new-file-from-rel-path
@@ -1159,6 +1165,21 @@ The files cache has the following structure:
               (pop-to-buffer bakbuf))
           (obsidian--populate-backlinks-buffer)))
     (obsidian-backlink-jump)))
+
+(defun obsidian-file-title-function (file)
+  "Return the title of FILE.
+
+This is a modified version of the default xeft title function.
+
+Recognize 'title:' if set, else return the first line as title or,
+if the first line is empty, return the file name as the title."
+  (re-search-forward (rx "title:" (* whitespace)) nil t)
+  (let ((bol (point)) title)
+    (end-of-line)
+    (setq title (buffer-substring-no-properties bol (point)))
+    (if (equal title "")
+        (file-name-base file)
+      title)))
 
 ;;;###autoload
 (defun obsidian-search ()
