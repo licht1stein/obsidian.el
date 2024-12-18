@@ -1123,34 +1123,6 @@ Template vars: {{title}}, {{date}}, and {{time}}"
     (message "Template variables replaced and inserted to the buffer")
     (goto-char m)))
 
-(defcustom obsidian-backlinks-panel-position 'right
-  "Position of backlinks buffer in frame.
-Valid values are:
- * `right',
- * `left'."
-  :type '(choice (const right)
-                 (const left)))
-
-(defcustom obsidian-backlinks-panel-width 75
-  "Width of the backlinks window."
-  :type 'integer)
-
-(defcustom obsidian-backlinks-show-vault-path t
-  "If t, show path relative to Obsidian vault, otherwise only show file name."
-  :type 'boolean)
-
-(defcustom obsidian-backlinks-buffer-name "*backlinks*"
-  "Name to use for the obsidian backlinks buffer."
-  :type 'string)
-
-(defcustom obsidian-file-links-buffer-name "*file links*"
-  "Name to use for the obsidian file links buffer."
-  :type 'string)
-
-(defcustom obsidian-show-file-links-buffer t
-  "If t, also who file links buffer when showing backlinks buffer."
-  :type 'boolean)
-
 (defun obsidian--backlinks-completion-fn (hmap)
   "Completion function to show file path and link text from hashmap HMAP."
   (let ((obsidian--backlinks-alist
@@ -1315,6 +1287,26 @@ If it is true, a timer will be created using the values of
 ;;
 ;; Backlinks Panel
 ;;
+
+(defcustom obsidian-backlinks-panel-position 'right
+  "Position of backlinks buffer in frame.
+Valid values are:
+ * `right',
+ * `left'."
+  :type '(choice (const right)
+                 (const left)))
+
+(defcustom obsidian-backlinks-panel-width 75
+  "Width of the backlinks window."
+  :type 'integer)
+
+(defcustom obsidian-backlinks-show-vault-path t
+  "If t, show path relative to Obsidian vault, otherwise only show file name."
+  :type 'boolean)
+
+(defcustom obsidian-backlinks-buffer-name "*backlinks*"
+  "Name to use for the obsidian backlinks buffer."
+  :type 'string)
 
 (defun obsidian--get-local-backlinks-window (&optional frame)
   "Return window if backlinks window is visible in FRAME, nil otherwise.
