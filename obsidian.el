@@ -478,7 +478,8 @@ markdown-link-at-pos:
     (when (> (point-max) 5)
       ;; Find markdown inline links
       (goto-char (point-min))
-      (while (markdown-match-generic-links (point-max) nil)
+      (while (and (> (point-max) (point))
+                  (markdown-match-generic-links (point-max) nil))
         (let ((link-info (markdown-link-at-pos (point))))
           (when (and (nth 2 link-info) (nth 3 link-info))
             (substring-no-properties (nth 2 link-info))
@@ -489,10 +490,12 @@ markdown-link-at-pos:
       (when markdown-enable-wiki-links
         (goto-char (point-min))
         (while
-            (if-let (link-info (obsidian-find-wiki-links (point-max)))
-                (obsidian--update-file-links-dict
-                 (obsidian-file-to-absolute-path (obsidian--extension (nth 3 link-info)))
-                 link-info dict)))))
+            (when-let (link-info (and (> (point-max) (point))
+                                      (obsidian-find-wiki-links (point-max))))
+              (obsidian--update-file-links-dict
+               (obsidian-file-to-absolute-path
+                (obsidian--extension (nth 3 link-info)))
+               link-info dict)))))
     dict))
 
 (defun obsidian-find-yaml-front-matter-in-string (s)
@@ -1048,8 +1051,6 @@ Opens markdown links in other window if ARG is non-nil.."
   "Open the file pointed to by the backlink and move to the linked location."
   (let* ((link (get-text-property (point) 'obsidian--file))
          (pos (get-text-property (point) 'obsidian--position)))
-    (when obsidian-debug-messages
-      (message "Processing link" link))
     (cond ((s-contains-p ":" link)
            (browse-url link))
           ((s-starts-with-p "#" link)
@@ -1121,6 +1122,34 @@ Template vars: {{title}}, {{date}}, and {{time}}"
     (insert output-content)
     (message "Template variables replaced and inserted to the buffer")
     (goto-char m)))
+
+(defcustom obsidian-backlinks-panel-position 'right
+  "Position of backlinks buffer in frame.
+Valid values are:
+ * `right',
+ * `left'."
+  :type '(choice (const right)
+                 (const left)))
+
+(defcustom obsidian-backlinks-panel-width 75
+  "Width of the backlinks window."
+  :type 'integer)
+
+(defcustom obsidian-backlinks-show-vault-path t
+  "If t, show path relative to Obsidian vault, otherwise only show file name."
+  :type 'boolean)
+
+(defcustom obsidian-backlinks-buffer-name "*backlinks*"
+  "Name to use for the obsidian backlinks buffer."
+  :type 'string)
+
+(defcustom obsidian-file-links-buffer-name "*file links*"
+  "Name to use for the obsidian file links buffer."
+  :type 'string)
+
+(defcustom obsidian-show-file-links-buffer t
+  "If t, also who file links buffer when showing backlinks buffer."
+  :type 'boolean)
 
 (defun obsidian--backlinks-completion-fn (hmap)
   "Completion function to show file path and link text from hashmap HMAP."
@@ -1198,7 +1227,7 @@ The files cache has the following structure:
 
 This is a modified version of the default xeft title function.
 
-Recognize 'title:' if set, else return the first line as title or,
+Recognize `title:' if set, else return the first line as title or,
 if the first line is empty, return the file name as the title."
   (re-search-forward (rx "title:" (* whitespace)) nil t)
   (let ((bol (point)) title)
@@ -1236,8 +1265,6 @@ if the first line is empty, return the file name as the title."
 (defun obsidian--idle-timer ()
   "Wait until Emacs is idle to call update."
   (when (and (boundp 'obsidian-update-idle-wait))
-    (when obsidian-debug-messages
-      (message "Update timer triggered at %s" (format-time-string "%H:%M:%S")))
     (run-with-idle-timer obsidian-update-idle-wait nil #'obsidian-update)))
 
 (defun obsidian-start-update-timer ()
@@ -1288,26 +1315,6 @@ If it is true, a timer will be created using the values of
 ;;
 ;; Backlinks Panel
 ;;
-
-(defcustom obsidian-backlinks-panel-position 'right
-  "Position of backlinks buffer in frame.
-Valid values are:
- * `right',
- * `left'."
-  :type '(choice (const right)
-                 (const left)))
-
-(defcustom obsidian-backlinks-panel-width 75
-  "Width of the backlinks window."
-  :type 'integer)
-
-(defcustom obsidian-backlinks-show-vault-path t
-  "If t, show path relative to Obsidian vault, otherwise only show file name."
-  :type 'boolean)
-
-(defcustom obsidian-backlinks-buffer-name "*backlinks*"
-  "Name to use for the obsidian backlinks buffer."
-  :type 'string)
 
 (defun obsidian--get-local-backlinks-window (&optional frame)
   "Return window if backlinks window is visible in FRAME, nil otherwise.
@@ -1367,13 +1374,12 @@ for an example of using `display-buffer-in-side-window'."
 (defun obsidian-close-backlinks-panel ()
   "Close local window used for dedicated backlinks panel."
   (interactive)
-  (delete-window (obsidian--get-local-backlinks-window)))
+  (delete-windows-on obsidian-backlinks-buffer-name 0))
 
 (defun obsidian-close-all-backlinks-panels ()
   "Close all windows used for dedicated backlinks panels."
-  (when-let ((wins (obsidian--get-all-backlinks-windows)))
-    (seq-map #'delete-window wins)
-    (balance-windows)))
+  (delete-windows-on obsidian-backlinks-buffer-name 'all)
+  (balance-windows))
 
 (defun obsidian-toggle-backlinks-panel ()
   "Create backlinks panel if it doesn't exist, close it otherwise.
