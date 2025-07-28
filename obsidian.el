@@ -1105,19 +1105,86 @@ See `markdown-follow-link-at-point' and `markdown-follow-wiki-link-at-point'."
     (or (s-matches-p obsidian-wiki-link-regex s)
         (s-matches-p obsidian-markdown-link-regex s))))
 
+(defconst obsidian--moment-format-map
+  '(("YYYY" . "%Y")
+    ("YY" . "%y")
+    ("Y" . "%Y")
+    ("MMMM" . "%B")
+    ("MMM" . "%b")
+    ("MM" . "%m")
+    ("M" . "%-m")
+    ("DD" . "%d")
+    ("D" . "%-d")
+    ("dddd" . "%A")
+    ("ddd" . "%a")
+    ("HH" . "%H")
+    ("H" . "%-H")
+    ("hh" . "%I")
+    ("h" . "%-I")
+    ("mm" . "%M")
+    ("m" . "%-M")
+    ("ss" . "%S")
+    ("s" . "%-S")
+    ("A" . "%p")
+    ("a" . "%P"))
+  "Mapping of moment.js format tokens to `format-time-string` specifiers.")
+
+(defconst obsidian--moment-format-regex
+  (regexp-opt (sort (mapcar 'car obsidian--moment-format-map)
+                    (lambda (a b) (> (length a) (length b)))))
+  "Regex to match moment.js format tokens, longest first.")
+
+(defun obsidian--moment-to-emacs-format (moment-format)
+  "Convert `MOMENT-FORMAT` moment.js format string to `format-time-string` format."
+  (with-temp-buffer
+    (insert moment-format)
+    (goto-char 0)
+    (save-match-data
+      (let ((case-fold-search nil))
+        (while (re-search-forward obsidian--moment-format-regex nil t)
+          (let* ((matched-text (match-string 0))
+                 (replacement (cdr (assoc matched-text obsidian--moment-format-map))))
+            (if replacement
+                (replace-match replacement t)
+              (error "Unknown moment.js format specifier: %s" matched-text))))))
+    (buffer-string)))
+
+(defun obsidian--substitute-template-variables (template-content title)
+  "Replace template variables in `TEMPLATE-CONTENT`.
+
+Uses `TITLE` as the current note's title, to replace {{title}}."
+
+  (with-temp-buffer
+    (insert template-content)
+
+    ;; Process {{title}}
+    (goto-char (point-min))
+    (while (search-forward  "{{title}}" nil t)
+      (replace-match title))
+
+    ;; Process both date and time templates
+    (goto-char (point-min))
+    (while (re-search-forward "{{\\(date\\|time\\)\\(?::\\([^}]+\\)\\)?}}" nil t)
+      (let* ((template-type (match-string 1))
+             (format-spec (match-string 2))
+             (default-format (if (string= template-type "date") "%Y-%m-%d" "%H:%M:%S"))
+             (format-or-default (if format-spec
+                                    (obsidian--moment-to-emacs-format format-spec)
+                                  default-format))
+             (replacement (format-time-string format-or-default)))
+        (replace-match replacement t)))
+    (buffer-string)))
+
 (defun obsidian-apply-template (template-filename)
   "Apply the template from TEMPLATE-FILENAME for the current buffer.
-Template vars: {{title}}, {{date}}, and {{time}}"
+
+Template vars: {{title}}, {{date}}, {{date:FORMAT}}, {{time}}, and {{time:FORMAT}}"
   (let* ((title (file-name-sans-extension (file-name-nondirectory buffer-file-name)))
-         (date (format-time-string "%Y-%m-%d"))
-         (time (format-time-string "%H:%M:%S"))
          (m (point))
          (template-content (with-temp-buffer
                              (insert-file-contents template-filename)
                              (buffer-string)))
-         (output-content (replace-regexp-in-string "{{title}}" title template-content))
-         (output-content (replace-regexp-in-string "{{date}}" date output-content))
-         (output-content (replace-regexp-in-string "{{time}}" time output-content)))
+         (output-content (obsidian--substitute-template-variables template-content title)))
     (goto-char (point-min))
     (insert output-content)
     (message "Template variables replaced and inserted to the buffer")

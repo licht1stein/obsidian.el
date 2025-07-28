@@ -485,4 +485,74 @@ key4:
        (expect (file-exists-p bad-path-root) :to-equal nil))
      (kill-whole-line)))
 
+(describe "obsidian--moment-to-emacs-format"
+  (it "converts basic moment.js format tokens to Emacs format"
+    (expect (obsidian--moment-to-emacs-format "YYYY-MM-DD") :to-equal "%Y-%m-%d")
+    (expect (obsidian--moment-to-emacs-format "YY/MM/DD") :to-equal "%y/%m/%d")
+    (expect (obsidian--moment-to-emacs-format "MMMM DD, YYYY") :to-equal "%B %d, %Y")
+    (expect (obsidian--moment-to-emacs-format "MMM D, YYYY") :to-equal "%b %-d, %Y")
+    (expect (obsidian--moment-to-emacs-format "M/D/YY") :to-equal "%-m/%-d/%y"))
+
+  (it "converts time format tokens"
+    (expect (obsidian--moment-to-emacs-format "HH:mm:ss") :to-equal "%H:%M:%S")
+    (expect (obsidian--moment-to-emacs-format "hh:mm") :to-equal "%I:%M"))
+
+  (it "handles mixed date and time formats"
+    (expect (obsidian--moment-to-emacs-format "YYYY-MM-DD HH:mm:ss") :to-equal "%Y-%m-%d %H:%M:%S")
+    (expect (obsidian--moment-to-emacs-format "MMM DD, YYYY HH:mm") :to-equal "%b %d, %Y %H:%M"))
+
+  (it "preserves literal text and special characters"
+    (expect (obsidian--moment-to-emacs-format "YYYY/MM/DD - HH:mm") :to-equal "%Y/%m/%d - %H:%M")
+    (expect (obsidian--moment-to-emacs-format "Report_YYYY_MM_DD.txt") :to-equal "Report_%Y_%m_%d.txt"))
+
+  (it "handles edge cases"
+    (expect (obsidian--moment-to-emacs-format "") :to-equal "")
+    (expect (obsidian--moment-to-emacs-format "YYYY") :to-equal "%Y")
+    (expect (obsidian--moment-to-emacs-format "YY YY YYYY") :to-equal "%y %y %Y")))
+
+(describe "obsidian--substitute-template-variables"
+  (it "processes basic date and time templates"
+    (let ((template-content "Today is {{date}} and current time is {{time}}"))
+      (obsidian--substitute-template-variables template-content nil)
+              :to-match "Today is [0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\} and current time is [0-9]\\{2\\}:[0-9]\\{2\\}:[0-9]\\{2\\}"))
+
+  (it "processes date templates with custom format"
+    (let ((template-content "Date: {{date:MMMM DD, YYYY}}"))
+      (expect (obsidian--substitute-template-variables template-content nil)
+              :to-match "Date: [A-Za-z]+ [0-9]\\{1,2\\}, [0-9]\\{4\\}")))
+
+  (it "processes time templates with custom format"
+    (let ((template-content "Time: {{time:h:mm A}}"))
+      (expect (obsidian--substitute-template-variables template-content nil)
+              :to-match "Time: [0-9]\\{1,2\\}:[0-9]\\{2\\} [ap]\\.[m]\\.")))
+
+  (it "processes multiple templates in same string"
+    (let ((template-content "Created on {{date:YYYY-MM-DD}} at {{time:HH:mm}}"))
+      (expect (obsidian--substitute-template-variables template-content nil)
+              :to-match "Created on [0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\} at [0-9]\\{2\\}:[0-9]\\{2\\}")))
+
+  (it "handles mixed template types"
+    (let ((template-content "{{date}} {{time}} {{date:MMM D}} {{time:h:mm A}}"))
+      (expect (obsidian--substitute-template-variables template-content nil)
+              :to-match "[0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\} [0-9]\\{2\\}:[0-9]\\{2\\}:[0-9]\\{2\\} [A-Za-z]+ [0-9]\\{1,2\\} [0-9]\\{1,2\\}:[0-9]\\{2\\} [ap]\\.[m]\\.")))
+
+  (it "preserves non-template content"
+    (let ((template-content "# Daily Note\n\nDate: {{date}}\nTime: {{time}}\n\n## Tasks\n- [ ] Item 1"))
+      (let ((result (obsidian--substitute-template-variables template-content nil)))
+        (expect result :to-match "# Daily Note")
+        (expect result :to-match "## Tasks")
+        (expect result :to-match "- \\[ \\] Item 1")
+        (expect result :to-match "Date: [0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\}")
+        (expect result :to-match "Time: [0-9]\\{2\\}:[0-9]\\{2\\}:[0-9]\\{2\\}"))))
+
+  (it "processes complex moment.js format patterns"
+    (let ((template-content "{{date:YYYY-MM-DD HH:mm:ss}}"))
+      (expect (obsidian--substitute-template-variables template-content nil)
+              :to-match "[0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\} [0-9]\\{2\\}:[0-9]\\{2\\}:[0-9]\\{2\\}")))
+
+  (it "handles repeated template processing"
+    (let ((template-content "{{date}} {{date}} {{time}} {{time}}"))
+      (expect (obsidian--substitute-template-variables template-content nil)
+              :to-match "[0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\} [0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\} [0-9]\\{2\\}:[0-9]\\{2\\}:[0-9]\\{2\\} [0-9]\\{2\\}:[0-9]\\{2\\}:[0-9]\\{2\\}"))))
+
 (provide 'test-obsidian)
