@@ -485,4 +485,44 @@ key4:
        (expect (file-exists-p bad-path-root) :to-equal nil))
      (kill-whole-line)))
 
+(describe "Obsidian Properties"
+  (before-each
+   (obsidian-change-vault obsidian--test-dir))
+
+  (it "should identify front matter correctly"
+    (with-temp-buffer
+      (insert "---\nkey: value\n---\nBody")
+      (expect (obsidian-point-in-front-matter-p 5) :to-be t)
+      (expect (obsidian-point-in-front-matter-p (point-max)) :to-be nil)))
+
+  (it "should insert property into new front matter if none exists"
+    (with-temp-buffer
+      (markdown-mode)
+      (insert "Body text")
+      (goto-char (point-min))
+      (cl-letf (((symbol-function 'completing-read) (lambda (&rest _) "status"))
+                ((symbol-function 'read-string) (lambda (&rest _) "active")))
+        (call-interactively 'obsidian-insert-property))
+      (expect (buffer-substring-no-properties (point-min) (point-max)) :to-equal "---\nstatus: active\n---\nBody text")))
+
+  (it "should append property to existing front matter"
+    (with-temp-buffer
+      (markdown-mode)
+      (insert "---\ntags: [test]\n---\nBody")
+      (goto-char (point-min))
+      (cl-letf (((symbol-function 'completing-read) (lambda (&rest _) "status"))
+                ((symbol-function 'read-string) (lambda (&rest _) "active")))
+        (call-interactively 'obsidian-insert-property))
+      (expect (buffer-substring-no-properties (point-min) (point-max)) :to-equal "---\ntags: [test]\nstatus: active\n---\nBody")))
+
+  (it "should update existing property in front matter"
+    (with-temp-buffer
+      (markdown-mode)
+      (insert "---\nstatus: draft\n---\nBody")
+      (goto-char (point-min))
+      (cl-letf (((symbol-function 'completing-read) (lambda (&rest _) "status"))
+                ((symbol-function 'read-string) (lambda (&rest _) "published")))
+        (call-interactively 'obsidian-insert-property))
+      (expect (buffer-substring-no-properties (point-min) (point-max)) :to-equal "---\nstatus: published\n---\nBody"))))
+
 (provide 'test-obsidian)
