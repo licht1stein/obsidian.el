@@ -183,26 +183,28 @@ the mode, `toggle' toggles the state."
   nil)
 
 (defconst obsidian--tag-regex
-  "\\(?:\\`\\|[[:space:]]\\)\\#\\(?:[A-Za-z_/][-A-Za-z0-9_/]*[A-Za-z_/][-A-Za-z0-9_/]*\\)"
+  (rx (or bos space)
+      "#"
+      (any alpha "_/")
+      (zero-or-more (any alnum "-_/"))
+      (any alpha "_/")
+      (zero-or-more (any alnum "-_/")))
   "Regex pattern used to find tags in Obsidian files.
 
 Here's a breakdown of the pattern:
 
-- `\\(?:\\`\\|[[:space:]]\\)`: Matches the beginning of the document (`\\``) or
-any whitespace character (`[[:space:]]`). This ensures that the tag either
-starts at the beginning of the document or is preceded by a whitespace character.
+- `(or bos space)`: Matches the beginning of the string (`bos`) or any
+whitespace character (`space`). This ensures that the tag either starts at
+the beginning of the document or is preceded by a whitespace character.
 
-- `\\(#`: Matches the starting hashtag of the tag and begins a capturing group
-for the tag itself.
+- `#`: Matches the starting hashtag of the tag.
 
-- `\\(?:[A-Za-z_/][-A-Za-z0-9_/]*[A-Za-z_/][-A-Za-z0-9_/]*\\)`: This ensures that
-the tag has at least one non-numerical character (A-Z) and allows the use of
-letters,numbers, underscores, hyphens, and forward slashes. The first and last
-segments (`[A-Za-z_/]`) ensure that the tag contains at least one non-numeric
-character outside the start and end. Numbers will not be allowed as the only
-characters of a tag.
-
-- `[#)]`: Ends the capturing group for the whole tag that starts with a `#`.")
+- `(any alpha \"_/\")` and `(any alnum \"-_/\")`: Matches tag characters. By using
+`alpha` and `alnum`, it supports alphabetic characters in any language, not just
+English. The placement of `alpha` ensures that the tag contains at least two
+non-numeric characters (letters, underscores, or forward slashes) and cannot
+be entirely numerical, while allowing letters, numbers, hyphens, underscores,
+and forward slashes overall.")
 
 (defconst obsidian-wiki-link-regex "\\[\\[[[:graph:][:blank:]]*\\]\\]"
   "Regex pattern used to find wikilinks.")
