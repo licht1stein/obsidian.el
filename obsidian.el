@@ -45,6 +45,7 @@
 (require 'markdown-mode)
 (require 'elgrep)
 (require 'yaml)
+(autoload 'ucs-normalize-NFC-string "ucs-normalize" nil t)
 
 (defgroup obsidian nil "Obsidian Notes group." :group 'text)
 
@@ -349,6 +350,20 @@ always a full absolute path."
   (if (s-starts-with-p obsidian-directory f)
       (substring f obsidian--relative-path-length)
     f))
+
+(defcustom obsidian-normalize-path-function #'identity
+  "Function used to normalize file path strings before comparison."
+  :type '(choice
+          (const :tag "None (identity)" identity)
+          (const :tag "NFC (ucs-normalize-NFC-string)" ucs-normalize-NFC-string)
+          (const :tag "NFC + downcase" obsidian--normalize-path-nfc-downcase)
+          (const :tag "Downcase" downcase)
+          (function :tag "Custom function"))
+  :group 'obsidian)
+
+(defun obsidian--normalize-path-nfc-downcase (s)
+  "Normalize S to NFC and downcase it."
+  (downcase (ucs-normalize-NFC-string s)))
 
 (defun obsidian-expand-file-name (f)
   "Take file F relative to `obsidian-directory' and return absolute path."
@@ -904,7 +919,18 @@ Note is created in the `obsidian-daily-notes-directory' if set, or in
 
 (defun obsidian--match-files (f all-files)
   "Filter ALL-FILES to return list with same name as F."
-  (-filter (lambda (el) (or (s-equals-p f el) (s-ends-with-p (concat "/" f) el))) all-files))
+  (if (eq obsidian-normalize-path-function #'identity)
+      (-filter (lambda (el)
+                 (or (s-equals-p f el)
+                     (s-ends-with-p (concat "/" f) el)))
+               all-files)
+    (let* ((normalize obsidian-normalize-path-function)
+           (needle (funcall normalize f)))
+      (-filter (lambda (el)
+                 (let ((candidate (funcall normalize el)))
+                   (or (s-equals-p needle candidate)
+                       (s-ends-with-p (concat "/" needle) candidate))))
+               all-files))))
 
 (defun obsidian--prepare-new-file-from-rel-path (p)
   "Create file if it doesn't exist and return full system path for relative path P.
